@@ -1,6 +1,9 @@
 # ---- build stage ----
-FROM node:22-alpine AS build
+FROM node:22-slim AS build
 WORKDIR /repo
+
+# Prisma needs openssl + ca-certs at install time to download the right binary
+RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 
 # Copy monorepo manifests for dependency caching
 COPY package.json package-lock.json tsconfig.base.json ./
@@ -17,9 +20,12 @@ RUN npx --workspace apps/api prisma generate --schema=../../database/schema/sche
 RUN npm run build --workspace apps/api
 
 # ---- runtime stage ----
-FROM node:22-alpine AS runtime
+FROM node:22-slim AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
+
+# Runtime libs Prisma needs + wget for the healthcheck
+RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates wget && rm -rf /var/lib/apt/lists/*
 
 # Copy only what the runtime needs
 COPY --from=build /repo/node_modules /app/node_modules
