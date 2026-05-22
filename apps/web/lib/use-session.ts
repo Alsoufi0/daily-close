@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { SessionProfile } from "@smokeshop/shared/types";
-import { getProfile, listStores, StoreRecord } from "./api-client";
+import { ApiError, bootstrapOwner, getProfile, listStores, StoreRecord } from "./api-client";
 import { createBrowserSupabase } from "./supabase-browser";
 import { demoOwner } from "./mock-data";
 
@@ -51,7 +51,18 @@ export function useSession(): Session {
     setToken(stored);
     (async () => {
       try {
-        const [p, s] = await Promise.all([getProfile(stored), listStores(stored).catch(() => [])]);
+        let p: SessionProfile;
+        try {
+          p = await getProfile(stored);
+        } catch (err) {
+          // First-time Supabase user with no public.users row yet -> auto-bootstrap as owner
+          if (err instanceof ApiError && err.status === 401 && /profile is not set up/i.test(err.message)) {
+            p = await bootstrapOwner(stored);
+          } else {
+            throw err;
+          }
+        }
+        const s = await listStores(stored).catch(() => []);
         if (cancelled) return;
         setProfile(p);
         setStores(s);

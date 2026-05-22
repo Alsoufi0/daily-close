@@ -62,6 +62,13 @@ export async function getProfile(token: string): Promise<SessionProfile> {
   return apiFetch<SessionProfile>("/auth/profile", token);
 }
 
+export async function bootstrapOwner(token: string, name?: string): Promise<SessionProfile> {
+  return apiFetch<SessionProfile>("/auth/bootstrap-owner", token, {
+    method: "POST",
+    body: JSON.stringify({ name })
+  });
+}
+
 export interface StoreRecord {
   id: string;
   storeName: string;

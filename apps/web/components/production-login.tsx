@@ -140,10 +140,16 @@ export function ProductionLogin() {
               {!loading ? <ArrowRight size={22} aria-hidden /> : null}
             </button>
             <Link
-              className="focus-ring flex h-14 items-center justify-center gap-2 rounded-lg border-2 border-ink bg-white text-lg font-black text-ink hover:bg-smoke"
+              className="focus-ring flex h-14 items-center justify-center gap-2 rounded-lg border-2 border-leaf bg-white text-lg font-black text-leaf hover:bg-leaf/5"
+              href="/signup"
+            >
+              Create new account · 14-day free trial
+            </Link>
+            <Link
+              className="focus-ring flex h-12 items-center justify-center gap-2 rounded-lg border border-ink/15 bg-white font-bold text-ink/70 hover:bg-smoke"
               href="/demo"
             >
-              Open demo mode
+              Try the demo (no account)
             </Link>
           </div>
 
