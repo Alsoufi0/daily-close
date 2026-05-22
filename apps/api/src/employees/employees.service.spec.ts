@@ -81,7 +81,7 @@ describe("EmployeesService", () => {
     ).rejects.toThrow(ConflictException);
   });
 
-  it("invite creates the user + employee row with EMPLOYEE role", async () => {
+  it("invite creates the user + employee row with EMPLOYEE role and returns a temp password", async () => {
     const { service, prisma } = build();
     const result = await service.invite(owner, {
       name: "New",
@@ -99,6 +99,8 @@ describe("EmployeesService", () => {
     );
     expect(result.invitedViaSupabase).toBe(false);
     expect(result.employeeId).toBe("emp-new");
+    expect(typeof result.tempPassword).toBe("string");
+    expect(result.tempPassword.length).toBeGreaterThan(8);
   });
 
   it("resetPassword forbids non-owners", async () => {

@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   Download,
   Loader2,
+  RefreshCcw,
   Store,
   X,
   XCircle
@@ -36,6 +37,20 @@ export function OwnerDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [dismissing, setDismissing] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  async function manualRefresh() {
+    setRefreshing(true);
+    setError(null);
+    try {
+      const data = await getOwnerDashboard(session.token);
+      setSummary(data);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not refresh");
+    } finally {
+      setRefreshing(false);
+    }
+  }
 
   useEffect(() => {
     if (session.mode === "loading") return;
@@ -165,14 +180,29 @@ export function OwnerDashboard() {
           </h1>
           <p className="mt-1 text-sm font-bold text-ink/65 sm:text-base">{today}</p>
         </div>
-        <button
-          onClick={exportCsv}
-          disabled={downloading}
-          className="focus-ring inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-ink px-4 font-bold text-white hover:bg-ink/90 disabled:opacity-60 sm:w-auto"
-        >
-          {downloading ? <Loader2 className="animate-spin" size={18} aria-hidden /> : <Download size={18} aria-hidden />}
-          {downloading ? "Downloading…" : "Export CSV"}
-        </button>
+        <div className="flex w-full gap-2 sm:w-auto">
+          <button
+            onClick={manualRefresh}
+            disabled={refreshing}
+            aria-label="Refresh"
+            className="focus-ring inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-ink/15 bg-white px-3 font-bold text-ink hover:bg-smoke disabled:opacity-60"
+          >
+            <RefreshCcw
+              size={16}
+              aria-hidden
+              className={refreshing ? "animate-spin" : undefined}
+            />
+            <span className="sm:hidden">Refresh</span>
+          </button>
+          <button
+            onClick={exportCsv}
+            disabled={downloading}
+            className="focus-ring inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-lg bg-ink px-4 font-bold text-white hover:bg-ink/90 disabled:opacity-60 sm:flex-none"
+          >
+            {downloading ? <Loader2 className="animate-spin" size={18} aria-hidden /> : <Download size={18} aria-hidden />}
+            {downloading ? "Downloading…" : "Export CSV"}
+          </button>
+        </div>
       </div>
 
       {error ? (
@@ -265,7 +295,8 @@ export function OwnerDashboard() {
           <div className="grid gap-3 md:grid-cols-3">
             {summary.stores.map((store) => {
               const barWidth = store.closedToday ? Math.max(6, (store.totalSales / maxSales) * 100) : 0;
-              const needsClosing = !store.closedToday && (store.pastCloseTime ?? true);
+              // Only flag "Needs closing" when API confirms close time has passed.
+              const needsClosing = !store.closedToday && store.pastCloseTime === true;
               const diffTone =
                 !store.closedToday
                   ? needsClosing ? "warning" : "neutral"

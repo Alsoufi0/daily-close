@@ -131,7 +131,15 @@ export async function listEmployees(token: string): Promise<any[]> {
 export async function inviteEmployee(
   token: string,
   input: { name: string; email: string; storeId: string }
-) {
+): Promise<{
+  id: string;
+  employeeId: string;
+  email: string;
+  name: string;
+  storeId: string;
+  tempPassword: string;
+  invitedViaSupabase: boolean;
+}> {
   return apiFetch("/employees/invite", token, {
     method: "POST",
     body: JSON.stringify(input)

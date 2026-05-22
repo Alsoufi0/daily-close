@@ -24,13 +24,21 @@ function makeService(overrides: Partial<{
   const posParser = { parse: jest.fn() };
   const ocr = { extractText: jest.fn() };
   const storage = { uploadBase64: jest.fn() };
+  const prisma = {
+    store: { findFirst: jest.fn().mockResolvedValue({ id: "store-1" }) },
+    employee: {
+      findFirst: jest.fn().mockResolvedValue({ id: "employee-1" }),
+      create: jest.fn().mockResolvedValue({ id: "employee-new" })
+    }
+  };
   const service = new DailyCloseService(
     repository as any,
     posParser as any,
     ocr as any,
-    storage as any
+    storage as any,
+    prisma as any
   );
-  return { service, repository };
+  return { service, repository, prisma };
 }
 
 const baseInput: CreateDailyCloseDto = {
@@ -103,8 +111,9 @@ describe("DailyCloseService.finishClosing", () => {
     ).rejects.toThrow(ForbiddenException);
   });
 
-  it("forbids non-employee role from submitting close", async () => {
-    const { service } = makeService();
+  it("forbids owner from closing a store they don't own", async () => {
+    const { service, prisma } = makeService();
+    prisma.store.findFirst.mockResolvedValueOnce(null);
     const owner: RequestUser = {
       id: "u-owner",
       name: "Owner",
@@ -113,6 +122,26 @@ describe("DailyCloseService.finishClosing", () => {
       ownerId: "owner-1"
     };
     await expect(service.finishClosing(baseInput, owner)).rejects.toThrow(ForbiddenException);
+  });
+
+  it("allows owner to close a store they own, auto-creating employee row", async () => {
+    const { service, prisma, repository } = makeService();
+    prisma.employee.findFirst.mockResolvedValueOnce(null); // no existing owner-employee row
+    const owner: RequestUser = {
+      id: "u-owner",
+      name: "Owner",
+      email: "owner@demo.com",
+      role: "STORE_OWNER",
+      ownerId: "owner-1"
+    };
+    const result = await service.finishClosing(baseInput, owner);
+    expect(prisma.employee.create).toHaveBeenCalledWith({
+      data: { userId: "u-owner", storeId: "store-1" }
+    });
+    expect(repository.create).toHaveBeenCalledWith(
+      expect.objectContaining({ employeeId: "employee-new", storeId: "store-1" })
+    );
+    expect(result.status).toBe("CLOSED");
   });
 
   it("writes expense and audit log only when expenses > 0", async () => {

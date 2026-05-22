@@ -64,16 +64,13 @@ export default function EmployeesAdminPage() {
     setError(null);
     setInfo(null);
     try {
-      const result: any = await inviteEmployee(session.token, { name, email, storeId });
-      setInfo(
-        result.invitedViaSupabase
-          ? `${name} has been invited by email.`
-          : `${name} added. (Supabase not configured — they can sign in once you wire auth.)`
-      );
+      const result = await inviteEmployee(session.token, { name, email, storeId });
       setEmployees((prev) => [
         ...prev,
         { id: result.id, user: { name, email }, storeId }
       ]);
+      // Show the temp password modal so the owner can share it.
+      setResetResult({ email: result.email, tempPassword: result.tempPassword });
       setName("");
       setEmail("");
       setShowForm(false);

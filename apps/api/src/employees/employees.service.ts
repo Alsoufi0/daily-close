@@ -52,13 +52,19 @@ export class EmployeesService {
     const existingUser = await this.prisma.user.findUnique({ where: { email: input.email } });
     if (existingUser) throw new ConflictException("A user with this email already exists.");
 
+    // Strong temporary password the owner shares with the employee.
+    const tempPassword = randomBytes(9).toString("base64url") + "Aa1!";
+
     let authUserId: string | undefined;
     if (this.supabase) {
-      const invite = await this.supabase.auth.admin.inviteUserByEmail(input.email, {
-        data: { name: input.name, role: "EMPLOYEE" }
+      const create = await this.supabase.auth.admin.createUser({
+        email: input.email,
+        password: tempPassword,
+        email_confirm: true,
+        user_metadata: { name: input.name, role: "EMPLOYEE" }
       });
-      if (invite.error) throw new BadRequestException(invite.error.message);
-      authUserId = invite.data.user?.id;
+      if (create.error) throw new BadRequestException(create.error.message);
+      authUserId = create.data.user?.id;
     }
 
     const created = await this.prisma.user.create({
@@ -81,6 +87,7 @@ export class EmployeesService {
       email: created.email,
       name: created.name,
       storeId: input.storeId,
+      tempPassword,
       invitedViaSupabase: Boolean(this.supabase)
     };
   }

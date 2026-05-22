@@ -14,6 +14,7 @@ import { CreateDailyCloseDto } from "./dto/create-daily-close.dto";
 import { ScanReportDto } from "./dto/scan-report.dto";
 import { UploadReportDto } from "./dto/upload-report.dto";
 import { DailyCloseRepository } from "./daily-close.repository";
+import { PrismaService } from "../prisma/prisma.service";
 
 @Injectable()
 export class DailyCloseService {
@@ -21,7 +22,8 @@ export class DailyCloseService {
     private readonly repository: DailyCloseRepository,
     private readonly posParser: PosParserService,
     @Inject("OCRService") private readonly ocr: OCRService,
-    private readonly storage: SupabaseStorageService
+    private readonly storage: SupabaseStorageService,
+    private readonly prisma: PrismaService
   ) {}
 
   async scanReport(input: ScanReportDto): Promise<ParsedPOSReport> {
@@ -30,7 +32,7 @@ export class DailyCloseService {
   }
 
   async uploadReport(input: UploadReportDto, user: RequestUser): Promise<ParsedPOSReport & { imageUrl: string }> {
-    this.assertEmployeeStore(user, input.storeId);
+    await this.assertCanCloseStore(user, input.storeId);
 
     const imageUrl = input.base64Data
       ? await this.storage.uploadBase64(
@@ -47,7 +49,10 @@ export class DailyCloseService {
   }
 
   async finishClosing(input: CreateDailyCloseDto, user?: RequestUser): Promise<DailyCloseResult> {
-    if (user) this.assertEmployeeStore(user, input.storeId);
+    let resolvedEmployeeId = input.employeeId;
+    if (user) {
+      resolvedEmployeeId = await this.assertCanCloseStore(user, input.storeId);
+    }
 
     const existing = await this.repository.findByStoreAndDate(input.storeId, new Date(input.date));
     if (existing) throw new BadRequestException("This store is already closed for this date.");
@@ -58,7 +63,7 @@ export class DailyCloseService {
 
     const created = await this.repository.create({
       ...input,
-      employeeId: user?.employeeId ?? input.employeeId,
+      employeeId: resolvedEmployeeId,
       date: new Date(input.date),
       expectedCash,
       difference,
@@ -158,5 +163,34 @@ export class DailyCloseService {
     if (user.role !== "EMPLOYEE") throw new ForbiddenException("Only employees can submit daily closes.");
     if (user.storeId !== storeId) throw new ForbiddenException("Employee cannot close another store.");
     if (!user.employeeId) throw new ForbiddenException("Employee profile is incomplete.");
+  }
+
+  // Allows owners (for stores they own) and employees (for their store).
+  // For owners, finds or creates an Employee row tying the owner's User to the
+  // target store so the close has a valid employeeId FK.
+  private async assertCanCloseStore(user: RequestUser, storeId: string): Promise<string> {
+    if (user.role === "EMPLOYEE") {
+      if (user.storeId !== storeId) throw new ForbiddenException("Employee cannot close another store.");
+      if (!user.employeeId) throw new ForbiddenException("Employee profile is incomplete.");
+      return user.employeeId;
+    }
+    if (user.role === "STORE_OWNER" && user.ownerId) {
+      const store = await this.prisma.store.findFirst({
+        where: { id: storeId, ownerId: user.ownerId },
+        select: { id: true }
+      });
+      if (!store) throw new ForbiddenException("This store is not yours.");
+      // Get-or-create an owner-as-employee row so we satisfy the FK.
+      let employee = await this.prisma.employee.findFirst({
+        where: { userId: user.id, storeId }
+      });
+      if (!employee) {
+        employee = await this.prisma.employee.create({
+          data: { userId: user.id, storeId }
+        });
+      }
+      return employee.id;
+    }
+    throw new ForbiddenException("Not allowed to close this store.");
   }
 }
