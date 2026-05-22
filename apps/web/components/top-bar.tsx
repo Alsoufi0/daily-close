@@ -18,9 +18,16 @@ const NAV = [
 export function TopBar() {
   const pathname = usePathname() || "/";
   const [open, setOpen] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
 
   // Close the menu on route change
   useEffect(() => setOpen(false), [pathname]);
+
+  // Re-check token on every route change so the nav adapts to sign-in/out.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setSignedIn(Boolean(window.localStorage.getItem("smokeshop-token")));
+  }, [pathname]);
 
   async function signOut() {
     window.localStorage.removeItem("smokeshop-token");
@@ -55,47 +62,79 @@ export function TopBar() {
 
         {/* Desktop nav */}
         <nav className="hidden items-center gap-1 text-sm font-black md:flex">
-          {NAV.map((item) => {
-            const active = pathname.startsWith(item.href);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-current={active ? "page" : undefined}
-                className={clsx(
-                  "focus-ring rounded-lg px-3 py-2 transition-colors",
-                  active ? "bg-leaf/10 text-leaf" : "text-ink/65 hover:bg-smoke hover:text-ink"
-                )}
+          {signedIn ? (
+            <>
+              {NAV.map((item) => {
+                const active = pathname.startsWith(item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    aria-current={active ? "page" : undefined}
+                    className={clsx(
+                      "focus-ring rounded-lg px-3 py-2 transition-colors",
+                      active ? "bg-leaf/10 text-leaf" : "text-ink/65 hover:bg-smoke hover:text-ink"
+                    )}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+              <button
+                onClick={signOut}
+                className="focus-ring ml-2 inline-flex items-center gap-1.5 rounded-lg border border-ink/15 px-3 py-2 text-ink/70 hover:bg-smoke hover:text-ink"
               >
-                {item.label}
-              </Link>
-            );
-          })}
-          {showSignOut ? (
-            <button
-              onClick={signOut}
-              className="focus-ring ml-2 inline-flex items-center gap-1.5 rounded-lg border border-ink/15 px-3 py-2 text-ink/70 hover:bg-smoke hover:text-ink"
+                <LogOut size={16} aria-hidden />
+                Sign Out
+              </button>
+            </>
+          ) : pathname === "/" ? (
+            <Link
+              href="/signup"
+              className="focus-ring inline-flex h-10 items-center justify-center rounded-lg bg-leaf px-4 font-black text-white"
             >
-              <LogOut size={16} aria-hidden />
-              Sign Out
-            </button>
-          ) : null}
+              Get started
+            </Link>
+          ) : (
+            <Link
+              href="/"
+              className="focus-ring inline-flex h-10 items-center justify-center rounded-lg border border-ink/15 px-4 font-black text-ink"
+            >
+              Sign in
+            </Link>
+          )}
         </nav>
 
-        {/* Mobile hamburger */}
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          aria-label={open ? "Close menu" : "Open menu"}
-          aria-expanded={open}
-          className="focus-ring inline-flex h-11 w-11 items-center justify-center rounded-lg border border-ink/15 text-ink/80 md:hidden"
-        >
-          {open ? <X size={20} aria-hidden /> : <Menu size={20} aria-hidden />}
-        </button>
+        {/* Mobile hamburger — only when signed in (anonymous landing is clean) */}
+        {signedIn ? (
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            aria-label={open ? "Close menu" : "Open menu"}
+            aria-expanded={open}
+            className="focus-ring inline-flex h-11 w-11 items-center justify-center rounded-lg border border-ink/15 text-ink/80 md:hidden"
+          >
+            {open ? <X size={20} aria-hidden /> : <Menu size={20} aria-hidden />}
+          </button>
+        ) : pathname === "/" ? (
+          <Link
+            href="/signup"
+            className="focus-ring inline-flex h-10 items-center justify-center rounded-lg bg-leaf px-3 text-sm font-black text-white md:hidden"
+          >
+            Get started
+          </Link>
+        ) : (
+          <Link
+            href="/"
+            className="focus-ring inline-flex h-10 items-center justify-center rounded-lg border border-ink/15 px-3 text-sm font-black text-ink md:hidden"
+          >
+            Sign in
+          </Link>
+        )}
       </div>
 
-      {/* Mobile sheet */}
-      {open ? (
+      {/* Mobile sheet (signed-in only) */}
+      {open && signedIn ? (
         <div className="border-t border-ink/10 bg-white md:hidden">
           <nav className="mx-auto flex w-full max-w-6xl flex-col gap-1 px-4 py-3 text-base font-black">
             {NAV.map((item) => {

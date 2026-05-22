@@ -4,8 +4,17 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2, Eye, EyeOff, Loader2, ShieldCheck } from "lucide-react";
 import { createBrowserSupabase } from "../../../lib/supabase-browser";
+import { RequireAuth } from "../../../components/require-auth";
 
 export default function ChangePasswordPage() {
+  return (
+    <RequireAuth>
+      <ChangePasswordPageInner />
+    </RequireAuth>
+  );
+}
+
+function ChangePasswordPageInner() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [show, setShow] = useState(false);

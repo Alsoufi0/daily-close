@@ -1,13 +1,29 @@
-import { Module } from "@nestjs/common";
+import { Module, Type } from "@nestjs/common";
 import { ManualEntryOCRService, MockOCRService } from "./ocr.service";
+import { OcrSpaceOCRService } from "./ocr-space.service";
 
-const useDemo = process.env.OCR_MODE === "demo";
+const mode = (process.env.OCR_MODE || "manual").toLowerCase();
+
+function pickProvider(): Type<any> {
+  switch (mode) {
+    case "ocrspace":
+      return OcrSpaceOCRService;
+    case "demo":
+      return MockOCRService;
+    case "manual":
+    default:
+      return ManualEntryOCRService;
+  }
+}
 
 @Module({
   providers: [
+    OcrSpaceOCRService,
+    MockOCRService,
+    ManualEntryOCRService,
     {
       provide: "OCRService",
-      useClass: useDemo ? MockOCRService : ManualEntryOCRService
+      useClass: pickProvider()
     }
   ],
   exports: ["OCRService"]

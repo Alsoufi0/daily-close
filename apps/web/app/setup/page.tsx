@@ -5,10 +5,19 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, Check, Loader2, Store, UserPlus } from "lucide-react";
 import { useSession } from "../../lib/use-session";
 import { ApiError, createStore, inviteEmployee } from "../../lib/api-client";
+import { RequireAuth } from "../../components/require-auth";
 
 type Step = "store" | "employee" | "done";
 
 export default function SetupPage() {
+  return (
+    <RequireAuth>
+      <SetupPageInner />
+    </RequireAuth>
+  );
+}
+
+function SetupPageInner() {
   const session = useSession();
   const router = useRouter();
   const [step, setStep] = useState<Step>("store");

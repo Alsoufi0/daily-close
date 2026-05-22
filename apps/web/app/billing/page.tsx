@@ -5,6 +5,7 @@ import Link from "next/link";
 import { CheckCircle2, CreditCard, Loader2, Sparkles, TimerReset } from "lucide-react";
 import { useSession } from "../../lib/use-session";
 import { getSubscription, SubscriptionView } from "../../lib/api-client";
+import { RequireAuth } from "../../components/require-auth";
 
 const demoSub: SubscriptionView = {
   status: "TRIALING",
@@ -17,6 +18,14 @@ const demoSub: SubscriptionView = {
 };
 
 export default function BillingPage() {
+  return (
+    <RequireAuth>
+      <BillingPageInner />
+    </RequireAuth>
+  );
+}
+
+function BillingPageInner() {
   const session = useSession();
   const [sub, setSub] = useState<SubscriptionView | null>(null);
   const [loading, setLoading] = useState(true);
