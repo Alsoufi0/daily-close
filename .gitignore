@@ -1,0 +1,46 @@
+# dependencies
+node_modules
+**/node_modules
+.npm
+
+# build output
+.next
+apps/web/.next
+apps/api/dist
+apps/mobile/dist
+dist
+*.tsbuildinfo
+
+# vercel
+.vercel
+.vercel/.env*.local
+
+# secrets / env
+.env
+.env.*
+!.env.example
+google-play-service-account.json
+
+# mobile
+apps/mobile/.expo
+apps/mobile/web-build
+
+# dev artifacts
+.chrome-profile*
+coverage
+*.log
+*.png.bak
+employee-close.png
+owner-dashboard.png
+
+# OS
+.DS_Store
+Thumbs.db
+
+# editors
+.vscode
+.idea
+
+# python bytecode (logo generator)
+**/__pycache__
+*.pyc

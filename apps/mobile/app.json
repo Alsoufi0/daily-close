@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "SmokeShop Daily Close",
+    "slug": "smokeshop-daily-close",
+    "version": "0.1.0",
+    "runtimeVersion": { "policy": "appVersion" },
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "scheme": "smokeshopclose",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1f7a4d"
+    },
+    "ios": {
+      "bundleIdentifier": "com.smokeshopdaily.close",
+      "buildNumber": "1",
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Employees take a photo of the POS report to fill daily closing numbers.",
+        "NSPhotoLibraryUsageDescription": "Employees can upload a POS report image from their phone.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.smokeshopdaily.close",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1f7a4d"
+      },
+      "permissions": ["CAMERA", "READ_MEDIA_IMAGES"]
+    },
+    "plugins": ["expo-image-picker", "expo-secure-store"],
+    "extra": {
+      "eas": {
+        "projectId": "replace-after-eas-init"
+      }
+    }
+  }
+}

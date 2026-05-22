@@ -1,0 +1,182 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  STORE_OWNER
+  EMPLOYEE
+}
+
+enum CloseStatus {
+  PENDING
+  CLOSED
+  SHORT
+  OVER
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+  READ
+}
+
+enum NotificationType {
+  PUSH
+  EMAIL
+  SMS
+}
+
+model User {
+  id           String         @id @default(cuid())
+  authUserId   String?        @unique @map("auth_user_id")
+  name         String
+  email        String         @unique
+  password     String
+  role         UserRole
+  createdAt    DateTime       @default(now()) @map("created_at")
+  owner        Owner?
+  employee     Employee?
+  notifications Notification[]
+  auditLogs     AuditLog[]
+
+  @@map("users")
+}
+
+model Owner {
+  id                   String    @id @default(cuid())
+  userId               String    @unique @map("user_id")
+  subscriptionPlan     String    @default("MVP") @map("subscription_plan")
+  subscriptionStatus   String    @default("TRIALING") @map("subscription_status")
+  trialEndsAt          DateTime? @map("trial_ends_at")
+  stripeCustomerId     String?   @unique @map("stripe_customer_id")
+  stripeSubscriptionId String?   @unique @map("stripe_subscription_id")
+  user                 User      @relation(fields: [userId], references: [id])
+  stores               Store[]
+
+  @@map("owners")
+}
+
+model Employee {
+  id          String       @id @default(cuid())
+  userId      String       @unique @map("user_id")
+  storeId     String       @map("store_id")
+  user        User         @relation(fields: [userId], references: [id])
+  store       Store        @relation(fields: [storeId], references: [id])
+  dailyCloses DailyClose[]
+
+  @@map("employees")
+}
+
+model Store {
+  id            String         @id @default(cuid())
+  ownerId       String         @map("owner_id")
+  storeName     String         @map("store_name")
+  address       String?
+  phone         String?
+  timezone      String         @default("America/New_York")
+  closeTime     String         @default("23:30") @map("close_time")
+  owner         Owner          @relation(fields: [ownerId], references: [id])
+  employees     Employee[]
+  dailyCloses   DailyClose[]
+  expenses      Expense[]
+  notifications Notification[]
+  auditLogs     AuditLog[]
+
+  @@index([ownerId])
+  @@map("stores")
+}
+
+model DailyClose {
+  id             String          @id @default(cuid())
+  storeId        String          @map("store_id")
+  employeeId     String          @map("employee_id")
+  date           DateTime
+  cashSales      Decimal         @map("cash_sales") @db.Decimal(12, 2)
+  cardSales      Decimal         @map("card_sales") @db.Decimal(12, 2)
+  totalSales     Decimal         @map("total_sales") @db.Decimal(12, 2)
+  tax            Decimal         @default(0) @db.Decimal(12, 2)
+  refunds        Decimal         @default(0) @db.Decimal(12, 2)
+  discounts      Decimal         @default(0) @db.Decimal(12, 2)
+  lottery        Decimal?        @db.Decimal(12, 2)
+  expectedCash   Decimal         @map("expected_cash") @db.Decimal(12, 2)
+  countedCash    Decimal         @map("counted_cash") @db.Decimal(12, 2)
+  difference     Decimal         @db.Decimal(12, 2)
+  expenses       Decimal         @default(0) @db.Decimal(12, 2)
+  notes          String?
+  status         CloseStatus
+  createdAt      DateTime        @default(now()) @map("created_at")
+  store          Store           @relation(fields: [storeId], references: [id])
+  employee       Employee        @relation(fields: [employeeId], references: [id])
+  expenseItems   Expense[]
+  uploadedReports UploadedReport[]
+
+  @@unique([storeId, date])
+  @@index([storeId, date])
+  @@index([employeeId])
+  @@map("daily_close")
+}
+
+model Expense {
+  id           String      @id @default(cuid())
+  storeId      String      @map("store_id")
+  dailyCloseId String?     @map("daily_close_id")
+  amount       Decimal     @db.Decimal(12, 2)
+  category     String
+  description  String?
+  createdAt    DateTime    @default(now()) @map("created_at")
+  store        Store       @relation(fields: [storeId], references: [id])
+  dailyClose   DailyClose? @relation(fields: [dailyCloseId], references: [id])
+
+  @@index([storeId])
+  @@map("expenses")
+}
+
+model UploadedReport {
+  id           String     @id @default(cuid())
+  dailyCloseId String?    @map("daily_close_id")
+  imageUrl     String     @map("image_url")
+  parsedJson   Json       @map("parsed_json")
+  parserType   String     @map("parser_type")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  dailyClose   DailyClose? @relation(fields: [dailyCloseId], references: [id])
+
+  @@index([dailyCloseId])
+  @@map("uploaded_reports")
+}
+
+model Notification {
+  id        String             @id @default(cuid())
+  userId    String             @map("user_id")
+  storeId   String?            @map("store_id")
+  type      NotificationType
+  message   String
+  status    NotificationStatus @default(PENDING)
+  createdAt DateTime           @default(now()) @map("created_at")
+  user      User               @relation(fields: [userId], references: [id])
+  store     Store?             @relation(fields: [storeId], references: [id])
+
+  @@index([userId, status])
+  @@map("notifications")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  storeId   String?  @map("store_id")
+  action    String
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id])
+  store     Store?   @relation(fields: [storeId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([storeId, createdAt])
+  @@map("audit_logs")
+}

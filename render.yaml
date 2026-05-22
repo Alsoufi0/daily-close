@@ -1,0 +1,53 @@
+services:
+  - type: web
+    name: smokeshop-api
+    runtime: docker
+    plan: starter
+    region: oregon
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      - key: ENABLE_SWAGGER
+        value: "false"
+      - key: ALLOW_DEMO_AUTH
+        value: "false"
+      - key: ALLOWED_ORIGINS
+        value: https://follow-th-pbelow-exaclty-smokeshop.vercel.app
+      # Secrets — set these in the Render dashboard after first deploy
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_REPORTS_BUCKET
+        value: pos-reports
+      # Subscriptions / Stripe (optional until you connect billing)
+      - key: STRIPE_CHECKOUT_URL
+        sync: false
+      - key: STRIPE_PORTAL_URL
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+
+  # Daily 23:45 sweep — creates missed-close alerts for stores that didn't submit
+  - type: cron
+    name: smokeshop-missed-close-cron
+    runtime: docker
+    plan: starter
+    region: oregon
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    schedule: "45 23 * * *"
+    envVars:
+      - key: CRON_API_URL
+        sync: false # e.g. https://smokeshop-api.onrender.com
+      - key: CRON_TOKEN
+        sync: false # service-account bearer token from supabase
+    dockerCommand: >
+      sh -c "wget -q -O- --header=\"Authorization: Bearer $CRON_TOKEN\" --post-data='' $CRON_API_URL/notifications/check-missed-close && echo done"

@@ -1,0 +1,159 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { CalendarDays, Loader2, Pencil } from "lucide-react";
+import { clsx } from "clsx";
+import { formatMoney } from "@smokeshop/shared/utils/money";
+import { getOwnerHistory, HistoryRow } from "../lib/api-client";
+import { EditCloseModal } from "./edit-close-modal";
+
+const ranges = [7, 14, 30] as const;
+type Range = typeof ranges[number];
+
+export function HistoryPanel({ token }: { token?: string }) {
+  const [days, setDays] = useState<Range>(7);
+  const [rows, setRows] = useState<HistoryRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState<HistoryRow | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    getOwnerHistory(token, days)
+      .then((r) => !cancelled && setRows(r))
+      .catch(() => !cancelled && setRows([]))
+      .finally(() => !cancelled && setLoading(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [token, days]);
+
+  const totalSales = rows.reduce((sum, r) => sum + r.totalSales, 0);
+  const totalShortage = rows.reduce((sum, r) => sum + Math.min(r.difference, 0), 0);
+
+  return (
+    <section>
+      <div className="mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <CalendarDays size={20} aria-hidden className="text-leaf" />
+          <h2 className="text-2xl font-black">History</h2>
+        </div>
+        <div className="flex items-center gap-1 rounded-lg border border-ink/10 bg-white p-1">
+          {ranges.map((d) => (
+            <button
+              key={d}
+              onClick={() => setDays(d)}
+              className={clsx(
+                "focus-ring rounded-md px-3 py-1 text-xs font-black",
+                d === days ? "bg-leaf text-white" : "text-ink/60 hover:bg-smoke"
+              )}
+            >
+              {d}d
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-ink/10 bg-white shadow-sm">
+        <div className="grid grid-cols-2 gap-px overflow-hidden rounded-t-xl bg-ink/10 sm:grid-cols-3">
+          <div className="bg-white p-4">
+            <p className="text-xs font-black uppercase tracking-wide text-ink/55">Total Sales</p>
+            <p className="mt-1 text-2xl font-black">{formatMoney(totalSales)}</p>
+          </div>
+          <div className="bg-white p-4">
+            <p className="text-xs font-black uppercase tracking-wide text-ink/55">Shortages</p>
+            <p
+              className={clsx(
+                "mt-1 text-2xl font-black",
+                totalShortage < 0 ? "text-warning" : "text-leaf"
+              )}
+            >
+              {formatMoney(totalShortage)}
+            </p>
+          </div>
+          <div className="bg-white p-4">
+            <p className="text-xs font-black uppercase tracking-wide text-ink/55">Closes</p>
+            <p className="mt-1 text-2xl font-black">{rows.length}</p>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center gap-2 p-8 text-ink/55">
+            <Loader2 className="animate-spin" size={18} aria-hidden />
+            <span className="text-sm font-bold">Loading history…</span>
+          </div>
+        ) : rows.length === 0 ? (
+          <div className="p-8 text-center text-sm font-bold text-ink/55">
+            No closes recorded in this range yet.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="border-y border-ink/5 bg-smoke text-xs font-black uppercase tracking-wide text-ink/55">
+                <tr>
+                  <th className="px-4 py-2.5">Date</th>
+                  <th className="px-4 py-2.5">Store</th>
+                  <th className="px-4 py-2.5 text-right">Sales</th>
+                  <th className="px-4 py-2.5 text-right">Diff</th>
+                  <th className="px-4 py-2.5">Status</th>
+                  <th className="px-2 py-2.5" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-ink/5 text-sm font-bold">
+                {rows.map((r) => (
+                  <tr key={r.id}>
+                    <td className="px-4 py-2.5 text-ink/70 whitespace-nowrap">{r.date}</td>
+                    <td className="px-4 py-2.5 text-ink">{r.storeName}</td>
+                    <td className="px-4 py-2.5 text-right font-black">{formatMoney(r.totalSales)}</td>
+                    <td
+                      className={clsx(
+                        "px-4 py-2.5 text-right font-black",
+                        r.difference < 0 ? "text-warning" : r.difference > 0 ? "text-leaf" : "text-ink/55"
+                      )}
+                    >
+                      {formatMoney(r.difference)}
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <StatusPill status={r.status} />
+                    </td>
+                    <td className="px-2 py-2.5 text-right">
+                      <button
+                        onClick={() => setEditing(r)}
+                        aria-label="Edit close"
+                        className="focus-ring rounded-lg p-2 text-ink/60 hover:bg-smoke hover:text-ink"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {editing ? (
+        <EditCloseModal
+          row={editing}
+          token={token}
+          onClose={() => setEditing(null)}
+          onSaved={(updated) =>
+            setRows((prev) => prev.map((r) => (r.id === updated.id ? updated : r)))
+          }
+        />
+      ) : null}
+    </section>
+  );
+}
+
+function StatusPill({ status }: { status: HistoryRow["status"] }) {
+  const map: Record<HistoryRow["status"], { label: string; cls: string }> = {
+    CLOSED: { label: "Closed", cls: "bg-leaf/10 text-leaf" },
+    SHORT: { label: "Short", cls: "bg-red-50 text-warning" },
+    OVER: { label: "Over", cls: "bg-yellow-50 text-gold" },
+    PENDING: { label: "Pending", cls: "bg-smoke text-ink/60" }
+  };
+  const { label, cls } = map[status];
+  return <span className={clsx("rounded-full px-2 py-0.5 text-xs font-black", cls)}>{label}</span>;
+}
