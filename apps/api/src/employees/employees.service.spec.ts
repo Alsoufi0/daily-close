@@ -23,6 +23,7 @@ function build(prismaOverrides: Record<string, any> = {}) {
   const prisma = {
     employee: {
       findMany: jest.fn().mockResolvedValue([]),
+      findFirst: jest.fn().mockResolvedValue(null),
       ...(prismaOverrides.employee || {})
     },
     store: {
@@ -98,5 +99,33 @@ describe("EmployeesService", () => {
     );
     expect(result.invitedViaSupabase).toBe(false);
     expect(result.employeeId).toBe("emp-new");
+  });
+
+  it("resetPassword forbids non-owners", async () => {
+    const { service } = build();
+    await expect(service.resetPassword(employee, "e-1")).rejects.toThrow(ForbiddenException);
+  });
+
+  it("resetPassword 404 when employee not in this owner's stores", async () => {
+    const { service } = build({ employee: { findFirst: jest.fn().mockResolvedValue(null) } });
+    const { NotFoundException } = require("@nestjs/common");
+    await expect(service.resetPassword(owner, "e-1")).rejects.toThrow(NotFoundException);
+  });
+
+  it("resetPassword returns a temporary password without Supabase configured", async () => {
+    const { service } = build({
+      employee: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: "e-1",
+          user: { authUserId: "auth-1", email: "m@demo.com" }
+        })
+      }
+    });
+    const r = await service.resetPassword(owner, "e-1");
+    expect(r.employeeId).toBe("e-1");
+    expect(r.email).toBe("m@demo.com");
+    expect(typeof r.tempPassword).toBe("string");
+    expect(r.tempPassword.length).toBeGreaterThan(8);
+    expect(r.reset).toBe(false);
   });
 });

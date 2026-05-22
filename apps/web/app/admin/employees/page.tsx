@@ -1,9 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, Plus, User } from "lucide-react";
+import { Copy, Key, Loader2, Plus, User, X } from "lucide-react";
 import { useSession } from "../../../lib/use-session";
-import { ApiError, inviteEmployee, listEmployees } from "../../../lib/api-client";
+import {
+  ApiError,
+  inviteEmployee,
+  listEmployees,
+  resetEmployeePassword
+} from "../../../lib/api-client";
 
 export default function EmployeesAdminPage() {
   const session = useSession();
@@ -16,6 +21,8 @@ export default function EmployeesAdminPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+  const [resettingId, setResettingId] = useState<string | null>(null);
+  const [resetResult, setResetResult] = useState<{ email: string; tempPassword: string } | null>(null);
 
   useEffect(() => {
     if (!session.token) {
@@ -35,6 +42,20 @@ export default function EmployeesAdminPage() {
   useEffect(() => {
     if (!storeId && session.stores[0]) setStoreId(session.stores[0].id);
   }, [session.stores, storeId]);
+
+  async function reset(employeeId: string) {
+    if (!session.token) return;
+    setResettingId(employeeId);
+    setError(null);
+    try {
+      const r = await resetEmployeePassword(session.token, employeeId);
+      setResetResult({ email: r.email, tempPassword: r.tempPassword });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not reset password");
+    } finally {
+      setResettingId(null);
+    }
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -169,9 +190,89 @@ export default function EmployeesAdminPage() {
                 <p className="text-xs font-bold text-ink/55">{e.user?.email ?? e.email}</p>
               </div>
               <span className="text-xs font-bold text-ink/55">{e.store?.storeName ?? ""}</span>
+              <button
+                onClick={() => reset(e.id)}
+                disabled={resettingId === e.id}
+                className="focus-ring inline-flex h-9 items-center gap-1.5 rounded-lg border border-ink/15 px-3 text-xs font-black text-ink hover:bg-smoke disabled:opacity-60"
+                aria-label="Reset password"
+              >
+                {resettingId === e.id ? <Loader2 className="animate-spin" size={14} /> : <Key size={14} />}
+                Reset
+              </button>
             </div>
           ))
         )}
+      </div>
+
+      {resetResult ? (
+        <ResetPasswordModal
+          email={resetResult.email}
+          tempPassword={resetResult.tempPassword}
+          onClose={() => setResetResult(null)}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function ResetPasswordModal({
+  email,
+  tempPassword,
+  onClose
+}: {
+  email: string;
+  tempPassword: string;
+  onClose: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(tempPassword);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // noop
+    }
+  }
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 z-30 flex items-center justify-center bg-ink/40 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-3 flex items-start justify-between">
+          <div>
+            <p className="text-xs font-black uppercase tracking-wide text-leaf">Password reset</p>
+            <h2 className="text-xl font-black">Share this with {email}</h2>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="focus-ring rounded-lg p-2 text-ink/55 hover:bg-smoke"
+          >
+            <X size={18} />
+          </button>
+        </div>
+        <p className="mb-3 text-sm font-bold text-ink/65">
+          Temporary password — they'll be asked to change it on first sign in.
+        </p>
+        <div className="flex items-center gap-2 rounded-lg border border-ink/15 bg-smoke px-3 py-3 font-mono text-lg font-black">
+          <span className="flex-1 break-all">{tempPassword}</span>
+          <button
+            onClick={copy}
+            className="focus-ring inline-flex h-9 items-center gap-1.5 rounded-md bg-white px-3 text-xs font-black hover:bg-smoke"
+          >
+            <Copy size={14} /> {copied ? "Copied" : "Copy"}
+          </button>
+        </div>
+        <p className="mt-4 text-xs font-bold text-ink/55">
+          Send by text or in person. This password won't be shown again.
+        </p>
       </div>
     </div>
   );

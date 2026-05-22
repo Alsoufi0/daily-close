@@ -1,4 +1,11 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable } from "@nestjs/common";
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException
+} from "@nestjs/common";
+import { randomBytes } from "crypto";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { PrismaService } from "../prisma/prisma.service";
 import { RequestUser } from "../auth/request-user";
@@ -75,6 +82,36 @@ export class EmployeesService {
       name: created.name,
       storeId: input.storeId,
       invitedViaSupabase: Boolean(this.supabase)
+    };
+  }
+
+  async resetPassword(user: RequestUser, employeeId: string) {
+    this.assertOwner(user);
+
+    const emp = await this.prisma.employee.findFirst({
+      where: { id: employeeId, store: { ownerId: user.ownerId } },
+      include: { user: true }
+    });
+    if (!emp) throw new NotFoundException("Employee not found.");
+    if (!emp.user.authUserId) {
+      throw new BadRequestException("Employee has no Supabase auth user yet.");
+    }
+
+    // Generate a strong temp password the owner can share with the employee.
+    const tempPassword = randomBytes(9).toString("base64url") + "Aa1!";
+
+    if (this.supabase) {
+      const { error } = await this.supabase.auth.admin.updateUserById(emp.user.authUserId, {
+        password: tempPassword
+      });
+      if (error) throw new BadRequestException(error.message);
+    }
+
+    return {
+      employeeId: emp.id,
+      email: emp.user.email,
+      tempPassword,
+      reset: this.supabase ? true : false
     };
   }
 }

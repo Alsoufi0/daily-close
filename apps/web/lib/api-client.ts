@@ -72,6 +72,10 @@ export async function bootstrapOwner(token: string, name?: string): Promise<Sess
 export interface StoreRecord {
   id: string;
   storeName: string;
+  address?: string | null;
+  phone?: string | null;
+  timezone?: string;
+  closeTime?: string;
 }
 
 export async function listStores(token: string): Promise<StoreRecord[]> {
@@ -91,6 +95,24 @@ export async function createStore(token: string, input: CreateStoreInput): Promi
     method: "POST",
     body: JSON.stringify(input)
   });
+}
+
+export async function updateStore(
+  token: string,
+  id: string,
+  input: Partial<CreateStoreInput>
+): Promise<StoreRecord> {
+  return apiFetch<StoreRecord>(`/stores/${id}`, token, {
+    method: "PATCH",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function resetEmployeePassword(
+  token: string,
+  employeeId: string
+): Promise<{ employeeId: string; email: string; tempPassword: string; reset: boolean }> {
+  return apiFetch(`/employees/${employeeId}/reset-password`, token, { method: "POST" });
 }
 
 export interface EmployeeRecord {

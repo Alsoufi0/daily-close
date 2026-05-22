@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { RequestUser } from "../auth/request-user";
@@ -23,5 +23,10 @@ export class EmployeesController {
   @UseGuards(SubscriptionGuard)
   invite(@CurrentUser() user: RequestUser, @Body() input: InviteEmployeeDto) {
     return this.employees.invite(user, input);
+  }
+
+  @Post(":id/reset-password")
+  resetPassword(@CurrentUser() user: RequestUser, @Param("id") id: string) {
+    return this.employees.resetPassword(user, id);
   }
 }

@@ -16,6 +16,7 @@
     "@nestjs/platform-express": "^10.4.8",
     "@nestjs/swagger": "^7.4.2",
     "@prisma/client": "^5.22.0",
+    "@sentry/node": "^10.53.1",
     "@supabase/supabase-js": "^2.47.10",
     "bcryptjs": "^2.4.3",
     "class-transformer": "^0.5.1",

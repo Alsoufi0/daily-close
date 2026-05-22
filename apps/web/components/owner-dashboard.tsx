@@ -39,7 +39,6 @@ export function OwnerDashboard() {
 
   useEffect(() => {
     if (session.mode === "loading") return;
-    // Not signed in -> bounce to login (unless they explicitly opened /demo).
     if (session.mode === "demo" && typeof window !== "undefined") {
       const onDemo = window.location.pathname.startsWith("/demo");
       if (!onDemo) {
@@ -47,7 +46,6 @@ export function OwnerDashboard() {
         return;
       }
     }
-    // First-run owner -> setup wizard
     if (
       session.mode === "production" &&
       session.profile?.role === "STORE_OWNER" &&
@@ -56,22 +54,44 @@ export function OwnerDashboard() {
       window.location.replace("/setup");
       return;
     }
+
     let cancelled = false;
-    setLoading(true);
-    setError(null);
-    getOwnerDashboard(session.token)
-      .then((data) => {
+    let timer: ReturnType<typeof setInterval> | null = null;
+
+    async function load(initial: boolean) {
+      if (initial) {
+        setLoading(true);
+        setError(null);
+      }
+      try {
+        const data = await getOwnerDashboard(session.token);
         if (cancelled) return;
         setSummary(data);
-      })
-      .catch((err) => {
+        if (!initial) setError(null);
+      } catch (err) {
         if (cancelled) return;
-        setSummary(getDemoDashboard());
+        if (initial) setSummary(getDemoDashboard());
         setError(err instanceof ApiError ? err.message : "Could not load dashboard");
-      })
-      .finally(() => !cancelled && setLoading(false));
+      } finally {
+        if (initial && !cancelled) setLoading(false);
+      }
+    }
+
+    load(true);
+    timer = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      load(false);
+    }, 60_000);
+
+    const onVisible = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") load(false);
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
     return () => {
       cancelled = true;
+      if (timer) clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [session.mode, session.token]);
 

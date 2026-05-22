@@ -3,6 +3,17 @@ import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { AppModule } from "./app.module";
 
+// Initialise Sentry as early as possible, but only when a DSN is configured.
+if (process.env.SENTRY_DSN) {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const Sentry = require("@sentry/node");
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV || "development",
+    tracesSampleRate: Number(process.env.SENTRY_TRACES_SAMPLE_RATE ?? 0.1)
+  });
+}
+
 function securityHeaders(_req: unknown, res: { setHeader: (name: string, value: string) => void }, next: () => void) {
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "DENY");

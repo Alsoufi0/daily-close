@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { TopBar } from "../components/top-bar";
 import { Footer } from "../components/footer";
+import { SentryInit } from "../components/sentry-init";
 
 export const metadata: Metadata = {
   title: "SmokeShop Daily Close",
@@ -22,6 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className="flex min-h-screen flex-col">
+        <SentryInit />
         <TopBar />
         <div className="flex-1">{children}</div>
         <Footer />
