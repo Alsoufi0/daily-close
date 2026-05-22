@@ -14,6 +14,7 @@ import * as ImagePicker from "expo-image-picker";
 import { formatMoney } from "@smokeshop/shared/utils/money";
 import type { ParsedPOSReport } from "@smokeshop/shared/types";
 import { ApiError, finishClose, uploadReport } from "../api";
+import { uploadMobilePosReport } from "../upload-pos-report";
 import { useSession } from "../use-session";
 import { Banner, Button, Card, Header, MetricCard, MoneyInput, StepProgress } from "../ui";
 import { colors, font, radius, spacing } from "../theme";
@@ -78,24 +79,42 @@ export function EmployeeScreen({ onBack }: { onBack: () => void }) {
   async function pickImage(source: "camera" | "library") {
     setLoading(true);
     try {
+      let result: ImagePicker.ImagePickerResult;
       if (source === "camera") {
         const perm = await ImagePicker.requestCameraPermissionsAsync();
         if (!perm.granted) {
           Alert.alert("Camera permission needed", "Allow camera access to take a photo of the POS report.");
           return;
         }
-        await ImagePicker.launchCameraAsync({ quality: 0.6 });
+        result = await ImagePicker.launchCameraAsync({ quality: 0.6 });
       } else {
         const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (!perm.granted) {
           Alert.alert("Photo permission needed", "Allow photo access to upload a POS report.");
           return;
         }
-        await ImagePicker.launchImageLibraryAsync({
+        result = await ImagePicker.launchImageLibraryAsync({
           mediaTypes: ImagePicker.MediaTypeOptions.Images,
           quality: 0.6
         });
       }
+      if (result.canceled || !result.assets?.length) return;
+      const asset = result.assets[0];
+
+      try {
+        await uploadMobilePosReport(activeStore.id, {
+          uri: asset.uri,
+          mimeType: asset.mimeType,
+          fileName: asset.fileName
+        });
+      } catch (e: any) {
+        // Upload optional in dev (no Supabase). Carry on with mock parse.
+        if (process.env.EXPO_PUBLIC_SUPABASE_URL) {
+          Alert.alert("Upload failed", e?.message || "Could not upload the image.");
+          return;
+        }
+      }
+
       const parsed = await uploadReport();
       setReport(parsed);
       setStep("sales");

@@ -1,4 +1,13 @@
-import { Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import {
+  Controller,
+  ForbiddenException,
+  Get,
+  Headers,
+  Param,
+  Patch,
+  Post,
+  UseGuards
+} from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { RequestUser } from "../auth/request-user";
@@ -7,9 +16,7 @@ import { MissedCloseService } from "./missed-close.service";
 import { NotificationsService } from "./notifications.service";
 
 @ApiTags("Notifications")
-@ApiBearerAuth()
 @Controller("notifications")
-@UseGuards(SupabaseAuthGuard)
 export class NotificationsController {
   constructor(
     private readonly notifications: NotificationsService,
@@ -17,17 +24,27 @@ export class NotificationsController {
   ) {}
 
   @Get()
+  @ApiBearerAuth()
+  @UseGuards(SupabaseAuthGuard)
   list(@CurrentUser() user: RequestUser) {
     return this.notifications.listForUser(user);
   }
 
   @Patch(":id/read")
+  @ApiBearerAuth()
+  @UseGuards(SupabaseAuthGuard)
   markRead(@Param("id") id: string, @CurrentUser() user: RequestUser) {
     return this.notifications.markRead(id, user);
   }
 
+  // Hit by the Render cron - secured by a shared CRON_SECRET header.
+  // When CRON_SECRET is unset, the route is open (dev convenience).
   @Post("check-missed-close")
-  checkMissedClose() {
+  checkMissedClose(@Headers("x-cron-secret") provided: string | undefined) {
+    const expected = process.env.CRON_SECRET;
+    if (expected && provided !== expected) {
+      throw new ForbiddenException("Bad cron secret.");
+    }
     return this.missedClose.checkStores();
   }
 }

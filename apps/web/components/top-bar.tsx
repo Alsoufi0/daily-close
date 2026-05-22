@@ -10,7 +10,8 @@ const NAV = [
   { href: "/owner", label: "Owner" },
   { href: "/employee", label: "Employee" },
   { href: "/admin", label: "Admin" },
-  { href: "/billing", label: "Billing" }
+  { href: "/billing", label: "Billing" },
+  { href: "/account/password", label: "Password" }
 ];
 
 export function TopBar() {
