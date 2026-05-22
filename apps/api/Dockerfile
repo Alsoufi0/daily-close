@@ -3,7 +3,7 @@ FROM node:20-alpine AS build
 WORKDIR /repo
 
 # Copy monorepo manifests for dependency caching
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json tsconfig.base.json ./
 COPY apps/api/package.json apps/api/
 COPY shared shared
 COPY database database
