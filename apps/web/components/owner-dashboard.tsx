@@ -18,6 +18,8 @@ import {
   downloadTodayCsv,
   getDemoDashboard,
   getOwnerDashboard,
+  listEmployees,
+  listStores,
   markNotificationRead
 } from "../lib/api-client";
 import { useSession } from "../lib/use-session";
@@ -93,6 +95,11 @@ export function OwnerDashboard() {
     }
 
     load(true);
+    // Pre-fetch admin lists in the background so the Admin tab loads instantly.
+    if (session.token) {
+      listStores(session.token).catch(() => {});
+      listEmployees(session.token).catch(() => {});
+    }
     timer = setInterval(() => {
       if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
       load(false);

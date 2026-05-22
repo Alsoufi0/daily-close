@@ -33,3 +33,25 @@ textarea {
   outline: 3px solid rgba(31, 122, 77, 0.35);
   outline-offset: 2px;
 }
+
+/* Subtle fade-in for newly-mounted content so step transitions feel smooth. */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-in {
+  animation: fade-in 0.18s ease-out;
+}
+
+/* Big interactive buttons get a quick press feedback on touch. */
+button:active:not(:disabled),
+a:active {
+  transition: transform 0.05s;
+}
+
+/* Stop iOS Safari from zooming when focusing inputs <16px. */
+input,
+select,
+textarea {
+  font-size: 16px;
+}

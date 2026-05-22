@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import {
+  ArrowLeft,
   Banknote,
   Camera,
   CheckCircle2,
@@ -164,17 +165,34 @@ export function EmployeeClose() {
         ) : null}
       </div>
 
-      {step !== "start" && step !== "blocked" ? <StepProgress current={currentIndex} /> : null}
+      {step !== "start" && step !== "blocked" ? (
+        <StepProgress current={currentIndex} onJump={(k) => setStep(k as Step)} />
+      ) : null}
 
       <div className="rounded-2xl border border-ink/10 bg-white p-4 shadow-sm sm:p-6">
-        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-2xl font-black">
-            {step === "start"
-              ? "Ready to close?"
-              : step === "blocked"
-                ? "Already closed today"
-                : STEPS[currentIndex]?.label}
-          </h2>
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2">
+            {step !== "start" && step !== "blocked" && step !== "finish" && currentIndex > 0 ? (
+              <button
+                type="button"
+                onClick={() => {
+                  const prev = STEPS[currentIndex - 1]?.key;
+                  if (prev) setStep(prev);
+                }}
+                aria-label="Back to previous step"
+                className="focus-ring inline-flex h-10 w-10 items-center justify-center rounded-lg border border-ink/15 text-ink/70 hover:bg-smoke"
+              >
+                <ArrowLeft size={18} aria-hidden />
+              </button>
+            ) : null}
+            <h2 className="text-2xl font-black">
+              {step === "start"
+                ? "Ready to close?"
+                : step === "blocked"
+                  ? "Already closed today"
+                  : STEPS[currentIndex]?.label}
+            </h2>
+          </div>
           {step !== "start" && step !== "blocked" ? (
             <p className="text-sm font-black text-ink/60">
               Step {currentIndex + 1} of {STEPS.length}
@@ -183,7 +201,7 @@ export function EmployeeClose() {
         </div>
 
         {step === "start" ? (
-          <div className="grid gap-4">
+          <div className="grid gap-4 fade-in">
             <button
               className="focus-ring flex min-h-28 w-full items-center justify-center gap-3 rounded-xl bg-leaf px-6 text-2xl font-black text-white shadow-sm transition-transform active:scale-[0.99]"
               onClick={() => setStep("upload")}
@@ -214,7 +232,7 @@ export function EmployeeClose() {
         ) : null}
 
         {step === "upload" ? (
-          <div className="space-y-4">
+          <div className="space-y-4 fade-in">
             <input
               ref={cameraInputRef}
               type="file"
@@ -294,7 +312,7 @@ export function EmployeeClose() {
         ) : null}
 
         {step === "sales" ? (
-          <div className="space-y-4">
+          <div className="space-y-4 fade-in">
             <div className="grid gap-3 sm:grid-cols-2">
               <MoneyInput label="Cash Sales" value={cashSales} onChange={setCashSales} />
               <MoneyInput label="Card Sales" value={cardSales} onChange={setCardSales} />
@@ -313,7 +331,7 @@ export function EmployeeClose() {
         ) : null}
 
         {step === "cash" ? (
-          <div className="space-y-4">
+          <div className="space-y-4 fade-in">
             <div className="grid gap-3 sm:grid-cols-2">
               <MoneyInput label="Cash Counted" value={cashCounted} onChange={setCashCounted} />
               <MoneyInput label="Safe Drop" value={safeDrop} onChange={setSafeDrop} />
@@ -337,7 +355,7 @@ export function EmployeeClose() {
         ) : null}
 
         {step === "expenses" ? (
-          <div className="space-y-4">
+          <div className="space-y-4 fade-in">
             <MoneyInput label="Expenses" value={expenses} onChange={setExpenses} />
             <label className="block">
               <span className="text-base font-black">Notes</span>
@@ -390,7 +408,13 @@ export function EmployeeClose() {
   );
 }
 
-function StepProgress({ current }: { current: number }) {
+function StepProgress({
+  current,
+  onJump
+}: {
+  current: number;
+  onJump: (key: (typeof STEPS)[number]["key"]) => void;
+}) {
   const pct = ((current + 1) / STEPS.length) * 100;
   return (
     <div className="rounded-xl border border-ink/10 bg-white p-3 shadow-sm">
@@ -401,6 +425,7 @@ function StepProgress({ current }: { current: number }) {
         {STEPS.map((s, i) => {
           const isDone = i < current;
           const isCurrent = i === current;
+          const canJump = isDone; // only allow going back to completed steps
           return (
             <li
               key={s.key}
@@ -409,19 +434,30 @@ function StepProgress({ current }: { current: number }) {
                 isCurrent ? "text-leaf" : isDone ? "text-ink/70" : "text-ink/40"
               )}
             >
-              <span
+              <button
+                type="button"
+                disabled={!canJump}
+                onClick={() => canJump && onJump(s.key)}
+                aria-label={`Go back to ${s.label}`}
                 className={clsx(
-                  "flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px]",
-                  isCurrent
-                    ? "bg-leaf text-white"
-                    : isDone
-                      ? "bg-leaf/15 text-leaf"
-                      : "bg-smoke text-ink/40"
+                  "focus-ring flex items-center gap-1.5 rounded-md px-1 py-0.5 transition-colors",
+                  canJump ? "cursor-pointer hover:bg-smoke" : "cursor-default"
                 )}
               >
-                {isDone ? "✓" : i + 1}
-              </span>
-              <span className="hidden sm:inline">{s.short}</span>
+                <span
+                  className={clsx(
+                    "flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px]",
+                    isCurrent
+                      ? "bg-leaf text-white"
+                      : isDone
+                        ? "bg-leaf/15 text-leaf"
+                        : "bg-smoke text-ink/40"
+                  )}
+                >
+                  {isDone ? "✓" : i + 1}
+                </span>
+                <span className="hidden sm:inline">{s.short}</span>
+              </button>
             </li>
           );
         })}
