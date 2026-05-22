@@ -11,6 +11,8 @@ enum UserRole {
   SUPER_ADMIN
   STORE_OWNER
   EMPLOYEE
+
+  @@map("user_role")
 }
 
 enum CloseStatus {
@@ -18,6 +20,8 @@ enum CloseStatus {
   CLOSED
   SHORT
   OVER
+
+  @@map("close_status")
 }
 
 enum NotificationStatus {
@@ -25,12 +29,16 @@ enum NotificationStatus {
   SENT
   FAILED
   READ
+
+  @@map("notification_status")
 }
 
 enum NotificationType {
   PUSH
   EMAIL
   SMS
+
+  @@map("notification_type")
 }
 
 model User {
