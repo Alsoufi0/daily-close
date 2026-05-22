@@ -116,6 +116,18 @@ export async function resetEmployeePassword(
   return apiFetch(`/employees/${employeeId}/reset-password`, token, { method: "POST" });
 }
 
+export async function deleteEmployee(token: string, employeeId: string) {
+  return apiFetch(`/employees/${employeeId}`, token, { method: "DELETE" });
+}
+
+export async function deleteStore(token: string, storeId: string) {
+  return apiFetch(`/stores/${storeId}`, token, { method: "DELETE" });
+}
+
+export async function deleteNotification(token: string, id: string) {
+  return apiFetch(`/notifications/${id}`, token, { method: "DELETE" });
+}
+
 export interface EmployeeRecord {
   id: string;
   name: string;

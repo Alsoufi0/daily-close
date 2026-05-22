@@ -75,10 +75,12 @@ model Employee {
   id          String       @id @default(cuid())
   userId      String       @unique @map("user_id")
   storeId     String       @map("store_id")
+  deletedAt   DateTime?    @map("deleted_at")
   user        User         @relation(fields: [userId], references: [id])
   store       Store        @relation(fields: [storeId], references: [id])
   dailyCloses DailyClose[]
 
+  @@index([deletedAt])
   @@map("employees")
 }
 
@@ -90,6 +92,7 @@ model Store {
   phone         String?
   timezone      String         @default("America/New_York")
   closeTime     String         @default("23:30") @map("close_time")
+  deletedAt     DateTime?      @map("deleted_at")
   owner         Owner          @relation(fields: [ownerId], references: [id])
   employees     Employee[]
   dailyCloses   DailyClose[]
@@ -98,6 +101,7 @@ model Store {
   auditLogs     AuditLog[]
 
   @@index([ownerId])
+  @@index([deletedAt])
   @@map("stores")
 }
 

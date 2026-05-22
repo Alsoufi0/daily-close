@@ -1,5 +1,6 @@
 import {
   Controller,
+  Delete,
   ForbiddenException,
   Get,
   Headers,
@@ -35,6 +36,13 @@ export class NotificationsController {
   @UseGuards(SupabaseAuthGuard)
   markRead(@Param("id") id: string, @CurrentUser() user: RequestUser) {
     return this.notifications.markRead(id, user);
+  }
+
+  @Delete(":id")
+  @ApiBearerAuth()
+  @UseGuards(SupabaseAuthGuard)
+  remove(@Param("id") id: string, @CurrentUser() user: RequestUser) {
+    return this.notifications.remove(id, user);
   }
 
   // Hit by the Render cron - secured by a shared CRON_SECRET header.

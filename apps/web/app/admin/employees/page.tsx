@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Copy, Key, Loader2, Plus, User, X } from "lucide-react";
+import { Copy, Key, Loader2, Plus, Trash2, User, X } from "lucide-react";
 import { useSession } from "../../../lib/use-session";
 import {
   ApiError,
+  deleteEmployee,
   inviteEmployee,
   listEmployees,
   resetEmployeePassword
@@ -23,6 +24,24 @@ export default function EmployeesAdminPage() {
   const [info, setInfo] = useState<string | null>(null);
   const [resettingId, setResettingId] = useState<string | null>(null);
   const [resetResult, setResetResult] = useState<{ email: string; tempPassword: string } | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  async function remove(employeeId: string, name: string) {
+    if (!session.token) return;
+    if (!window.confirm(`Remove ${name}? They will no longer be able to sign in. Their past closes stay on record.`)) {
+      return;
+    }
+    setDeletingId(employeeId);
+    setError(null);
+    try {
+      await deleteEmployee(session.token, employeeId);
+      setEmployees((prev) => prev.filter((e: any) => e.id !== employeeId));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not remove employee");
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   useEffect(() => {
     if (!session.token) {
@@ -195,6 +214,15 @@ export default function EmployeesAdminPage() {
               >
                 {resettingId === e.id ? <Loader2 className="animate-spin" size={14} /> : <Key size={14} />}
                 Reset
+              </button>
+              <button
+                onClick={() => remove(e.id, e.user?.name ?? e.name ?? "this employee")}
+                disabled={deletingId === e.id}
+                className="focus-ring inline-flex h-9 items-center gap-1.5 rounded-lg border border-warning/30 px-3 text-xs font-black text-warning hover:bg-red-50 disabled:opacity-60"
+                aria-label="Remove employee"
+              >
+                {deletingId === e.id ? <Loader2 className="animate-spin" size={14} /> : <Trash2 size={14} />}
+                Remove
               </button>
             </div>
           ))

@@ -31,4 +31,13 @@ export class NotificationsService {
       data: { status: "READ" }
     });
   }
+
+  async remove(id: string, user: RequestUser) {
+    const existing = await this.prisma.notification.findFirst({
+      where: { id, userId: user.id }
+    });
+    if (!existing) throw new NotFoundException("Notification not found.");
+    await this.prisma.notification.delete({ where: { id } });
+    return { id, deleted: true };
+  }
 }

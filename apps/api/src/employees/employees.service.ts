@@ -34,7 +34,7 @@ export class EmployeesService {
   async listForOwner(user: RequestUser) {
     this.assertOwner(user);
     return this.prisma.employee.findMany({
-      where: { store: { ownerId: user.ownerId } },
+      where: { store: { ownerId: user.ownerId }, deletedAt: null },
       include: { user: true, store: true },
       orderBy: { user: { name: "asc" } }
     });
@@ -120,5 +120,32 @@ export class EmployeesService {
       tempPassword,
       reset: this.supabase ? true : false
     };
+  }
+
+  async remove(user: RequestUser, employeeId: string) {
+    this.assertOwner(user);
+
+    const emp = await this.prisma.employee.findFirst({
+      where: { id: employeeId, store: { ownerId: user.ownerId }, deletedAt: null },
+      include: { user: true }
+    });
+    if (!emp) throw new NotFoundException("Employee not found.");
+
+    // Soft-delete the employee row (preserves daily_close FK history)
+    await this.prisma.employee.update({
+      where: { id: employeeId },
+      data: { deletedAt: new Date() }
+    });
+
+    // Block sign-in by deleting the Supabase auth user (if any)
+    if (this.supabase && emp.user.authUserId) {
+      try {
+        await this.supabase.auth.admin.deleteUser(emp.user.authUserId);
+      } catch {
+        // ignore - already gone or permission issue; soft delete is what matters
+      }
+    }
+
+    return { employeeId, deleted: true };
   }
 }

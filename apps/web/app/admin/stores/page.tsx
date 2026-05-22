@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, Pencil, Plus, Store } from "lucide-react";
+import { Loader2, Pencil, Plus, Store, Trash2 } from "lucide-react";
 import { useSession } from "../../../lib/use-session";
 import {
   ApiError,
   CreateStoreInput,
   createStore,
+  deleteStore,
   listStores,
   StoreRecord,
   updateStore
@@ -59,6 +60,21 @@ export default function StoresAdminPage() {
   async function onUpdated() {
     setEditing(null);
     await refresh();
+  }
+
+  async function remove(s: StoreRowWithMeta) {
+    if (!session.token) return;
+    if (!window.confirm(
+      `Remove ${s.storeName}? Existing daily closes stay on record, but the store stops appearing on dashboards and employees can't sign in to it.`
+    )) {
+      return;
+    }
+    try {
+      await deleteStore(session.token, s.id);
+      await refresh();
+    } catch (err) {
+      window.alert(err instanceof ApiError ? err.message : "Could not remove store");
+    }
   }
 
   return (
@@ -131,6 +147,13 @@ export default function StoresAdminPage() {
                 className="focus-ring rounded-lg p-2 text-ink/60 hover:bg-smoke hover:text-ink"
               >
                 <Pencil size={16} />
+              </button>
+              <button
+                onClick={() => remove(s)}
+                aria-label="Remove store"
+                className="focus-ring rounded-lg p-2 text-warning hover:bg-red-50"
+              >
+                <Trash2 size={16} />
               </button>
             </div>
           ))

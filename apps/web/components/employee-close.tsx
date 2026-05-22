@@ -41,12 +41,14 @@ export function EmployeeClose() {
   const [storeIdx, setStoreIdx] = useState(0);
   const [isReading, setIsReading] = useState(false);
   const [reportReady, setReportReady] = useState(false);
-  const [cashSales, setCashSales] = useState(String(scannedReport.cashSales));
-  const [cardSales, setCardSales] = useState(String(scannedReport.cardSales));
-  const [totalSales, setTotalSales] = useState(String(scannedReport.totalSales));
-  const [tax, setTax] = useState(String(scannedReport.tax));
-  const [refunds, setRefunds] = useState(String(scannedReport.refunds));
-  const [cashCounted, setCashCounted] = useState("2390");
+  // All numbers start blank (0). They get populated either by the OCR parser
+  // when auto-fill is enabled, or by the employee typing them from the photo.
+  const [cashSales, setCashSales] = useState("0");
+  const [cardSales, setCardSales] = useState("0");
+  const [totalSales, setTotalSales] = useState("0");
+  const [tax, setTax] = useState("0");
+  const [refunds, setRefunds] = useState("0");
+  const [cashCounted, setCashCounted] = useState("0");
   const [safeDrop, setSafeDrop] = useState("0");
   const [expenses, setExpenses] = useState("0");
   const [notes, setNotes] = useState("");
@@ -273,13 +275,17 @@ export function EmployeeClose() {
               <div className="rounded-xl bg-leaf/5 p-4 text-leaf">
                 <div className="flex items-center gap-2">
                   <FileImage size={22} aria-hidden />
-                  <p className="text-lg font-black">Report uploaded — numbers filled in.</p>
+                  <p className="text-lg font-black">
+                    {Number(cashSales || 0) > 0
+                      ? "Report uploaded — numbers filled in."
+                      : "Photo saved. Enter the numbers from your report on the next step."}
+                  </p>
                 </div>
                 <button
                   className="focus-ring mt-4 flex h-14 w-full items-center justify-center gap-2 rounded-lg bg-leaf px-5 text-lg font-black text-white"
                   onClick={() => setStep("sales")}
                 >
-                  Check Sales Numbers
+                  Enter Sales Numbers
                   <ChevronRight size={22} aria-hidden />
                 </button>
               </div>

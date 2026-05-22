@@ -11,16 +11,40 @@ export class StoresService {
   async listForUser(user: RequestUser) {
     if (user.role === "STORE_OWNER" && user.ownerId) {
       return this.prisma.store.findMany({
-        where: { ownerId: user.ownerId },
+        where: { ownerId: user.ownerId, deletedAt: null },
         orderBy: { storeName: "asc" }
       });
     }
 
     if (user.role === "EMPLOYEE" && user.storeId) {
-      return this.prisma.store.findMany({ where: { id: user.storeId } });
+      return this.prisma.store.findMany({ where: { id: user.storeId, deletedAt: null } });
     }
 
     throw new ForbiddenException("No stores are available for this user.");
+  }
+
+  async deleteForOwner(user: RequestUser, storeId: string) {
+    if (user.role !== "STORE_OWNER" || !user.ownerId) {
+      throw new ForbiddenException("Only owners can delete stores.");
+    }
+    const existing = await this.prisma.store.findFirst({
+      where: { id: storeId, ownerId: user.ownerId, deletedAt: null }
+    });
+    if (!existing) throw new NotFoundException("Store not found.");
+
+    await this.prisma.store.update({
+      where: { id: storeId },
+      data: { deletedAt: new Date() }
+    });
+    // Also archive the employees attached to this store so they can't sign in to it.
+    await this.prisma.employee.updateMany({
+      where: { storeId, deletedAt: null },
+      data: { deletedAt: new Date() }
+    });
+    await this.prisma.auditLog.create({
+      data: { userId: user.id, storeId, action: "store.deleted", metadata: {} }
+    });
+    return { id: storeId, deleted: true };
   }
 
   async createForOwner(user: RequestUser, input: CreateStoreDto) {

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { RequestUser } from "../auth/request-user";
@@ -33,5 +33,10 @@ export class StoresController {
     @Body() input: UpdateStoreDto
   ) {
     return this.storesService.updateForOwner(user, id, input);
+  }
+
+  @Delete(":id")
+  remove(@CurrentUser() user: RequestUser, @Param("id") id: string) {
+    return this.storesService.deleteForOwner(user, id);
   }
 }
