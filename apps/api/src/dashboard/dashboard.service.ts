@@ -7,6 +7,29 @@ import { PrismaService } from "../prisma/prisma.service";
 export class DashboardService {
   constructor(private readonly prisma: PrismaService) {}
 
+  // Returns the current local wall-clock minutes-since-midnight in the given IANA timezone.
+  static minutesNowInTimezone(timezone: string, now = new Date()): number {
+    try {
+      const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone: timezone,
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false
+      }).formatToParts(now);
+      const h = Number(parts.find((p) => p.type === "hour")?.value ?? "0");
+      const m = Number(parts.find((p) => p.type === "minute")?.value ?? "0");
+      return h * 60 + m;
+    } catch {
+      // Bad timezone string - fall back to UTC.
+      return now.getUTCHours() * 60 + now.getUTCMinutes();
+    }
+  }
+
+  static parseCloseTime(closeTime: string): number {
+    const [hh, mm] = (closeTime || "23:30").split(":").map((x) => Number(x) || 0);
+    return hh * 60 + mm;
+  }
+
   async getOwnerToday(ownerId: string, date = new Date()): Promise<OwnerDashboardSummary["stores"]> {
     const start = new Date(date);
     start.setHours(0, 0, 0, 0);
@@ -26,6 +49,10 @@ export class DashboardService {
 
     return stores.map((store) => {
       const close = store.dailyCloses[0];
+      const tz = (store as any).timezone || "America/New_York";
+      const closeTime = (store as any).closeTime || "23:30";
+      const nowMin = DashboardService.minutesNowInTimezone(tz, date);
+      const closeMin = DashboardService.parseCloseTime(closeTime);
       return {
         id: store.id,
         storeName: store.storeName,
@@ -33,7 +60,9 @@ export class DashboardService {
         totalSales: close ? Number(close.totalSales) : 0,
         cashSales: close ? Number(close.cashSales) : 0,
         cardSales: close ? Number(close.cardSales) : 0,
-        difference: close ? Number(close.difference) : 0
+        difference: close ? Number(close.difference) : 0,
+        closeTime,
+        pastCloseTime: nowMin >= closeMin
       };
     });
   }
@@ -92,6 +121,12 @@ export class DashboardService {
     const storesClosed = stores.filter((store) => store.closedToday).length;
     const missingCash = stores.reduce((sum, store) => sum + Math.min(store.difference, 0), 0);
     const totalSales = stores.reduce((sum, store) => sum + store.totalSales, 0);
+    // A store only "needs attention" if it has missing cash, OR it hasn't closed AND its close time has passed.
+    const needsAttention = stores.filter(
+      (store) =>
+        (store.closedToday && store.difference < 0) ||
+        (!store.closedToday && store.pastCloseTime)
+    ).length;
 
     return {
       date: date.toISOString().slice(0, 10),
@@ -99,7 +134,7 @@ export class DashboardService {
       totalStores: stores.length,
       totalSales,
       missingCash,
-      needsAttention: stores.filter((store) => !store.closedToday || store.difference < 0).length,
+      needsAttention,
       stores,
       alerts: alerts.map((alert) => ({
         id: alert.id,

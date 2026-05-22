@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   Banknote,
   Camera,
@@ -16,6 +16,7 @@ import { clsx } from "clsx";
 import { formatMoney } from "@smokeshop/shared/utils/money";
 import { scannedReport } from "../lib/mock-data";
 import { ApiError, finishDailyClose, uploadReport } from "../lib/api-client";
+import { uploadPosReportFile } from "../lib/upload-pos-report";
 import { useSession } from "../lib/use-session";
 import { MetricCard } from "./metric-card";
 
@@ -51,6 +52,10 @@ export function EmployeeClose() {
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const libraryInputRef = useRef<HTMLInputElement>(null);
 
   const result = useMemo(() => {
     const expectedCash = Number(cashSales || 0) - Number(refunds || 0) - Number(expenses || 0);
@@ -67,19 +72,30 @@ export function EmployeeClose() {
   const activeStore = availableStores[storeIdx] ?? availableStores[0];
   const employeeId = session.profile?.employeeId ?? "employee-maya";
 
-  function fakeUpload() {
+  async function handleFile(file: File | null) {
+    if (!file) return;
+    setUploadError(null);
     setIsReading(true);
     setReportReady(false);
-    window.setTimeout(async () => {
-      const parsed = await uploadReport(session.token, activeStore.id);
+    setPreviewUrl(URL.createObjectURL(file));
+    try {
+      let upload: { imageUrl: string; fileName: string; contentType: string } | undefined;
+      if (session.token) {
+        const u = await uploadPosReportFile(activeStore.id, file);
+        upload = { imageUrl: u.signedUrl, fileName: u.fileName, contentType: u.contentType };
+      }
+      const parsed = await uploadReport(session.token, activeStore.id, upload);
       setCashSales(String(parsed.cashSales));
       setCardSales(String(parsed.cardSales));
       setTotalSales(String(parsed.totalSales));
       setTax(String(parsed.tax));
       setRefunds(String(parsed.refunds));
-      setIsReading(false);
       setReportReady(true);
-    }, 1100);
+    } catch (err: any) {
+      setUploadError(err?.message || "Upload failed. Please try again.");
+    } finally {
+      setIsReading(false);
+    }
   }
 
   async function submitClose() {
@@ -197,27 +213,59 @@ export function EmployeeClose() {
 
         {step === "upload" ? (
           <div className="space-y-4">
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
+            />
+            <input
+              ref={libraryInputRef}
+              type="file"
+              accept="image/*,application/pdf"
+              className="hidden"
+              onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
+            />
             <div className="grid gap-3 sm:grid-cols-2">
               <button
-                className="focus-ring flex min-h-32 flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-leaf bg-leaf/5 p-4 text-xl font-black text-leaf hover:bg-leaf/10"
-                onClick={fakeUpload}
+                type="button"
+                disabled={isReading}
+                className="focus-ring flex min-h-32 flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-leaf bg-leaf/5 p-4 text-xl font-black text-leaf hover:bg-leaf/10 disabled:opacity-60"
+                onClick={() => cameraInputRef.current?.click()}
               >
                 <Camera size={32} aria-hidden />
                 Take Photo
               </button>
               <button
-                className="focus-ring flex min-h-32 flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-ink/25 bg-smoke p-4 text-xl font-black text-ink hover:bg-ink/5"
-                onClick={fakeUpload}
+                type="button"
+                disabled={isReading}
+                className="focus-ring flex min-h-32 flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-ink/25 bg-smoke p-4 text-xl font-black text-ink hover:bg-ink/5 disabled:opacity-60"
+                onClick={() => libraryInputRef.current?.click()}
               >
                 <Upload size={32} aria-hidden />
                 Upload Report
               </button>
             </div>
 
+            {previewUrl ? (
+              <div className="rounded-xl border border-ink/10 bg-white p-3">
+                <p className="mb-2 text-xs font-black uppercase tracking-wide text-ink/55">Preview</p>
+                <img src={previewUrl} alt="POS report preview" className="mx-auto max-h-64 rounded-lg" />
+              </div>
+            ) : null}
+
             {isReading ? (
               <div className="flex items-center gap-3 rounded-xl bg-yellow-50 p-4 text-gold">
                 <Loader2 className="animate-spin" size={24} aria-hidden />
-                <p className="text-lg font-black">Reading report…</p>
+                <p className="text-lg font-black">Uploading & reading report…</p>
+              </div>
+            ) : null}
+
+            {uploadError ? (
+              <div className="rounded-xl border border-warning/30 bg-red-50 p-3 text-sm font-bold text-warning">
+                {uploadError}
               </div>
             ) : null}
 

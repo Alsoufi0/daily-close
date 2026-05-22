@@ -12,6 +12,8 @@ export interface StoreSummary {
   cashSales: number;
   cardSales: number;
   difference: number;
+  closeTime?: string;
+  pastCloseTime?: boolean;
 }
 
 export interface SessionProfile {

@@ -180,16 +180,17 @@ export async function getOwnerDashboard(token?: string): Promise<OwnerDashboardS
 
 export async function uploadReport(
   token: string | undefined,
-  storeId: string
+  storeId: string,
+  upload?: { imageUrl: string; fileName: string; contentType: string }
 ): Promise<ParsedPOSReport & { imageUrl: string }> {
-  if (!apiUrl || !token) return { ...scannedReport, imageUrl: "demo-report.jpg" };
+  if (!apiUrl || !token) return { ...scannedReport, imageUrl: upload?.imageUrl || "demo-report.jpg" };
   return apiFetch<ParsedPOSReport & { imageUrl: string }>("/daily-close/upload-report", token, {
     method: "POST",
     body: JSON.stringify({
       storeId,
-      fileName: "pos-report-demo.jpg",
-      contentType: "image/jpeg",
-      imageUrl: "https://example.com/pos-report-demo.jpg"
+      fileName: upload?.fileName || "pos-report.jpg",
+      contentType: upload?.contentType || "image/jpeg",
+      imageUrl: upload?.imageUrl || "https://example.com/pos-report-demo.jpg"
     })
   });
 }

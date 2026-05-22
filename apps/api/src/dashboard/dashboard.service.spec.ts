@@ -28,20 +28,18 @@ const employeeNoOwner: RequestUser = {
 
 describe("DashboardService", () => {
   it("aggregates storesClosed, totalSales and missingCash correctly", async () => {
+    // closeTime 00:00 + UTC tz -> always "past close time" regardless of when tests run
     const prisma = makePrisma([
       {
-        id: "s1",
-        storeName: "Store #1",
+        id: "s1", storeName: "Store #1", timezone: "UTC", closeTime: "00:00",
         dailyCloses: [{ totalSales: 4500, cashSales: 1800, cardSales: 2700, difference: 5 }]
       },
       {
-        id: "s2",
-        storeName: "Store #2",
-        dailyCloses: [] // not closed
+        id: "s2", storeName: "Store #2", timezone: "UTC", closeTime: "00:00",
+        dailyCloses: []
       },
       {
-        id: "s3",
-        storeName: "Store #3",
+        id: "s3", storeName: "Store #3", timezone: "UTC", closeTime: "00:00",
         dailyCloses: [{ totalSales: 3900, cashSales: 1500, cardSales: 2400, difference: -40 }]
       }
     ]);
@@ -52,10 +50,26 @@ describe("DashboardService", () => {
     expect(summary.totalStores).toBe(3);
     expect(summary.storesClosed).toBe(2);
     expect(summary.totalSales).toBe(8400);
-    // missingCash sums only negative differences (the +5 from s1 is ignored)
     expect(summary.missingCash).toBe(-40);
-    // needsAttention: store-2 (not closed) + store-3 (negative diff) = 2
+    // store-2 not closed AND past close time + store-3 negative diff = 2
     expect(summary.needsAttention).toBe(2);
+  });
+
+  it("does not flag a not-yet-due store as needing attention", async () => {
+    // closeTime 23:59 + UTC: should not yet be past close time during typical test runs (unless flaky right at midnight UTC).
+    // We use a guaranteed-future close by setting close to the next hour.
+    const future = new Date(Date.now() + 2 * 60 * 60 * 1000);
+    const futureTime = `${String(future.getUTCHours()).padStart(2, "0")}:${String(future.getUTCMinutes()).padStart(2, "0")}`;
+    const prisma = makePrisma([
+      {
+        id: "s1", storeName: "Store #1", timezone: "UTC", closeTime: futureTime,
+        dailyCloses: []
+      }
+    ]);
+    const service = new DashboardService(prisma);
+    const summary = await service.getMyToday(owner);
+    expect(summary.stores[0].pastCloseTime).toBe(false);
+    expect(summary.needsAttention).toBe(0);
   });
 
   it("returns empty summary when the user has no ownerId", async () => {

@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
   BadgeCheck,
   Clock,
+  Eye,
+  EyeOff,
   LockKeyhole,
   Smartphone,
   Store,
@@ -32,10 +34,18 @@ const FEATURES = [
 ];
 
 export function ProductionLogin() {
-  const [email, setEmail] = useState("owner@demo.com");
-  const [password, setPassword] = useState("demo1234");
-  const [message, setMessage] = useState("Use your Supabase credentials. New here? Try Demo Mode below.");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPw, setShowPw] = useState(false);
+  const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [expired, setExpired] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("expired") === "1") setExpired(true);
+  }, []);
 
   async function login() {
     setLoading(true);
@@ -118,17 +128,35 @@ export function ProductionLogin() {
             </label>
             <label className="block">
               <span className="text-sm font-black">Password</span>
-              <input
-                className="focus-ring mt-2 h-12 w-full rounded-lg border border-ink/15 px-4 font-bold"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                type="password"
-                autoComplete="current-password"
-              />
+              <div className="relative mt-2">
+                <input
+                  className="focus-ring h-12 w-full rounded-lg border border-ink/15 px-4 pr-12 font-bold"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  type={showPw ? "text" : "password"}
+                  autoComplete="current-password"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPw((v) => !v)}
+                  aria-label={showPw ? "Hide password" : "Show password"}
+                  className="focus-ring absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-2 text-ink/55 hover:bg-smoke"
+                >
+                  {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
             </label>
           </div>
 
-          <p className="mt-3 rounded-lg bg-smoke p-3 text-sm font-bold text-ink/70">{message}</p>
+          {expired ? (
+            <p className="mt-3 rounded-lg border border-warning/30 bg-red-50 p-3 text-sm font-bold text-warning">
+              Your session expired. Please sign in again.
+            </p>
+          ) : null}
+          {message ? (
+            <p className="mt-3 rounded-lg bg-smoke p-3 text-sm font-bold text-ink/70">{message}</p>
+          ) : null}
 
           <div className="mt-5 grid gap-3">
             <button

@@ -69,9 +69,13 @@ export function useSession(): Session {
         setMode("production");
       } catch (err: any) {
         if (cancelled) return;
-        // Token invalid -> drop into demo so the UI still works.
+        // Token rejected -> clear and bounce to sign in.
         window.localStorage.removeItem(TOKEN_KEY);
         setToken(undefined);
+        if (typeof window !== "undefined" && window.location.pathname !== "/" && !window.location.pathname.startsWith("/demo")) {
+          window.location.replace("/?expired=1");
+          return;
+        }
         setProfile(demoProfile);
         setMode("demo");
         setError(err?.message || "Session expired");

@@ -39,6 +39,14 @@ export function OwnerDashboard() {
 
   useEffect(() => {
     if (session.mode === "loading") return;
+    // Not signed in -> bounce to login (unless they explicitly opened /demo).
+    if (session.mode === "demo" && typeof window !== "undefined") {
+      const onDemo = window.location.pathname.startsWith("/demo");
+      if (!onDemo) {
+        window.location.replace("/");
+        return;
+      }
+    }
     // First-run owner -> setup wizard
     if (
       session.mode === "production" &&
@@ -237,8 +245,11 @@ export function OwnerDashboard() {
           <div className="grid gap-3 md:grid-cols-3">
             {summary.stores.map((store) => {
               const barWidth = store.closedToday ? Math.max(6, (store.totalSales / maxSales) * 100) : 0;
+              const needsClosing = !store.closedToday && (store.pastCloseTime ?? true);
               const diffTone =
-                !store.closedToday ? "warning" : store.difference < 0 ? "bad" : "good";
+                !store.closedToday
+                  ? needsClosing ? "warning" : "neutral"
+                  : store.difference < 0 ? "bad" : "good";
               return (
                 <article
                   key={store.id}
@@ -255,9 +266,13 @@ export function OwnerDashboard() {
                       <span className="inline-flex items-center gap-1 rounded-full bg-leaf/10 px-2 py-1 text-xs font-black text-leaf">
                         <CheckCircle2 size={14} aria-hidden /> Closed
                       </span>
-                    ) : (
+                    ) : needsClosing ? (
                       <span className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-1 text-xs font-black text-gold">
-                        <AlertTriangle size={14} aria-hidden /> Open
+                        <AlertTriangle size={14} aria-hidden /> Needs closing
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-smoke px-2 py-1 text-xs font-black text-ink/60">
+                        Open · closes {store.closeTime ?? "23:30"}
                       </span>
                     )}
                   </div>
@@ -287,11 +302,17 @@ export function OwnerDashboard() {
                         ? "mt-4 rounded-lg bg-red-50 p-3 text-warning"
                         : diffTone === "good"
                         ? "mt-4 rounded-lg bg-green-50 p-3 text-leaf"
-                        : "mt-4 rounded-lg bg-yellow-50 p-3 text-gold"
+                        : diffTone === "warning"
+                        ? "mt-4 rounded-lg bg-yellow-50 p-3 text-gold"
+                        : "mt-4 rounded-lg bg-smoke p-3 text-ink/65"
                     }
                   >
                     <p className="text-sm font-black">
-                      {store.closedToday ? `Cash difference: ${formatMoney(store.difference)}` : "Closing needed"}
+                      {store.closedToday
+                        ? `Cash difference: ${formatMoney(store.difference)}`
+                        : needsClosing
+                        ? "Closing needed"
+                        : `Closes ${store.closeTime ?? "23:30"}`}
                     </p>
                   </div>
                 </article>
