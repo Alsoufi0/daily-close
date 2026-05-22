@@ -21,6 +21,7 @@ export class ApiError extends Error {
 async function apiFetch<T>(path: string, token?: string, init?: RequestInit): Promise<T> {
   if (!apiUrl) throw new ApiError(0, "API URL is not configured.");
   const response = await fetch(`${apiUrl}${path}`, {
+    cache: "no-store",
     ...init,
     headers: {
       "Content-Type": "application/json",

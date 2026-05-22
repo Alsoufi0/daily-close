@@ -3,9 +3,19 @@ import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { PrismaService } from "../prisma/prisma.service";
 import { RequestUser } from "./request-user";
 
+interface CachedUser {
+  user: RequestUser;
+  expiresAt: number;
+}
+
 @Injectable()
 export class SupabaseAuthService {
   private readonly supabase?: SupabaseClient;
+  // 30-second in-memory cache keyed by token to avoid hitting Supabase
+  // + Prisma on every request during a dashboard auto-refresh burst.
+  private readonly cache = new Map<string, CachedUser>();
+  private static readonly CACHE_TTL_MS = 30_000;
+  private static readonly CACHE_MAX = 500;
 
   constructor(private readonly prisma: PrismaService) {
     const url = process.env.SUPABASE_URL;
@@ -19,6 +29,11 @@ export class SupabaseAuthService {
 
   async getUserFromToken(token: string): Promise<RequestUser> {
     if (!this.supabase) throw new UnauthorizedException("Supabase is not configured.");
+
+    const cached = this.cache.get(token);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.user;
+    }
 
     const { data, error } = await this.supabase.auth.getUser(token);
     if (error || !data.user.email) throw new UnauthorizedException("Invalid session.");
@@ -42,7 +57,7 @@ export class SupabaseAuthService {
       });
     }
 
-    return {
+    const requestUser: RequestUser = {
       id: user.id,
       authUserId: data.user.id,
       name: user.name,
@@ -52,6 +67,18 @@ export class SupabaseAuthService {
       employeeId: user.employee?.id,
       storeId: user.employee?.storeId
     };
+
+    // Cache and trim
+    if (this.cache.size > SupabaseAuthService.CACHE_MAX) {
+      const firstKey = this.cache.keys().next().value;
+      if (firstKey) this.cache.delete(firstKey);
+    }
+    this.cache.set(token, {
+      user: requestUser,
+      expiresAt: Date.now() + SupabaseAuthService.CACHE_TTL_MS
+    });
+
+    return requestUser;
   }
 
   // Idempotently provision a public.users + owners row for a Supabase Auth user.

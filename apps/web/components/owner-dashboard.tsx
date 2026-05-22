@@ -154,21 +154,21 @@ export function OwnerDashboard() {
     <section className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="flex items-center gap-2 text-sm font-black uppercase tracking-wide text-leaf">
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-black uppercase tracking-wide text-leaf sm:text-sm">
             <span>Welcome, {ownerName}</span>
             <span className="inline-flex h-1.5 w-1.5 rounded-full bg-leaf/40" aria-hidden />
             <span className="text-ink/55">{modeLabel}</span>
             {loading ? <Loader2 className="animate-spin text-ink/40" size={14} aria-hidden /> : null}
           </p>
-          <h1 className="mt-1 text-3xl font-black tracking-tight text-ink sm:text-4xl">
+          <h1 className="mt-1 text-2xl font-black tracking-tight text-ink sm:text-4xl">
             Today's Store Close
           </h1>
-          <p className="mt-1 text-base font-bold text-ink/65">{today}</p>
+          <p className="mt-1 text-sm font-bold text-ink/65 sm:text-base">{today}</p>
         </div>
         <button
           onClick={exportCsv}
           disabled={downloading}
-          className="focus-ring inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-ink px-4 font-bold text-white hover:bg-ink/90 disabled:opacity-60"
+          className="focus-ring inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-ink px-4 font-bold text-white hover:bg-ink/90 disabled:opacity-60 sm:w-auto"
         >
           {downloading ? <Loader2 className="animate-spin" size={18} aria-hidden /> : <Download size={18} aria-hidden />}
           {downloading ? "Downloading…" : "Export CSV"}

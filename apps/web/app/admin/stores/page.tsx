@@ -41,14 +41,24 @@ export default function StoresAdminPage() {
     };
   }, [session.token]);
 
-  function onCreated(s: StoreRowWithMeta) {
-    setStores((prev) => [...prev, s]);
-    setShowCreate(false);
+  async function refresh() {
+    if (!session.token) return;
+    try {
+      const s = await listStores(session.token);
+      setStores(s as StoreRowWithMeta[]);
+    } catch {
+      /* noop */
+    }
   }
 
-  function onUpdated(s: StoreRowWithMeta) {
-    setStores((prev) => prev.map((x) => (x.id === s.id ? { ...x, ...s } : x)));
+  async function onCreated() {
+    setShowCreate(false);
+    await refresh();
+  }
+
+  async function onUpdated() {
     setEditing(null);
+    await refresh();
   }
 
   return (

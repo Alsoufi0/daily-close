@@ -16,13 +16,14 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   themeColor: "#1f7a4d",
   width: "device-width",
-  initialScale: 1
+  initialScale: 1,
+  viewportFit: "cover"
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="flex min-h-screen flex-col">
+      <body className="flex min-h-screen flex-col overflow-x-hidden">
         <SentryInit />
         <TopBar />
         <div className="flex-1">{children}</div>

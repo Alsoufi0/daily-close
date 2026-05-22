@@ -1,8 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Leaf, LogOut } from "lucide-react";
+import { Leaf, LogOut, Menu, X } from "lucide-react";
 import { clsx } from "clsx";
 import { createBrowserSupabase } from "../lib/supabase-browser";
 
@@ -16,22 +17,35 @@ const NAV = [
 
 export function TopBar() {
   const pathname = usePathname() || "/";
+  const [open, setOpen] = useState(false);
+
+  // Close the menu on route change
+  useEffect(() => setOpen(false), [pathname]);
 
   async function signOut() {
     window.localStorage.removeItem("smokeshop-token");
     const supabase = createBrowserSupabase();
     if (supabase) {
-      try { await supabase.auth.signOut(); } catch { /* ignore */ }
+      try {
+        await supabase.auth.signOut();
+      } catch {
+        /* ignore */
+      }
     }
     window.location.href = "/";
   }
 
-  const showSignOut = pathname.startsWith("/owner") || pathname.startsWith("/employee");
+  const showSignOut =
+    pathname.startsWith("/owner") ||
+    pathname.startsWith("/employee") ||
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/billing") ||
+    pathname.startsWith("/account");
 
   return (
-    <header className="sticky top-0 z-20 border-b border-ink/10 bg-white/85 backdrop-blur">
-      <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Link href="/" className="focus-ring flex items-center gap-2 rounded-lg px-1 py-1 text-ink">
+    <header className="sticky top-0 z-30 border-b border-ink/10 bg-white/90 backdrop-blur">
+      <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-2 px-4 sm:px-6 lg:px-8">
+        <Link href="/" className="focus-ring flex shrink-0 items-center gap-2 rounded-lg px-1 py-1 text-ink">
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-leaf text-white shadow-sm">
             <Leaf size={20} aria-hidden />
           </span>
@@ -39,7 +53,8 @@ export function TopBar() {
           <span className="hidden text-sm font-bold text-ink/55 sm:inline">Daily Close</span>
         </Link>
 
-        <nav className="flex items-center gap-1 text-sm font-black">
+        {/* Desktop nav */}
+        <nav className="hidden items-center gap-1 text-sm font-black md:flex">
           {NAV.map((item) => {
             const active = pathname.startsWith(item.href);
             return (
@@ -66,7 +81,50 @@ export function TopBar() {
             </button>
           ) : null}
         </nav>
+
+        {/* Mobile hamburger */}
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-label={open ? "Close menu" : "Open menu"}
+          aria-expanded={open}
+          className="focus-ring inline-flex h-11 w-11 items-center justify-center rounded-lg border border-ink/15 text-ink/80 md:hidden"
+        >
+          {open ? <X size={20} aria-hidden /> : <Menu size={20} aria-hidden />}
+        </button>
       </div>
+
+      {/* Mobile sheet */}
+      {open ? (
+        <div className="border-t border-ink/10 bg-white md:hidden">
+          <nav className="mx-auto flex w-full max-w-6xl flex-col gap-1 px-4 py-3 text-base font-black">
+            {NAV.map((item) => {
+              const active = pathname.startsWith(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  className={clsx(
+                    "focus-ring flex min-h-[44px] items-center rounded-lg px-3",
+                    active ? "bg-leaf/10 text-leaf" : "text-ink/75 hover:bg-smoke"
+                  )}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+            {showSignOut ? (
+              <button
+                onClick={signOut}
+                className="focus-ring mt-2 inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-ink/15 px-3 text-ink/80"
+              >
+                <LogOut size={18} aria-hidden /> Sign Out
+              </button>
+            ) : null}
+          </nav>
+        </div>
+      ) : null}
     </header>
   );
 }

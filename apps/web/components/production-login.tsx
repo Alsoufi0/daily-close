@@ -45,6 +45,14 @@ export function ProductionLogin() {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     if (params.get("expired") === "1") setExpired(true);
+
+    // Pre-warm the API so the post-login dashboard load is fast.
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (apiUrl) {
+      fetch(`${apiUrl}/health`, { cache: "no-store" }).catch(() => {
+        /* ignore */
+      });
+    }
   }, []);
 
   async function login() {
@@ -75,10 +83,10 @@ export function ProductionLogin() {
             <Store size={14} aria-hidden />
             Mobile pilot · 3–5 stores
           </span>
-          <h1 className="mt-4 text-4xl font-black leading-tight tracking-tight text-ink sm:text-6xl">
+          <h1 className="mt-4 text-3xl font-black leading-tight tracking-tight text-ink sm:text-6xl">
             Daily closing for smoke shops, <span className="text-leaf">done in minutes.</span>
           </h1>
-          <p className="mt-5 max-w-xl text-lg font-bold leading-8 text-ink/70 sm:text-xl">
+          <p className="mt-4 max-w-xl text-base font-bold leading-7 text-ink/70 sm:mt-5 sm:text-xl sm:leading-8">
             Stop chasing paper sheets and late-night phone calls. Employees close the store from their phone. You see the truth.
           </p>
 

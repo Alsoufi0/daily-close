@@ -28,7 +28,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   key={href}
                   href={href}
                   className={clsx(
-                    "focus-ring flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-black",
+                    "focus-ring flex min-h-[44px] flex-1 items-center gap-2 rounded-lg px-3 py-2 text-sm font-black lg:flex-none",
                     active ? "bg-leaf/10 text-leaf" : "text-ink/65 hover:bg-smoke hover:text-ink"
                   )}
                 >
