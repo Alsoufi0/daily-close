@@ -45,8 +45,8 @@ async function bootstrap() {
   if (enableSwagger) {
     const config = new DocumentBuilder()
       .setTitle("SmokeShop Daily Close API")
-      .setDescription("MVP API for daily store closing")
-      .setVersion("0.1.0")
+      .setDescription("API for daily store closing — owners and employees")
+      .setVersion("1.0.0")
       .addBearerAuth()
       .build();
     SwaggerModule.setup("docs", app, SwaggerModule.createDocument(app, config));

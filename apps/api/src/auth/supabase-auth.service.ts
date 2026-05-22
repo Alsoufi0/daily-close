@@ -110,7 +110,7 @@ export class SupabaseAuthService {
           authUserId: authId,
           owner: {
             create: {
-              subscriptionPlan: "MVP",
+              subscriptionPlan: "Standard",
               subscriptionStatus: "TRIALING",
               trialEndsAt: new Date(Date.now() + 14 * 86_400_000)
             }
@@ -130,7 +130,7 @@ export class SupabaseAuthService {
       await this.prisma.owner.create({
         data: {
           userId: user.id,
-          subscriptionPlan: "MVP",
+          subscriptionPlan: "Standard",
           subscriptionStatus: "TRIALING",
           trialEndsAt: new Date(Date.now() + 14 * 86_400_000)
         }

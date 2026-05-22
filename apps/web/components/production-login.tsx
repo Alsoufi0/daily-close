@@ -28,8 +28,8 @@ const FEATURES = [
   },
   {
     icon: BadgeCheck,
-    title: "Built for pilots",
-    body: "Supabase auth, row-level security, real audit trail, CSV export — production-ready."
+    title: "Built for accountants",
+    body: "Secure auth, full audit trail, CSV export, missed-close alerts — ready for your books."
   }
 ];
 
@@ -81,7 +81,7 @@ export function ProductionLogin() {
         <div>
           <span className="inline-flex items-center gap-2 rounded-full bg-leaf/10 px-3 py-1 text-xs font-black uppercase tracking-wide text-leaf">
             <Store size={14} aria-hidden />
-            Mobile pilot · 3–5 stores
+            Multi-store · iOS · Android · Web
           </span>
           <h1 className="mt-4 text-3xl font-black leading-tight tracking-tight text-ink sm:text-6xl">
             Daily closing for smoke shops, <span className="text-leaf">done in minutes.</span>
@@ -179,13 +179,7 @@ export function ProductionLogin() {
               className="focus-ring flex h-14 items-center justify-center gap-2 rounded-lg border-2 border-leaf bg-white text-lg font-black text-leaf hover:bg-leaf/5"
               href="/signup"
             >
-              Create new account · 14-day free trial
-            </Link>
-            <Link
-              className="focus-ring flex h-12 items-center justify-center gap-2 rounded-lg border border-ink/15 bg-white font-bold text-ink/70 hover:bg-smoke"
-              href="/demo"
-            >
-              Try the demo (no account)
+              Create account · 14-day free trial
             </Link>
           </div>
 
@@ -197,6 +191,8 @@ export function ProductionLogin() {
               <Link href="/terms" className="underline">Terms</Link>
               <span className="mx-1">·</span>
               <Link href="/privacy" className="underline">Privacy</Link>
+              <span className="mx-1">·</span>
+              <Link href="/demo" className="underline">Demo</Link>
             </span>
           </div>
         </div>

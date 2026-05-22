@@ -1,12 +1,39 @@
+export const metadata = { title: "Privacy Policy · SmokeShop Daily Close" };
+
 export default function PrivacyPage() {
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
+    <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
       <h1 className="text-4xl font-black">Privacy Policy</h1>
-      <div className="mt-5 space-y-4 text-lg font-semibold leading-8 text-ink/75">
-        <p>SmokeShop Daily Close stores account, store, daily close, expense, report image, and notification information needed to run the closing workflow.</p>
-        <p>POS report images are used to fill closing numbers and are stored securely for store records.</p>
-        <p>Owners can access their stores. Employees can access only their assigned store.</p>
-        <p>Production deployments should add the company legal name, support email, retention policy, and deletion request process before App Store submission.</p>
+      <p className="mt-2 text-sm font-bold text-ink/55">Last updated: 2026-05-22</p>
+      <div className="mt-6 space-y-4 text-base font-semibold leading-8 text-ink/75">
+        <p>
+          SmokeShop Daily Close stores account, store, employee, daily close,
+          expense, report image, and notification information for the sole
+          purpose of running the closing workflow.
+        </p>
+        <p>
+          <strong>What we collect:</strong> name, email, password (hashed by
+          Supabase Auth), store details you create, daily close numbers, POS
+          report images you upload.
+        </p>
+        <p>
+          <strong>Who sees it:</strong> store owners can see their own stores
+          and the employees they invite. Employees can only see the store they
+          are assigned to. No data is shared with third parties.
+        </p>
+        <p>
+          <strong>Where it lives:</strong> Supabase Postgres + Storage. Backups
+          are managed by Supabase. POS report images are kept for the lifetime
+          of the corresponding daily close record.
+        </p>
+        <p>
+          <strong>Delete my data:</strong> email{" "}
+          <a className="underline" href="mailto:support@smokeshopdaily.app">
+            support@smokeshopdaily.app
+          </a>{" "}
+          and we will remove your account and all related records within 30
+          days.
+        </p>
       </div>
     </main>
   );

@@ -8,7 +8,7 @@ import { getSubscription, SubscriptionView } from "../../lib/api-client";
 
 const demoSub: SubscriptionView = {
   status: "TRIALING",
-  plan: "MVP",
+  plan: "Standard",
   trialEndsAt: new Date(Date.now() + 12 * 86_400_000).toISOString(),
   daysLeftInTrial: 12,
   active: true,
@@ -58,7 +58,7 @@ export default function BillingPage() {
         <p className="text-sm font-black uppercase tracking-wide text-leaf">Billing</p>
         <h1 className="mt-1 text-3xl font-black tracking-tight">Your subscription</h1>
         <p className="mt-1 text-base font-bold text-ink/65">
-          Pilot plan — $29/store/month, billed monthly. Cancel anytime.
+          $29 per store, per month. Billed monthly. Cancel anytime.
         </p>
       </header>
 
