@@ -44,3 +44,5 @@ Thumbs.db
 # python bytecode (logo generator)
 **/__pycache__
 *.pyc
+scripts/render-create.json
+scripts/*.local.json
