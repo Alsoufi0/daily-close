@@ -24,20 +24,36 @@ export class OcrSpaceOCRService implements OCRService {
   async extractText(fileUrl: string): Promise<string> {
     if (!fileUrl) return "";
 
-    const params = new URLSearchParams({
-      apikey: this.apiKey,
-      url: fileUrl,
-      language: this.language,
-      OCREngine: this.engine,
-      isTable: "true",
-      scale: "true"
-    });
+    // OCR.space's URL-based fetcher is unreliable for Supabase signed URLs
+    // (long query strings, geo restrictions). Always pull the bytes
+    // ourselves and forward as multipart — that path is rock solid.
+    let imageBlob: Blob;
+    let fileName: string;
+    try {
+      const imgRes = await fetch(fileUrl);
+      if (!imgRes.ok) {
+        this.logger.warn(`OCR fetch image failed: ${imgRes.status}`);
+        return "";
+      }
+      imageBlob = await imgRes.blob();
+      fileName = `report.${this.detectFileType(fileUrl).toLowerCase()}`;
+    } catch (err: any) {
+      this.logger.warn(`OCR could not fetch image: ${err?.message || err}`);
+      return "";
+    }
+
+    const form = new FormData();
+    form.set("apikey", this.apiKey);
+    form.set("language", this.language);
+    form.set("OCREngine", this.engine);
+    form.set("isTable", "true");
+    form.set("scale", "true");
+    form.set("file", imageBlob, fileName);
 
     try {
       const res = await fetch("https://api.ocr.space/parse/image", {
         method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: params.toString()
+        body: form
       });
       const body = (await res.json()) as {
         ParsedResults?: Array<{ ParsedText?: string }>;
@@ -61,5 +77,22 @@ export class OcrSpaceOCRService implements OCRService {
       this.logger.error(`OCR.space request failed: ${err?.message || err}`);
       return "";
     }
+  }
+
+  // OCR.space rejects URLs without an obvious extension - look at the path,
+  // strip Supabase signed-URL query string first.
+  private detectFileType(fileUrl: string): string {
+    try {
+      const path = new URL(fileUrl).pathname.toLowerCase();
+      if (path.endsWith(".pdf")) return "PDF";
+      if (path.endsWith(".png")) return "PNG";
+      if (path.endsWith(".webp")) return "WEBP";
+      if (path.endsWith(".gif")) return "GIF";
+      if (path.endsWith(".bmp")) return "BMP";
+      if (path.endsWith(".tif") || path.endsWith(".tiff")) return "TIF";
+    } catch {
+      /* fall through */
+    }
+    return "JPG"; // safe default for phone uploads
   }
 }
