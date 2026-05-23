@@ -48,3 +48,6 @@ scripts/render-create.json
 scripts/*.local.json
 
 .vercel
+
+.commitmsg.txt
+
