@@ -69,16 +69,29 @@ export function useSession(): Session {
         setMode("production");
       } catch (err: any) {
         if (cancelled) return;
-        // Token rejected -> clear and bounce to sign in.
-        window.localStorage.removeItem(TOKEN_KEY);
-        setToken(undefined);
-        if (typeof window !== "undefined" && window.location.pathname !== "/" && !window.location.pathname.startsWith("/demo")) {
-          window.location.replace("/?expired=1");
-          return;
+        // Only bounce on hard auth rejection (Supabase says token is bad / expired).
+        // Transient failures (API cold start, network blip) keep the session and
+        // surface a banner instead — otherwise a slow Render dyno looks like an
+        // expired login to the user.
+        const isApiErr = err instanceof ApiError;
+        const isAuthReject =
+          isApiErr &&
+          err.status === 401 &&
+          /(invalid session|invalid jwt|jwt expired|missing bearer)/i.test(err.message);
+        if (isAuthReject) {
+          window.localStorage.removeItem(TOKEN_KEY);
+          setToken(undefined);
+          if (typeof window !== "undefined" && window.location.pathname !== "/" && !window.location.pathname.startsWith("/demo")) {
+            window.location.replace("/?expired=1");
+            return;
+          }
+          setProfile(demoProfile);
+          setMode("demo");
+        } else {
+          // Keep the token, render production shell, show the error to the user.
+          setMode("production");
         }
-        setProfile(demoProfile);
-        setMode("demo");
-        setError(err?.message || "Session expired");
+        setError(err?.message || "Could not load profile");
       }
     })();
 

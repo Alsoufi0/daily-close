@@ -3,6 +3,7 @@ import "./globals.css";
 import { TopBar } from "../components/top-bar";
 import { Footer } from "../components/footer";
 import { SentryInit } from "../components/sentry-init";
+import { AuthBootstrap } from "../components/auth-bootstrap";
 
 const SITE_URL = "https://daily-close-mvp.vercel.app";
 const DESCRIPTION =
@@ -57,6 +58,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body className="flex min-h-screen flex-col overflow-x-hidden">
         <SentryInit />
+        <AuthBootstrap />
         <TopBar />
         <div className="flex-1">{children}</div>
         <Footer />
