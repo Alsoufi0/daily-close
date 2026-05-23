@@ -30,27 +30,68 @@ export class DashboardService {
     return hh * 60 + mm;
   }
 
-  async getOwnerToday(ownerId: string, date = new Date()): Promise<OwnerDashboardSummary["stores"]> {
-    const start = new Date(date);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(date);
-    end.setHours(23, 59, 59, 999);
+  // Returns the UTC instants spanning a store's *local* calendar day for `now`.
+  // Without this, dashboard queries use the server's UTC day and miss closes
+  // submitted late-evening in earlier timezones (e.g. a 23:00 PT close is at
+  // 06:00 UTC the next day, so a Render server in UTC would query the wrong
+  // day and falsely report the store as not-yet-closed).
+  static storeLocalDayRange(timezone: string, now = new Date()): { start: Date; end: Date } {
+    try {
+      const parts = new Intl.DateTimeFormat("en-CA", {
+        timeZone: timezone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit"
+      }).formatToParts(now);
+      const y = parts.find((p) => p.type === "year")!.value;
+      const m = parts.find((p) => p.type === "month")!.value;
+      const d = parts.find((p) => p.type === "day")!.value;
+      const offsetMin = DashboardService.timezoneOffsetMinutes(timezone, now);
+      // The local-midnight of YYYY-MM-DD in `timezone` expressed as UTC:
+      const utcMidnight = Date.UTC(Number(y), Number(m) - 1, Number(d)) - offsetMin * 60 * 1000;
+      return { start: new Date(utcMidnight), end: new Date(utcMidnight + 86_400_000 - 1) };
+    } catch {
+      const start = new Date(now);
+      start.setUTCHours(0, 0, 0, 0);
+      const end = new Date(now);
+      end.setUTCHours(23, 59, 59, 999);
+      return { start, end };
+    }
+  }
 
+  // Minutes the given zone is ahead of UTC (positive east of UTC). Computed
+  // from Intl rather than a hardcoded table so DST is correct year-round.
+  static timezoneOffsetMinutes(timezone: string, now = new Date()): number {
+    const dtf = new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone,
+      hourCycle: "h23",
+      year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", second: "2-digit"
+    });
+    const parts = dtf.formatToParts(now);
+    const get = (t: string) => Number(parts.find((p) => p.type === t)!.value);
+    const asUTC = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"), get("second"));
+    return Math.round((asUTC - now.getTime()) / 60000);
+  }
+
+  async getOwnerToday(ownerId: string, date = new Date()): Promise<OwnerDashboardSummary["stores"]> {
     const stores = await this.prisma.store.findMany({
       where: { ownerId },
       include: {
         dailyCloses: {
-          where: { date: { gte: start, lte: end } },
-          orderBy: { createdAt: "desc" },
-          take: 1
+          // Wide UTC window covers any timezone's "today"; we filter
+          // per-store below using the store's local-day range.
+          where: { date: { gte: new Date(date.getTime() - 36 * 3600_000), lte: new Date(date.getTime() + 12 * 3600_000) } },
+          orderBy: { createdAt: "desc" }
         }
       }
     });
 
     return stores.map((store) => {
-      const close = store.dailyCloses[0];
       const tz = (store as any).timezone || "America/New_York";
       const closeTime = (store as any).closeTime || "23:30";
+      const { start, end } = DashboardService.storeLocalDayRange(tz, date);
+      const close = store.dailyCloses.find((c: any) => c.date >= start && c.date <= end);
       const nowMin = DashboardService.minutesNowInTimezone(tz, date);
       const closeMin = DashboardService.parseCloseTime(closeTime);
       return {

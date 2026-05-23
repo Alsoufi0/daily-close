@@ -72,4 +72,49 @@ export class SubscriptionsService {
       }
     });
   }
+
+  /**
+   * Creates a Stripe Checkout session for the owner and returns its URL.
+   * Self-serve: owner clicks "Start paid plan", Stripe handles card collection,
+   * webhook flips them to ACTIVE.
+   *
+   * Required env: STRIPE_SECRET_KEY, STRIPE_PRICE_ID.
+   * Optional env: STRIPE_SUCCESS_URL, STRIPE_CANCEL_URL (default to site root).
+   */
+  async createCheckoutForOwner(ownerId: string, ownerEmail: string): Promise<string> {
+    const secret = process.env.STRIPE_SECRET_KEY;
+    const priceId = process.env.STRIPE_PRICE_ID;
+    if (!secret || !priceId) {
+      throw new Error("Stripe is not configured (STRIPE_SECRET_KEY + STRIPE_PRICE_ID).");
+    }
+    const siteUrl = process.env.SITE_URL || "https://daily-close-mvp.vercel.app";
+    const successUrl = process.env.STRIPE_SUCCESS_URL || `${siteUrl}/billing?status=success`;
+    const cancelUrl = process.env.STRIPE_CANCEL_URL || `${siteUrl}/billing?status=cancel`;
+
+    const params = new URLSearchParams();
+    params.set("mode", "subscription");
+    params.set("success_url", successUrl);
+    params.set("cancel_url", cancelUrl);
+    params.set("customer_email", ownerEmail);
+    params.set("client_reference_id", ownerId);
+    params.set("line_items[0][price]", priceId);
+    params.set("line_items[0][quantity]", "1");
+    params.set("allow_promotion_codes", "true");
+
+    const res = await fetch("https://api.stripe.com/v1/checkout/sessions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${secret}`,
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body: params.toString()
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`Stripe checkout failed: ${res.status} ${body.slice(0, 200)}`);
+    }
+    const data = (await res.json()) as { url?: string };
+    if (!data.url) throw new Error("Stripe did not return a checkout URL.");
+    return data.url;
+  }
 }

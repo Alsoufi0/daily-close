@@ -27,12 +27,31 @@ services:
         sync: false
       - key: SUPABASE_REPORTS_BUCKET
         value: pos-reports
-      # Subscriptions / Stripe (optional until you connect billing)
-      - key: STRIPE_CHECKOUT_URL
+      # Subscriptions / Stripe (set these to enable self-serve checkout)
+      - key: STRIPE_SECRET_KEY
+        sync: false # sk_live_... or sk_test_...
+      - key: STRIPE_PRICE_ID
+        sync: false # price_... for the $29/store/month plan
+      - key: STRIPE_WEBHOOK_SECRET
         sync: false
       - key: STRIPE_PORTAL_URL
+        sync: false # optional: customer portal link for self-serve cancel
+      - key: STRIPE_CHECKOUT_URL
+        sync: false # legacy fallback if you prefer a static link
+      - key: SITE_URL
+        value: https://daily-close-mvp.vercel.app
+      # OCR — Google Vision preferred when both keys are present
+      - key: GOOGLE_VISION_API_KEY
         sync: false
-      - key: STRIPE_WEBHOOK_SECRET
+      - key: OCR_SPACE_API_KEY
+        sync: false
+      # Resend — weekly summary email
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM
+        value: "Daily Close <reports@dailyclose.app>"
+      # Shared secret for cron endpoints
+      - key: CRON_SECRET
         sync: false
 
   # Daily 23:45 sweep — creates missed-close alerts for stores that didn't submit
@@ -47,7 +66,24 @@ services:
     envVars:
       - key: CRON_API_URL
         sync: false # e.g. https://daily-close-api.onrender.com
-      - key: CRON_TOKEN
-        sync: false # service-account bearer token from supabase
+      - key: CRON_SECRET
+        sync: false # must match the API's CRON_SECRET
     dockerCommand: >
-      sh -c "wget -q -O- --header=\"Authorization: Bearer $CRON_TOKEN\" --post-data='' $CRON_API_URL/notifications/check-missed-close && echo done"
+      sh -c "wget -q -O- --header=\"x-cron-secret: $CRON_SECRET\" --post-data='' $CRON_API_URL/notifications/check-missed-close && echo done"
+
+  # Weekly summary — Monday 13:00 UTC (~ Monday morning across US/EU)
+  - type: cron
+    name: daily-close-weekly-summary-cron
+    runtime: docker
+    plan: starter
+    region: oregon
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    schedule: "0 13 * * 1"
+    envVars:
+      - key: CRON_API_URL
+        sync: false
+      - key: CRON_SECRET
+        sync: false
+    dockerCommand: >
+      sh -c "wget -q -O- --header=\"x-cron-secret: $CRON_SECRET\" --post-data='' $CRON_API_URL/notifications/weekly-summary && echo done"

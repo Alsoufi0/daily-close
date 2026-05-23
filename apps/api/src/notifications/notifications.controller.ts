@@ -15,13 +15,15 @@ import { RequestUser } from "../auth/request-user";
 import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
 import { MissedCloseService } from "./missed-close.service";
 import { NotificationsService } from "./notifications.service";
+import { WeeklySummaryService } from "./weekly-summary.service";
 
 @ApiTags("Notifications")
 @Controller("notifications")
 export class NotificationsController {
   constructor(
     private readonly notifications: NotificationsService,
-    private readonly missedClose: MissedCloseService
+    private readonly missedClose: MissedCloseService,
+    private readonly weekly: WeeklySummaryService
   ) {}
 
   @Get()
@@ -54,5 +56,15 @@ export class NotificationsController {
       throw new ForbiddenException("Bad cron secret.");
     }
     return this.missedClose.checkStores();
+  }
+
+  // Hit by the weekly cron (Monday 13:00 UTC by default). Same shared secret.
+  @Post("weekly-summary")
+  weeklySummary(@Headers("x-cron-secret") provided: string | undefined) {
+    const expected = process.env.CRON_SECRET;
+    if (expected && provided !== expected) {
+      throw new ForbiddenException("Bad cron secret.");
+    }
+    return this.weekly.sendForAllOwners();
   }
 }

@@ -383,6 +383,20 @@ export function OwnerDashboard() {
             })}
           </div>
         )}
+        {summary.stores.length === 1 ? (
+          <a
+            href="/admin/stores"
+            className="focus-ring mt-3 flex items-center justify-between gap-3 rounded-xl border border-leaf/30 bg-leaf/5 p-4 text-leaf hover:bg-leaf/10"
+          >
+            <div>
+              <p className="text-base font-black">Run more than one store?</p>
+              <p className="text-sm font-bold text-ink/65">
+                Add your next store — multi-store totals, missed-close alerts, and one weekly summary email come included.
+              </p>
+            </div>
+            <span className="hidden sm:inline text-sm font-black">Add store →</span>
+          </a>
+        ) : null}
       </div>
 
       <HistoryPanel token={session.token} />

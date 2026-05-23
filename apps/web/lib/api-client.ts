@@ -172,6 +172,13 @@ export async function getSubscription(token: string): Promise<SubscriptionView> 
   return apiFetch<SubscriptionView>("/subscriptions/me", token);
 }
 
+export async function startSubscriptionCheckout(token: string): Promise<{ url: string }> {
+  return apiFetch<{ url: string }>("/subscriptions/create-checkout", token, {
+    method: "POST",
+    body: JSON.stringify({})
+  });
+}
+
 export async function editDailyClose(
   token: string,
   id: string,

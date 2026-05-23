@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, CreditCard, Loader2, Sparkles, TimerReset } from "lucide-react";
 import { useSession } from "../../lib/use-session";
-import { getSubscription, SubscriptionView } from "../../lib/api-client";
+import { getSubscription, startSubscriptionCheckout, SubscriptionView } from "../../lib/api-client";
 import { RequireAuth } from "../../components/require-auth";
 
 const demoSub: SubscriptionView = {
@@ -29,6 +29,21 @@ function BillingPageInner() {
   const session = useSession();
   const [sub, setSub] = useState<SubscriptionView | null>(null);
   const [loading, setLoading] = useState(true);
+  const [starting, setStarting] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
+
+  async function startCheckout() {
+    if (!session.token) return;
+    setStarting(true);
+    setStartError(null);
+    try {
+      const { url } = await startSubscriptionCheckout(session.token);
+      window.location.href = url;
+    } catch (err: any) {
+      setStartError(err?.message || "Could not start checkout.");
+      setStarting(false);
+    }
+  }
 
   useEffect(() => {
     if (session.mode === "loading") return;
@@ -104,22 +119,18 @@ function BillingPageInner() {
               </p>
             ) : null}
           </div>
-          <div className="flex gap-2">
-            {sub.checkoutUrl ? (
-              <a
-                href={sub.checkoutUrl}
-                className="focus-ring inline-flex h-12 items-center gap-2 rounded-lg bg-leaf px-4 font-black text-white"
-              >
-                <CreditCard size={18} /> {expired ? "Choose plan" : "Upgrade now"}
-              </a>
-            ) : (
-              <a
-                href="mailto:support@dailyclose.app?subject=Start%20paid%20plan"
-                className="focus-ring inline-flex h-12 items-center gap-2 rounded-lg bg-leaf px-4 font-black text-white"
-              >
-                <CreditCard size={18} /> Start paid plan
-              </a>
-            )}
+          <div className="flex flex-col items-end gap-2 sm:flex-row">
+            <button
+              onClick={startCheckout}
+              disabled={starting || !session.token}
+              className="focus-ring inline-flex h-12 items-center gap-2 rounded-lg bg-leaf px-4 font-black text-white disabled:opacity-60"
+            >
+              {starting ? <Loader2 className="animate-spin" size={18} /> : <CreditCard size={18} />}
+              {starting ? "Starting…" : expired ? "Choose plan" : trialStatus ? "Start paid plan" : "Update payment"}
+            </button>
+            {startError ? (
+              <span className="text-xs font-bold text-warning">{startError}</span>
+            ) : null}
             {sub.portalUrl ? (
               <a
                 href={sub.portalUrl}

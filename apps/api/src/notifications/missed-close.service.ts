@@ -1,52 +1,57 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { NotificationsService } from "./notifications.service";
+import { DashboardService } from "../dashboard/dashboard.service";
+import { WhatsAppService } from "./whatsapp.service";
 
 @Injectable()
 export class MissedCloseService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly notifications: NotificationsService
+    private readonly notifications: NotificationsService,
+    private readonly whatsapp: WhatsAppService
   ) {}
 
   async checkStores(date = new Date()) {
-    const start = new Date(date);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(date);
-    end.setHours(23, 59, 59, 999);
-
+    // Wide UTC window: a store's "today" can sit ±24h from the server clock.
+    const wideStart = new Date(date.getTime() - 36 * 3600_000);
+    const wideEnd = new Date(date.getTime() + 12 * 3600_000);
     const stores = await this.prisma.store.findMany({
       include: {
-        dailyCloses: { where: { date: { gte: start, lte: end } }, take: 1 }
+        dailyCloses: { where: { date: { gte: wideStart, lte: wideEnd } } }
       }
     });
 
     // Only flag stores whose close_time has passed in their local timezone
-    const minutesNow = (tz: string) => {
-      try {
-        const parts = new Intl.DateTimeFormat("en-US", {
-          timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false
-        }).formatToParts(date);
-        const h = Number(parts.find((p) => p.type === "hour")?.value ?? "0");
-        const m = Number(parts.find((p) => p.type === "minute")?.value ?? "0");
-        return h * 60 + m;
-      } catch { return 24 * 60; }
-    };
     const minutesAt = (t: string) => {
       const [hh, mm] = (t || "23:30").split(":").map((x) => Number(x) || 0);
       return hh * 60 + mm;
     };
 
-    const missing = stores.filter(
-      (store: any) =>
-        store.dailyCloses.length === 0 &&
-        minutesNow(store.timezone || "America/New_York") >= minutesAt(store.closeTime || "23:30")
-    );
+    const missing = stores.filter((store: any) => {
+      const tz = store.timezone || "America/New_York";
+      const { start, end } = DashboardService.storeLocalDayRange(tz, date);
+      const hasCloseToday = store.dailyCloses.some((c: any) => c.date >= start && c.date <= end);
+      if (hasCloseToday) return false;
+      const nowMin = DashboardService.minutesNowInTimezone(tz, date);
+      return nowMin >= minutesAt(store.closeTime || "23:30");
+    });
+    const start = wideStart;
+    const end = wideEnd;
     await Promise.all(
       missing.map(async (store) => {
         await this.notifications.sendMissingCloseAlert(store.storeName);
-        const owner = await this.prisma.owner.findUnique({ where: { id: store.ownerId } });
+        const owner = await this.prisma.owner.findUnique({
+          where: { id: store.ownerId },
+          include: { user: true }
+        });
         if (!owner) return;
+
+        // Best-effort WhatsApp ping to the owner. No-op when WhatsApp env is unset.
+        const ownerPhone = (owner.user as any)?.phone || (owner as any).phone;
+        if (ownerPhone && this.whatsapp.isConfigured()) {
+          await this.whatsapp.sendMissedCloseTemplate(ownerPhone, store.storeName);
+        }
 
         const existing = await this.prisma.notification.findFirst({
           where: {

@@ -1,11 +1,23 @@
 import { Module, Type } from "@nestjs/common";
 import { ManualEntryOCRService, MockOCRService } from "./ocr.service";
 import { OcrSpaceOCRService } from "./ocr-space.service";
+import { GoogleVisionOCRService } from "./google-vision.service";
 
-const mode = (process.env.OCR_MODE || "manual").toLowerCase();
+// Auto-detect provider when OCR_MODE is unset: prefer Google Vision if a key
+// is present, then OCR.space, then fall back to manual entry. Explicit
+// OCR_MODE always wins.
+function resolveMode(): string {
+  const explicit = (process.env.OCR_MODE || "").toLowerCase();
+  if (explicit) return explicit;
+  if (process.env.GOOGLE_VISION_API_KEY) return "google";
+  if (process.env.OCR_SPACE_API_KEY) return "ocrspace";
+  return "manual";
+}
 
 function pickProvider(): Type<any> {
-  switch (mode) {
+  switch (resolveMode()) {
+    case "google":
+      return GoogleVisionOCRService;
     case "ocrspace":
       return OcrSpaceOCRService;
     case "demo":
@@ -18,6 +30,7 @@ function pickProvider(): Type<any> {
 
 @Module({
   providers: [
+    GoogleVisionOCRService,
     OcrSpaceOCRService,
     MockOCRService,
     ManualEntryOCRService,

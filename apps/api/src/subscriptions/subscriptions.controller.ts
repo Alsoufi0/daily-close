@@ -30,6 +30,21 @@ export class SubscriptionsController {
     return this.subscriptions.getForOwner(user.ownerId);
   }
 
+  @Post("create-checkout")
+  @ApiBearerAuth()
+  @UseGuards(SupabaseAuthGuard)
+  async createCheckout(@CurrentUser() user: RequestUser): Promise<{ url: string }> {
+    if (user.role !== "STORE_OWNER" || !user.ownerId) {
+      throw new ForbiddenException("Only owners can start a subscription.");
+    }
+    try {
+      const url = await this.subscriptions.createCheckoutForOwner(user.ownerId, user.email);
+      return { url };
+    } catch (err: any) {
+      throw new BadRequestException(err?.message || "Could not start checkout.");
+    }
+  }
+
   // Stripe webhook. Validate the signature when STRIPE_WEBHOOK_SECRET is set.
   @Post("webhook")
   @HttpCode(200)
