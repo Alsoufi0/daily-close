@@ -23,9 +23,33 @@ function securityHeaders(_req: unknown, res: { setHeader: (name: string, value: 
   next();
 }
 
-function parseOrigins(value: string | undefined): string[] | true {
-  if (!value || value.trim() === "*") return true;
-  return value.split(",").map((origin) => origin.trim()).filter(Boolean);
+// Allow any *.vercel.app preview, localhost dev, and explicit allowlist entries.
+// The API still requires a valid Supabase JWT for every protected route — CORS
+// is the wrong place to enforce app-level access control. Being permissive here
+// stops a benign env-var typo from killing every browser API call.
+function originChecker(value: string | undefined) {
+  const explicit = (value || "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  if (explicit.includes("*")) return true;
+
+  return (
+    requestOrigin: string | undefined,
+    callback: (err: Error | null, allow?: boolean) => void
+  ) => {
+    // No Origin header (server-to-server, curl, healthchecks) → allow.
+    if (!requestOrigin) return callback(null, true);
+    if (explicit.includes(requestOrigin)) return callback(null, true);
+    try {
+      const host = new URL(requestOrigin).hostname;
+      if (host === "localhost" || host === "127.0.0.1") return callback(null, true);
+      if (host.endsWith(".vercel.app")) return callback(null, true);
+    } catch {
+      /* fall through to deny */
+    }
+    return callback(null, false);
+  };
 }
 
 async function bootstrap() {
@@ -34,7 +58,7 @@ async function bootstrap() {
 
   app.use(securityHeaders);
   app.enableCors({
-    origin: parseOrigins(process.env.ALLOWED_ORIGINS),
+    origin: originChecker(process.env.ALLOWED_ORIGINS),
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
   });

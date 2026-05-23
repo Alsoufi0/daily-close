@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  ForbiddenException,
   Get,
   Headers,
   Post,
@@ -56,5 +57,39 @@ export class AuthController {
       employeeId: user.employeeId,
       storeId: user.storeId
     };
+  }
+
+  /**
+   * Admin-only: create an owner with email already confirmed and provision
+   * their public.users + owners row. Bypasses Supabase's email verification —
+   * use only until SMTP is wired up. Gated by SETUP_ADMIN_KEY header so it's
+   * safe to leave deployed.
+   *
+   *   curl -X POST .../auth/admin-create-user \
+   *     -H "x-setup-key: $SETUP_ADMIN_KEY" \
+   *     -H "Content-Type: application/json" \
+   *     -d '{"email":"owner@example.com","name":"Alex","password":"optional"}'
+   */
+  @Post("admin-create-user")
+  async adminCreateUser(
+    @Headers("x-setup-key") providedKey: string | undefined,
+    @Body() body: { email?: string; name?: string; password?: string }
+  ) {
+    const expected = process.env.SETUP_ADMIN_KEY;
+    if (!expected) {
+      throw new ForbiddenException(
+        "SETUP_ADMIN_KEY is not configured on the API. Set it in Render env first."
+      );
+    }
+    if (providedKey !== expected) throw new ForbiddenException("Bad setup key.");
+    if (!body?.email) throw new BadRequestException("email is required.");
+    if (body.password && body.password.length < 8) {
+      throw new BadRequestException("password must be at least 8 characters.");
+    }
+    return this.auth.adminCreateOwner({
+      email: body.email,
+      name: body.name,
+      password: body.password
+    });
   }
 }
