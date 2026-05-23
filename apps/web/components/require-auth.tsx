@@ -44,9 +44,7 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
 
       if (cancelled) return;
       if (!token) {
-        const next = window.location.pathname + window.location.search;
-        const back = next && next !== "/" ? `?next=${encodeURIComponent(next)}` : "";
-        window.location.replace(`/${back}`);
+        setReady(true);
         return;
       }
       setReady(true);

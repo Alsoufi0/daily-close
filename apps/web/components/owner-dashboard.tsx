@@ -56,13 +56,6 @@ export function OwnerDashboard() {
 
   useEffect(() => {
     if (session.mode === "loading") return;
-    if (session.mode === "demo" && typeof window !== "undefined") {
-      const onDemo = window.location.pathname.startsWith("/demo");
-      if (!onDemo) {
-        window.location.replace("/");
-        return;
-      }
-    }
     if (
       session.mode === "production" &&
       session.profile?.role === "STORE_OWNER" &&
