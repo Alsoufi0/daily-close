@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
+import type { UserRole } from "@smokeshop/shared/types";
+import { ApiError, getProfile } from "../lib/api-client";
 import { createBrowserSupabase } from "../lib/supabase-browser";
 
 const TOKEN_KEY = "dailyclose-token";
@@ -14,8 +16,15 @@ const TOKEN_KEY = "dailyclose-token";
  * any stale localStorage token on the way so useSession can't follow up
  * with a doomed API call that re-triggers /?expired=1.
  */
-export function RequireAuth({ children }: { children: React.ReactNode }) {
+export function RequireAuth({
+  children,
+  allowedRoles
+}: {
+  children: React.ReactNode;
+  allowedRoles?: UserRole[];
+}) {
   const [ready, setReady] = useState(false);
+  const [blocked, setBlocked] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -44,9 +53,30 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
 
       if (cancelled) return;
       if (!token) {
-        setReady(true);
+        const next = encodeURIComponent(window.location.pathname + window.location.search);
+        window.location.replace(`/?next=${next}`);
         return;
       }
+
+      if (allowedRoles?.length) {
+        try {
+          const profile = await getProfile(token);
+          if (!allowedRoles.includes(profile.role)) {
+            setBlocked(true);
+            const target = profile.role === "EMPLOYEE" ? "/employee" : "/owner";
+            window.location.replace(target);
+            return;
+          }
+        } catch (err) {
+          if (err instanceof ApiError && err.status === 401) {
+            window.localStorage.removeItem(TOKEN_KEY);
+            const next = encodeURIComponent(window.location.pathname + window.location.search);
+            window.location.replace(`/?next=${next}`);
+            return;
+          }
+        }
+      }
+
       setReady(true);
     })();
 
@@ -55,7 +85,7 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  if (!ready) {
+  if (!ready || blocked) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center text-ink/55">
         <Loader2 className="animate-spin" size={20} aria-hidden />

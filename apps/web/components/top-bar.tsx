@@ -6,17 +6,19 @@ import { usePathname } from "next/navigation";
 import { Leaf, LogOut, Menu, X } from "lucide-react";
 import { clsx } from "clsx";
 import { createBrowserSupabase } from "../lib/supabase-browser";
+import { useSession } from "../lib/use-session";
 
 const NAV = [
-  { href: "/owner", label: "Owner" },
+  { href: "/owner", label: "Owner", ownerOnly: true },
   { href: "/employee", label: "Employee" },
-  { href: "/admin", label: "Admin" },
-  { href: "/billing", label: "Billing" },
+  { href: "/admin", label: "Admin", ownerOnly: true },
+  { href: "/billing", label: "Billing", ownerOnly: true },
   { href: "/account/password", label: "Password" }
 ];
 
 export function TopBar() {
   const pathname = usePathname() || "/";
+  const session = useSession();
   const [open, setOpen] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
 
@@ -48,6 +50,8 @@ export function TopBar() {
     pathname.startsWith("/admin") ||
     pathname.startsWith("/billing") ||
     pathname.startsWith("/account");
+  const isOwnerLike = session.profile?.role === "STORE_OWNER" || session.profile?.role === "SUPER_ADMIN";
+  const navItems = NAV.filter((item) => !item.ownerOnly || isOwnerLike);
 
   return (
     <header className="sticky top-0 z-30 border-b border-ink/10 bg-white/90 backdrop-blur">
@@ -63,7 +67,7 @@ export function TopBar() {
         <nav className="hidden items-center gap-1 text-sm font-black md:flex">
           {signedIn ? (
             <>
-              {NAV.map((item) => {
+              {navItems.map((item) => {
                 const active = pathname.startsWith(item.href);
                 return (
                   <Link
@@ -136,7 +140,7 @@ export function TopBar() {
       {open && signedIn ? (
         <div className="border-t border-ink/10 bg-white md:hidden">
           <nav className="mx-auto flex w-full max-w-6xl flex-col gap-1 px-4 py-3 text-base font-black">
-            {NAV.map((item) => {
+            {navItems.map((item) => {
               const active = pathname.startsWith(item.href);
               return (
                 <Link

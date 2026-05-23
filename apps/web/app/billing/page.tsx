@@ -19,7 +19,7 @@ const demoSub: SubscriptionView = {
 
 export default function BillingPage() {
   return (
-    <RequireAuth>
+    <RequireAuth allowedRoles={["STORE_OWNER", "SUPER_ADMIN"]}>
       <BillingPageInner />
     </RequireAuth>
   );

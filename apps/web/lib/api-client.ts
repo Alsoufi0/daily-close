@@ -120,6 +120,17 @@ export async function deleteEmployee(token: string, employeeId: string) {
   return apiFetch(`/employees/${employeeId}`, token, { method: "DELETE" });
 }
 
+export async function setEmployeeAdminAccess(
+  token: string,
+  employeeId: string,
+  isAdmin: boolean
+): Promise<{ employeeId: string; userId: string; role: "STORE_OWNER" | "EMPLOYEE"; isAdmin: boolean }> {
+  return apiFetch(`/employees/${employeeId}/admin-access`, token, {
+    method: "PATCH",
+    body: JSON.stringify({ isAdmin })
+  });
+}
+
 export async function deleteStore(token: string, storeId: string) {
   return apiFetch(`/stores/${storeId}`, token, { method: "DELETE" });
 }
@@ -233,6 +244,7 @@ export async function uploadReport(
   storeId: string,
   upload?: { imageUrl: string; fileName: string; contentType: string }
 ): Promise<ParsedPOSReport & { imageUrl: string; rawText?: string }> {
+  if (apiUrl && !token) throw new ApiError(401, "Please sign in before uploading a report.");
   if (!apiUrl || !token) return { ...scannedReport, imageUrl: upload?.imageUrl || "demo-report.jpg" };
   return apiFetch<ParsedPOSReport & { imageUrl: string; rawText?: string }>("/daily-close/upload-report", token, {
     method: "POST",

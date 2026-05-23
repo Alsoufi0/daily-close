@@ -15,7 +15,7 @@ const items = [
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || "";
   return (
-    <RequireAuth>
+    <RequireAuth allowedRoles={["STORE_OWNER", "SUPER_ADMIN"]}>
     <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
       <header className="mb-6 flex items-center gap-2 text-sm font-black uppercase tracking-wide text-leaf">
         <Settings size={16} aria-hidden /> Admin

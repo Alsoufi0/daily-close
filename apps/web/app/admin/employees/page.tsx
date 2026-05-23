@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Copy, Key, Loader2, Plus, Trash2, User, X } from "lucide-react";
+import { Copy, Key, Loader2, Plus, ShieldCheck, Trash2, User, X } from "lucide-react";
 import { useSession } from "../../../lib/use-session";
 import {
   ApiError,
   deleteEmployee,
   inviteEmployee,
   listEmployees,
-  resetEmployeePassword
+  resetEmployeePassword,
+  setEmployeeAdminAccess
 } from "../../../lib/api-client";
 
 export default function EmployeesAdminPage() {
@@ -25,6 +26,7 @@ export default function EmployeesAdminPage() {
   const [resettingId, setResettingId] = useState<string | null>(null);
   const [resetResult, setResetResult] = useState<{ email: string; tempPassword: string } | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [adminChangingId, setAdminChangingId] = useState<string | null>(null);
 
   async function remove(employeeId: string, name: string) {
     if (!session.token) return;
@@ -73,6 +75,29 @@ export default function EmployeesAdminPage() {
       setError(err instanceof ApiError ? err.message : "Could not reset password");
     } finally {
       setResettingId(null);
+    }
+  }
+
+  async function toggleAdmin(employee: any) {
+    if (!session.token) return;
+    const employeeId = employee.id;
+    const isAdmin = employee.user?.role === "STORE_OWNER";
+    setAdminChangingId(employeeId);
+    setError(null);
+    try {
+      const result = await setEmployeeAdminAccess(session.token, employeeId, !isAdmin);
+      setEmployees((prev) =>
+        prev.map((row: any) =>
+          row.id === employeeId
+            ? { ...row, user: { ...row.user, role: result.role } }
+            : row
+        )
+      );
+      setInfo(!isAdmin ? "Admin access turned on." : "Admin access turned off.");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not update admin access");
+    } finally {
+      setAdminChangingId(null);
     }
   }
 
@@ -182,6 +207,12 @@ export default function EmployeesAdminPage() {
         </form>
       ) : null}
 
+      {error && !showForm ? (
+        <div className="rounded-xl border border-warning/30 bg-red-50 p-3 text-sm font-bold text-warning">
+          {error}
+        </div>
+      ) : null}
+
       <div className="space-y-2">
         {loading ? (
           <div className="rounded-xl border border-ink/10 bg-white p-6 text-center text-sm font-bold text-ink/55">
@@ -193,7 +224,9 @@ export default function EmployeesAdminPage() {
             No employees yet.
           </div>
         ) : (
-          employees.map((e) => (
+          employees.map((e) => {
+            const isAdmin = e.user?.role === "STORE_OWNER";
+            return (
             <div
               key={e.id}
               className="flex items-center gap-3 rounded-xl border border-ink/10 bg-white p-4 shadow-sm"
@@ -205,7 +238,23 @@ export default function EmployeesAdminPage() {
                 <p className="font-black">{e.user?.name ?? e.name ?? "Employee"}</p>
                 <p className="text-xs font-bold text-ink/55">{e.user?.email ?? e.email}</p>
               </div>
-              <span className="text-xs font-bold text-ink/55">{e.store?.storeName ?? ""}</span>
+              <div className="hidden text-right sm:block">
+                <p className="text-xs font-bold text-ink/55">{e.store?.storeName ?? ""}</p>
+                {isAdmin ? <p className="text-xs font-black text-leaf">Admin access</p> : null}
+              </div>
+              <button
+                onClick={() => toggleAdmin(e)}
+                disabled={adminChangingId === e.id}
+                className={
+                  isAdmin
+                    ? "focus-ring inline-flex h-9 items-center gap-1.5 rounded-lg bg-leaf px-3 text-xs font-black text-white disabled:opacity-60"
+                    : "focus-ring inline-flex h-9 items-center gap-1.5 rounded-lg border border-ink/15 px-3 text-xs font-black text-ink hover:bg-smoke disabled:opacity-60"
+                }
+                aria-label={isAdmin ? "Remove admin access" : "Give admin access"}
+              >
+                {adminChangingId === e.id ? <Loader2 className="animate-spin" size={14} /> : <ShieldCheck size={14} />}
+                {isAdmin ? "Admin" : "Make Admin"}
+              </button>
               <button
                 onClick={() => reset(e.id)}
                 disabled={resettingId === e.id}
@@ -225,7 +274,8 @@ export default function EmployeesAdminPage() {
                 Remove
               </button>
             </div>
-          ))
+          );
+          })
         )}
       </div>
 

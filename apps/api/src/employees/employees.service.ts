@@ -122,6 +122,43 @@ export class EmployeesService {
     };
   }
 
+  async setAdminAccess(user: RequestUser, employeeId: string, isAdmin: boolean) {
+    this.assertOwner(user);
+
+    const emp = await this.prisma.employee.findFirst({
+      where: { id: employeeId, store: { ownerId: user.ownerId }, deletedAt: null },
+      include: { user: true }
+    });
+    if (!emp) throw new NotFoundException("Employee not found.");
+    if (emp.user.id === user.id) {
+      throw new BadRequestException("You cannot change your own admin access.");
+    }
+
+    const role = isAdmin ? "STORE_OWNER" : "EMPLOYEE";
+    const updated = await this.prisma.user.update({
+      where: { id: emp.userId },
+      data: { role },
+      include: { employee: true }
+    });
+
+    if (this.supabase && emp.user.authUserId) {
+      try {
+        await this.supabase.auth.admin.updateUserById(emp.user.authUserId, {
+          user_metadata: { name: emp.user.name, role }
+        });
+      } catch {
+        // The database role is authoritative for API access.
+      }
+    }
+
+    return {
+      employeeId,
+      userId: updated.id,
+      role: updated.role,
+      isAdmin: updated.role === "STORE_OWNER"
+    };
+  }
+
   async remove(user: RequestUser, employeeId: string) {
     this.assertOwner(user);
 

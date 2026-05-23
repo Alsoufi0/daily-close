@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { RequestUser } from "../auth/request-user";
@@ -28,6 +28,15 @@ export class EmployeesController {
   @Post(":id/reset-password")
   resetPassword(@CurrentUser() user: RequestUser, @Param("id") id: string) {
     return this.employees.resetPassword(user, id);
+  }
+
+  @Patch(":id/admin-access")
+  setAdminAccess(
+    @CurrentUser() user: RequestUser,
+    @Param("id") id: string,
+    @Body() body: { isAdmin?: boolean }
+  ) {
+    return this.employees.setAdminAccess(user, id, Boolean(body?.isAdmin));
   }
 
   @Delete(":id")

@@ -11,7 +11,7 @@ type Step = "store" | "employee" | "done";
 
 export default function SetupPage() {
   return (
-    <RequireAuth>
+    <RequireAuth allowedRoles={["STORE_OWNER", "SUPER_ADMIN"]}>
       <SetupPageInner />
     </RequireAuth>
   );

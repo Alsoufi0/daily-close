@@ -44,7 +44,7 @@ export class SupabaseAuthService {
       },
       include: {
         owner: true,
-        employee: true
+        employee: { include: { store: true } }
       }
     });
 
@@ -63,7 +63,7 @@ export class SupabaseAuthService {
       name: user.name,
       email: user.email,
       role: user.role,
-      ownerId: user.owner?.id,
+      ownerId: user.owner?.id || user.employee?.store?.ownerId,
       employeeId: user.employee?.id,
       storeId: user.employee?.storeId
     };
@@ -97,7 +97,7 @@ export class SupabaseAuthService {
 
     let user = await this.prisma.user.findFirst({
       where: { OR: [{ authUserId: authId }, { email }] },
-      include: { owner: true, employee: true }
+      include: { owner: true, employee: { include: { store: true } } }
     });
 
     if (!user) {
@@ -116,13 +116,13 @@ export class SupabaseAuthService {
             }
           }
         },
-        include: { owner: true, employee: true }
+        include: { owner: true, employee: { include: { store: true } } }
       });
     } else if (!user.authUserId) {
       user = await this.prisma.user.update({
         where: { id: user.id },
         data: { authUserId: authId },
-        include: { owner: true, employee: true }
+        include: { owner: true, employee: { include: { store: true } } }
       });
     }
 
@@ -137,7 +137,7 @@ export class SupabaseAuthService {
       });
       user = (await this.prisma.user.findUnique({
         where: { id: user.id },
-        include: { owner: true, employee: true }
+        include: { owner: true, employee: { include: { store: true } } }
       })) as any;
     }
 
@@ -147,7 +147,7 @@ export class SupabaseAuthService {
       name: user!.name,
       email: user!.email,
       role: user!.role,
-      ownerId: user!.owner?.id,
+      ownerId: user!.owner?.id || user!.employee?.store?.ownerId,
       employeeId: user!.employee?.id,
       storeId: user!.employee?.storeId
     };
@@ -249,7 +249,7 @@ export class SupabaseAuthService {
   async getDemoUser(role: "owner" | "employee" = "owner"): Promise<RequestUser> {
     const user = await this.prisma.user.findFirst({
       where: { email: role === "owner" ? "owner@demo.com" : "maya@demo.com" },
-      include: { owner: true, employee: true }
+      include: { owner: true, employee: { include: { store: true } } }
     });
 
     if (!user) throw new UnauthorizedException("Demo user has not been seeded.");
@@ -260,7 +260,7 @@ export class SupabaseAuthService {
       name: user.name,
       email: user.email,
       role: user.role,
-      ownerId: user.owner?.id,
+      ownerId: user.owner?.id || user.employee?.store?.ownerId,
       employeeId: user.employee?.id,
       storeId: user.employee?.storeId
     };
