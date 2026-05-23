@@ -25,8 +25,9 @@ function SetupPageInner() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const browserTz = typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : "America/New_York";
   // form state
-  const [storeName, setStoreName] = useState("Main Street Store");
+  const [storeName, setStoreName] = useState("");
   const [storeAddress, setStoreAddress] = useState("");
   const [closeTime, setCloseTime] = useState("23:30");
   const [empName, setEmpName] = useState("");
@@ -44,7 +45,8 @@ function SetupPageInner() {
       const created = await createStore(session.token, {
         storeName,
         address: storeAddress || undefined,
-        closeTime
+        closeTime,
+        timezone: browserTz
       });
       setStoreId(created.id);
       setStep("employee");

@@ -176,9 +176,11 @@ function StoreForm({
   onCancel: () => void;
   onSaved: (s: StoreRowWithMeta) => void;
 }) {
+  const browserTz = typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : "America/New_York";
   const [storeName, setStoreName] = useState(initial?.storeName ?? "");
   const [address, setAddress] = useState(initial?.address ?? "");
   const [closeTime, setCloseTime] = useState(initial?.closeTime ?? "23:30");
+  const [timezone, setTimezone] = useState(initial?.timezone ?? browserTz);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -191,7 +193,8 @@ function StoreForm({
       const input: CreateStoreInput = {
         storeName,
         address: address || undefined,
-        closeTime
+        closeTime,
+        timezone
       };
       const r =
         mode === "create"
@@ -236,6 +239,17 @@ function StoreForm({
           value={closeTime}
           onChange={(e) => setCloseTime(e.target.value)}
         />
+      </Field>
+      <Field label="Timezone">
+        <input
+          className="focus-ring h-12 w-full rounded-lg border border-ink/15 px-4 font-bold"
+          value={timezone}
+          onChange={(e) => setTimezone(e.target.value)}
+          placeholder="America/New_York"
+        />
+        <p className="mt-1 text-xs font-bold text-ink/55">
+          Defaults to your browser timezone ({browserTz}). Set this so "open" / "needs closing" math matches the store's local clock.
+        </p>
       </Field>
       <div className="flex gap-3">
         <button

@@ -327,11 +327,11 @@ export function OwnerDashboard() {
                     </div>
                     {store.closedToday ? (
                       <span className="inline-flex items-center gap-1 rounded-full bg-leaf/10 px-2 py-1 text-xs font-black text-leaf">
-                        <CheckCircle2 size={14} aria-hidden /> Closed
+                        <CheckCircle2 size={14} aria-hidden /> Closed today
                       </span>
                     ) : needsClosing ? (
                       <span className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-1 text-xs font-black text-gold">
-                        <AlertTriangle size={14} aria-hidden /> Needs closing
+                        <AlertTriangle size={14} aria-hidden /> Close not submitted
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 rounded-full bg-smoke px-2 py-1 text-xs font-black text-ink/60">
@@ -374,8 +374,8 @@ export function OwnerDashboard() {
                       {store.closedToday
                         ? `Cash difference: ${formatMoney(store.difference)}`
                         : needsClosing
-                        ? "Closing needed"
-                        : `Closes ${store.closeTime ?? "23:30"}`}
+                        ? "Today's close hasn't been submitted yet"
+                        : `Today's close due at ${store.closeTime ?? "23:30"}`}
                     </p>
                   </div>
                 </article>
