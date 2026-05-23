@@ -19,7 +19,8 @@ export const stores: StoreSummary[] = [
     totalSales: 4500,
     cashSales: 1800,
     cardSales: 2700,
-    difference: 5
+    difference: 5,
+    closeTime: "23:30"
   },
   {
     id: "store-b",
@@ -28,7 +29,8 @@ export const stores: StoreSummary[] = [
     totalSales: 0,
     cashSales: 0,
     cardSales: 0,
-    difference: 0
+    difference: 0,
+    closeTime: "22:00"
   },
   {
     id: "store-c",
@@ -37,7 +39,8 @@ export const stores: StoreSummary[] = [
     totalSales: 3900,
     cashSales: 1500,
     cardSales: 2400,
-    difference: -40
+    difference: -40,
+    closeTime: "23:30"
   }
 ];
 

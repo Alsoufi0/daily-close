@@ -56,7 +56,7 @@ export default function SignupPage() {
 
     try {
       await bootstrapOwner(data.session.access_token, name);
-      window.localStorage.setItem("smokeshop-token", data.session.access_token);
+      window.localStorage.setItem("dailyclose-token", data.session.access_token);
       window.location.href = "/setup";
     } catch (err: any) {
       setStatus("error");

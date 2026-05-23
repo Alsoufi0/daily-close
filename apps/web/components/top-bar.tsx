@@ -26,11 +26,11 @@ export function TopBar() {
   // Re-check token on every route change so the nav adapts to sign-in/out.
   useEffect(() => {
     if (typeof window === "undefined") return;
-    setSignedIn(Boolean(window.localStorage.getItem("smokeshop-token")));
+    setSignedIn(Boolean(window.localStorage.getItem("dailyclose-token")));
   }, [pathname]);
 
   async function signOut() {
-    window.localStorage.removeItem("smokeshop-token");
+    window.localStorage.removeItem("dailyclose-token");
     const supabase = createBrowserSupabase();
     if (supabase) {
       try {
@@ -56,8 +56,7 @@ export function TopBar() {
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-leaf text-white shadow-sm">
             <Leaf size={20} aria-hidden />
           </span>
-          <span className="text-lg font-black tracking-tight">SmokeShop</span>
-          <span className="hidden text-sm font-bold text-ink/55 sm:inline">Daily Close</span>
+          <span className="text-lg font-black tracking-tight">Daily Close</span>
         </Link>
 
         {/* Desktop nav */}

@@ -1,4 +1,4 @@
-# SmokeShop Daily Close — Production Runbook
+# Daily Close — Production Runbook
 
 For the full launch sequence with time estimates and costs, see [`APP_STORE_READINESS.md`](./APP_STORE_READINESS.md). This file is the operator reference.
 
@@ -21,7 +21,7 @@ NODE_ENV=production
 PORT=4000
 ENABLE_SWAGGER=false          # set true only when you need to expose /docs
 ALLOW_DEMO_AUTH=false         # NEVER true in production
-ALLOWED_ORIGINS=https://follow-th-pbelow-exaclty-smokeshop.vercel.app
+ALLOWED_ORIGINS=https://daily-close.vercel.app
 DATABASE_URL=postgresql://...        # Supabase session pooler
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=...
@@ -73,7 +73,7 @@ Required assets in `apps/mobile/assets/` (see `apps/mobile/assets/README.md`):
 
 ## 5. Missed-close cron
 
-`POST /notifications/check-missed-close` creates yellow alert records. Already wired in `render.yaml` as the `smokeshop-missed-close-cron` service (daily 23:45 UTC). Set in the Render dashboard:
+`POST /notifications/check-missed-close` creates yellow alert records. Already wired in `render.yaml` as the `daily-close-missed-close-cron` service (daily 23:45 UTC). Set in the Render dashboard:
 
 - `CRON_API_URL` = `https://<service>.onrender.com`
 - `CRON_TOKEN` = a long-lived bearer for a service-account user (create it once in Supabase Auth and store it).

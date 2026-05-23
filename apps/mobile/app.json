@@ -1,12 +1,12 @@
 {
   "expo": {
-    "name": "SmokeShop Daily Close",
-    "slug": "smokeshop-daily-close",
+    "name": "Daily Close",
+    "slug": "daily-close",
     "version": "0.1.0",
     "runtimeVersion": { "policy": "appVersion" },
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "scheme": "smokeshopclose",
+    "scheme": "dailyclose",
     "icon": "./assets/icon.png",
     "splash": {
       "image": "./assets/splash.png",
@@ -14,7 +14,7 @@
       "backgroundColor": "#1f7a4d"
     },
     "ios": {
-      "bundleIdentifier": "com.smokeshopdaily.close",
+      "bundleIdentifier": "com.dailyclose.app",
       "buildNumber": "1",
       "supportsTablet": false,
       "infoPlist": {
@@ -24,7 +24,7 @@
       }
     },
     "android": {
-      "package": "com.smokeshopdaily.close",
+      "package": "com.dailyclose.app",
       "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",

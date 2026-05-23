@@ -44,7 +44,7 @@ async function bootstrap() {
   const enableSwagger = process.env.ENABLE_SWAGGER === "true" || process.env.NODE_ENV !== "production";
   if (enableSwagger) {
     const config = new DocumentBuilder()
-      .setTitle("SmokeShop Daily Close API")
+      .setTitle("Daily Close API")
       .setDescription("API for daily store closing — owners and employees")
       .setVersion("1.0.0")
       .addBearerAuth()

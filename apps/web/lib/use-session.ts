@@ -6,7 +6,7 @@ import { ApiError, bootstrapOwner, getProfile, listStores, StoreRecord } from ".
 import { createBrowserSupabase } from "./supabase-browser";
 import { demoOwner } from "./mock-data";
 
-const TOKEN_KEY = "smokeshop-token";
+const TOKEN_KEY = "dailyclose-token";
 
 export type SessionMode = "loading" | "production" | "demo";
 

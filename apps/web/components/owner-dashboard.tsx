@@ -154,7 +154,7 @@ export function OwnerDashboard() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `smokeshop-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.download = `daily-close-${new Date().toISOString().slice(0, 10)}.csv`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -302,8 +302,13 @@ export function OwnerDashboard() {
           <div className="grid gap-3 md:grid-cols-3">
             {summary.stores.map((store) => {
               const barWidth = store.closedToday ? Math.max(6, (store.totalSales / maxSales) * 100) : 0;
-              // Only flag "Needs closing" when API confirms close time has passed.
-              const needsClosing = !store.closedToday && store.pastCloseTime === true;
+              // Past-close is authoritative from the API (uses store timezone),
+              // but if absent (e.g. demo data) fall back to the browser's local
+              // clock so the badge never says "Open" when the wall clock is
+              // already past the store's close time.
+              const pastCloseLocal = isPastCloseTimeLocal(store.closeTime);
+              const pastClose = store.pastCloseTime ?? pastCloseLocal;
+              const needsClosing = !store.closedToday && pastClose;
               const diffTone =
                 !store.closedToday
                   ? needsClosing ? "warning" : "neutral"
@@ -383,6 +388,14 @@ export function OwnerDashboard() {
       <HistoryPanel token={session.token} />
     </section>
   );
+}
+
+function isPastCloseTimeLocal(closeTime?: string): boolean {
+  if (!closeTime) return false;
+  const [hh, mm] = closeTime.split(":").map((x) => Number(x) || 0);
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  return nowMin >= hh * 60 + mm;
 }
 
 function DashboardSkeleton() {

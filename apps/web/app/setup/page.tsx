@@ -26,7 +26,7 @@ function SetupPageInner() {
   const [submitting, setSubmitting] = useState(false);
 
   // form state
-  const [storeName, setStoreName] = useState("Main Street Smoke Shop");
+  const [storeName, setStoreName] = useState("Main Street Store");
   const [storeAddress, setStoreAddress] = useState("");
   const [closeTime, setCloseTime] = useState("23:30");
   const [empName, setEmpName] = useState("");

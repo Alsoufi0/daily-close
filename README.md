@@ -1,6 +1,6 @@
-# SmokeShop Daily Close
+# Daily Close
 
-MVP v1 for replacing paper-sheet daily closing workflows in smoke and tobacco shops.
+MVP v1 for replacing paper-sheet daily closing workflows in retail.
 
 ## What Works
 

@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: smokeshop-api
+    name: daily-close-api
     runtime: docker
     plan: starter
     region: oregon
@@ -17,7 +17,7 @@ services:
       - key: ALLOW_DEMO_AUTH
         value: "false"
       - key: ALLOWED_ORIGINS
-        value: https://follow-th-pbelow-exaclty-smokeshop.vercel.app
+        value: https://daily-close.vercel.app
       # Secrets — set these in the Render dashboard after first deploy
       - key: DATABASE_URL
         sync: false
@@ -37,7 +37,7 @@ services:
 
   # Daily 23:45 sweep — creates missed-close alerts for stores that didn't submit
   - type: cron
-    name: smokeshop-missed-close-cron
+    name: daily-close-missed-close-cron
     runtime: docker
     plan: starter
     region: oregon
@@ -46,7 +46,7 @@ services:
     schedule: "45 23 * * *"
     envVars:
       - key: CRON_API_URL
-        sync: false # e.g. https://smokeshop-api.onrender.com
+        sync: false # e.g. https://daily-close-api.onrender.com
       - key: CRON_TOKEN
         sync: false # service-account bearer token from supabase
     dockerCommand: >

@@ -1,8 +1,8 @@
 {
-  "name": "smokeshop-daily-close",
+  "name": "daily-close",
   "private": true,
   "version": "0.1.0",
-  "description": "SmokeShop Daily Close MVP monorepo",
+  "description": "Daily Close MVP monorepo",
   "workspaces": [
     "apps/api",
     "apps/web",

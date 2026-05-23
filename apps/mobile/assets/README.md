@@ -14,7 +14,7 @@ Drop production PNGs here before running `eas build`. Brand color: `#1f7a4d` (le
 ## Generation tips
 - Figma: 1024×1024 frame, brand bg, centered leaf glyph (60% of frame), export PNG @1x.
 - Quick CLI from an SVG: `npx svgexport icon.svg icon.png 1024:1024`.
-- For pure-text "SmokeShop" mark: 700 weight, letter-spacing -0.02em, white on `#1f7a4d`.
+- For pure-text "Daily Close" mark: 700 weight, letter-spacing -0.02em, white on `#1f7a4d`.
 
 ## Store screenshots (separate — don't commit, upload to App Store Connect / Play Console)
 - **iPhone 6.7"**: 1290×2796 — 3–5 screens (login, owner dashboard, store cards, employee close, success state).

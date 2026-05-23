@@ -14,7 +14,7 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const token = window.localStorage.getItem("smokeshop-token");
+    const token = window.localStorage.getItem("dailyclose-token");
     if (!token) {
       // Keep the deep-link so we can bounce back after sign-in.
       const next = window.location.pathname + window.location.search;

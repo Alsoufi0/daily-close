@@ -61,8 +61,11 @@ export class DailyCloseService {
     const difference = input.countedCash + input.safeDropAmount - expectedCash;
     const status = this.getStatus(difference);
 
+    // safeDropAmount is part of the DTO for shortage math only — it is NOT a
+    // column on DailyClose, so it must be stripped before the Prisma create.
+    const { safeDropAmount: _safeDropAmount, date: _date, employeeId: _eid, ...persisted } = input;
     const created = await this.repository.create({
-      ...input,
+      ...persisted,
       employeeId: resolvedEmployeeId,
       date: new Date(input.date),
       expectedCash,

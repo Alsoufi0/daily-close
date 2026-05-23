@@ -8,7 +8,7 @@ import type {
 import * as SecureStore from "expo-secure-store";
 
 const apiUrl = process.env.EXPO_PUBLIC_API_URL;
-const tokenKey = "smokeshop-token";
+const tokenKey = "dailyclose-token";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {

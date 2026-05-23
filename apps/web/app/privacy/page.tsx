@@ -1,4 +1,4 @@
-export const metadata = { title: "Privacy Policy · SmokeShop Daily Close" };
+export const metadata = { title: "Privacy Policy · Daily Close" };
 
 export default function PrivacyPage() {
   return (
@@ -7,7 +7,7 @@ export default function PrivacyPage() {
       <p className="mt-2 text-sm font-bold text-ink/55">Last updated: 2026-05-22</p>
       <div className="mt-6 space-y-4 text-base font-semibold leading-8 text-ink/75">
         <p>
-          SmokeShop Daily Close stores account, store, employee, daily close,
+          Daily Close stores account, store, employee, daily close,
           expense, report image, and notification information for the sole
           purpose of running the closing workflow.
         </p>
@@ -28,8 +28,8 @@ export default function PrivacyPage() {
         </p>
         <p>
           <strong>Delete my data:</strong> email{" "}
-          <a className="underline" href="mailto:support@smokeshopdaily.app">
-            support@smokeshopdaily.app
+          <a className="underline" href="mailto:support@dailyclose.app">
+            support@dailyclose.app
           </a>{" "}
           and we will remove your account and all related records within 30
           days.

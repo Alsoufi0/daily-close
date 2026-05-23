@@ -1,4 +1,4 @@
-export const metadata = { title: "Terms of Service · SmokeShop Daily Close" };
+export const metadata = { title: "Terms of Service · Daily Close" };
 
 export default function TermsPage() {
   return (
@@ -7,7 +7,7 @@ export default function TermsPage() {
       <p className="mt-2 text-sm font-bold text-ink/55">Last updated: 2026-05-22</p>
       <div className="mt-6 space-y-4 text-base font-semibold leading-8 text-ink/75">
         <p>
-          SmokeShop Daily Close is a subscription service for smoke shop owners
+          Daily Close is a subscription service for retail owners
           and their employees to submit and review daily closing records.
         </p>
         <p>
@@ -27,15 +27,15 @@ export default function TermsPage() {
           with third parties.
         </p>
         <p>
-          <strong>Liability.</strong> SmokeShop Daily Close is provided "as is."
+          <strong>Liability.</strong> Daily Close is provided "as is."
           We make no warranty that the service will be uninterrupted or
           error-free. Our maximum aggregate liability is limited to the fees
           paid in the prior 12 months.
         </p>
         <p>
           For support, contact{" "}
-          <a className="underline" href="mailto:support@smokeshopdaily.app">
-            support@smokeshopdaily.app
+          <a className="underline" href="mailto:support@dailyclose.app">
+            support@dailyclose.app
           </a>
           .
         </p>

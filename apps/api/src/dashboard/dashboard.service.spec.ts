@@ -56,18 +56,17 @@ describe("DashboardService", () => {
   });
 
   it("does not flag a not-yet-due store as needing attention", async () => {
-    // closeTime 23:59 + UTC: should not yet be past close time during typical test runs (unless flaky right at midnight UTC).
-    // We use a guaranteed-future close by setting close to the next hour.
-    const future = new Date(Date.now() + 2 * 60 * 60 * 1000);
-    const futureTime = `${String(future.getUTCHours()).padStart(2, "0")}:${String(future.getUTCMinutes()).padStart(2, "0")}`;
+    // Pin "now" to 08:00 UTC so the +2h future close (10:00 UTC) cannot wrap
+    // past midnight on flaky late-day runs.
+    const fixedNow = new Date("2026-05-22T08:00:00.000Z");
     const prisma = makePrisma([
       {
-        id: "s1", storeName: "Store #1", timezone: "UTC", closeTime: futureTime,
+        id: "s1", storeName: "Store #1", timezone: "UTC", closeTime: "10:00",
         dailyCloses: []
       }
     ]);
     const service = new DashboardService(prisma);
-    const summary = await service.getMyToday(owner);
+    const summary = await service.getMyToday(owner, fixedNow);
     expect(summary.stores[0].pastCloseTime).toBe(false);
     expect(summary.needsAttention).toBe(0);
   });

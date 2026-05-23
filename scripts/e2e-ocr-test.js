@@ -38,7 +38,7 @@ const { createClient } = require("@supabase/supabase-js");
   console.log("calling /daily-close/upload-report ...");
   const t0 = Date.now();
   const res = await fetch(
-    "https://smokeshop-api.onrender.com/daily-close/upload-report",
+    "https://daily-close-api.onrender.com/daily-close/upload-report",
     {
       method: "POST",
       headers: {

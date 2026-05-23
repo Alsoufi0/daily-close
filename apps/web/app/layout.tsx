@@ -4,20 +4,20 @@ import { TopBar } from "../components/top-bar";
 import { Footer } from "../components/footer";
 import { SentryInit } from "../components/sentry-init";
 
-const SITE_URL = "https://follow-th-pbelow-exaclty-smokeshop.vercel.app";
+const SITE_URL = "https://daily-close.vercel.app";
 const DESCRIPTION =
   "Close your store in 2 minutes. Owners see today's sales, missing cash, and missed closes across every location. Employees finish the daily close from any phone.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "SmokeShop Daily Close — Daily closing for smoke shops",
-    template: "%s · SmokeShop Daily Close"
+    default: "Daily Close — Daily closing for retail",
+    template: "%s · Daily Close"
   },
   description: DESCRIPTION,
-  applicationName: "SmokeShop Daily Close",
+  applicationName: "Daily Close",
   keywords: [
-    "smoke shop software",
+    "daily close software",
     "daily close",
     "POS close-out",
     "cash reconciliation",
@@ -28,17 +28,17 @@ export const metadata: Metadata = {
     apple: "/apple-touch-icon.png"
   },
   openGraph: {
-    title: "SmokeShop Daily Close",
+    title: "Daily Close",
     description: DESCRIPTION,
     url: SITE_URL,
-    siteName: "SmokeShop Daily Close",
+    siteName: "Daily Close",
     images: [{ url: "/apple-touch-icon.png", width: 1024, height: 1024 }],
     type: "website",
     locale: "en_US"
   },
   twitter: {
     card: "summary",
-    title: "SmokeShop Daily Close",
+    title: "Daily Close",
     description: DESCRIPTION,
     images: ["/apple-touch-icon.png"]
   },

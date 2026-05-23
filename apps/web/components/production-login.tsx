@@ -71,14 +71,25 @@ export function ProductionLogin() {
       return;
     }
 
-    window.localStorage.setItem("smokeshop-token", data.session.access_token);
+    window.localStorage.setItem("dailyclose-token", data.session.access_token);
     window.location.href = "/owner";
   }
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
-      <section className="grid gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
-        <div>
+    <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-14 lg:px-8">
+      {/* Phone-only condensed hero so the sign-in stays the focus. */}
+      <div className="mb-5 lg:hidden">
+        <span className="inline-flex items-center gap-2 rounded-full bg-leaf/10 px-3 py-1 text-xs font-black uppercase tracking-wide text-leaf">
+          <Store size={14} aria-hidden />
+          Daily Close
+        </span>
+        <h1 className="mt-3 text-2xl font-black leading-tight tracking-tight text-ink">
+          Daily closing, <span className="text-leaf">done in minutes.</span>
+        </h1>
+      </div>
+      <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-start lg:gap-10">
+        {/* Marketing column — hidden on phone so the sign-in is the focus. */}
+        <div className="hidden lg:block">
           <span className="inline-flex items-center gap-2 rounded-full bg-leaf/10 px-3 py-1 text-xs font-black uppercase tracking-wide text-leaf">
             <Store size={14} aria-hidden />
             Multi-store · iOS · Android · Web
