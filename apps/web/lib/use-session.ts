@@ -24,6 +24,20 @@ function readToken(): string | undefined {
   return window.localStorage.getItem(TOKEN_KEY) || undefined;
 }
 
+async function readVerifiedBrowserToken(): Promise<string | undefined> {
+  if (typeof window === "undefined") return undefined;
+  const supabase = createBrowserSupabase();
+  if (!supabase) return readToken();
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (token) {
+    window.localStorage.setItem(TOKEN_KEY, token);
+    return token;
+  }
+  window.localStorage.removeItem(TOKEN_KEY);
+  return undefined;
+}
+
 const demoProfile: SessionProfile = {
   id: demoOwner.id,
   name: demoOwner.name,
@@ -41,15 +55,17 @@ export function useSession(): Session {
 
   useEffect(() => {
     let cancelled = false;
-    const stored = readToken();
-    if (!stored) {
-      setMode("demo");
-      setProfile(demoProfile);
-      return;
-    }
-
-    setToken(stored);
     (async () => {
+      const stored = await readVerifiedBrowserToken();
+      if (cancelled) return;
+      if (!stored) {
+        setToken(undefined);
+        setMode("demo");
+        setProfile(demoProfile);
+        return;
+      }
+
+      setToken(stored);
       try {
         let p: SessionProfile;
         try {

@@ -42,7 +42,7 @@ function makeService(overrides: Partial<{
     storage as any,
     prisma as any
   );
-  return { service, repository, prisma };
+  return { service, repository, prisma, ocr, posParser, storage };
 }
 
 const baseInput: CreateDailyCloseDto = {
@@ -154,6 +154,39 @@ describe("DailyCloseService.finishClosing", () => {
     expect(repository.createExpenseAndAudit).toHaveBeenCalledWith(
       expect.objectContaining({ expenses: 25, storeId: "store-1", userId: "user-employee" })
     );
+  });
+});
+
+describe("DailyCloseService.uploadReport", () => {
+  it("scans the submitted base64 image directly after storing it", async () => {
+    const { service, storage, ocr, posParser } = makeService();
+    storage.uploadBase64.mockResolvedValue("https://storage.example/report.jpg");
+    ocr.extractText.mockResolvedValue("Gross Sales $3,704.91 Cash $1,169.27 Credit/Debit $2,535.64");
+    posParser.parse.mockReturnValue({
+      parserType: "TERMINAL_REPORT",
+      cashSales: 1169.27,
+      cardSales: 2535.64,
+      totalSales: 3704.91,
+      tax: 0,
+      refunds: 0,
+      discounts: 0,
+      confidence: 1
+    });
+
+    const result = await service.uploadReport(
+      {
+        storeId: "store-1",
+        fileName: "report.jpg",
+        contentType: "image/jpeg",
+        base64Data: "data:image/jpeg;base64,abc123"
+      },
+      employeeUser
+    );
+
+    expect(storage.uploadBase64).toHaveBeenCalled();
+    expect(ocr.extractText).toHaveBeenCalledWith("data:image/jpeg;base64,abc123");
+    expect(result.imageUrl).toBe("https://storage.example/report.jpg");
+    expect(result.totalSales).toBe(3704.91);
   });
 });
 

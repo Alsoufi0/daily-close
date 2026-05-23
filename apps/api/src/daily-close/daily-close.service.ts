@@ -64,7 +64,7 @@ export class DailyCloseService {
 
     if (!imageUrl) throw new BadRequestException("Report image is required.");
 
-    const parsed = await this.scanReport({ imageUrl, storeId: input.storeId });
+    const parsed = await this.scanReport({ imageUrl: input.base64Data || imageUrl, storeId: input.storeId });
     return { ...parsed, imageUrl } as ParsedPOSReport & { imageUrl: string };
   }
 

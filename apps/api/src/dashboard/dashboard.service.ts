@@ -47,10 +47,6 @@ export class DashboardService {
     const rawCloseMin = DashboardService.parseCloseTime(closeTime);
     const nowMin = DashboardService.minutesNowInTimezone(timezone, now);
 
-    if (rawCloseMin < 6 * 60) {
-      return nowMin < 6 * 60 && nowMin >= rawCloseMin;
-    }
-
     return nowMin >= rawCloseMin;
   }
 

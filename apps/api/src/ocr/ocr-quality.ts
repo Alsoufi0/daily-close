@@ -28,13 +28,9 @@ export function scoreReceiptText(text: string): number {
 }
 
 export async function makeOcrImageVariants(fileUrl: string): Promise<OcrImageVariant[]> {
-  const res = await fetch(fileUrl);
-  if (!res.ok) {
-    throw new Error(`Image fetch failed: ${res.status}`);
-  }
-
-  const contentType = res.headers.get("content-type") || "image/jpeg";
-  const input = Buffer.from(await res.arrayBuffer());
+  const source = await readImageSource(fileUrl);
+  const contentType = source.contentType;
+  const input = source.buffer;
   const variants: OcrImageVariant[] = [
     { name: "original", blob: bufferToBlob(input, contentType) }
   ];
@@ -67,4 +63,27 @@ export async function makeOcrImageVariants(fileUrl: string): Promise<OcrImageVar
 
 function bufferToBlob(buffer: Buffer, contentType: string): Blob {
   return new Blob([new Uint8Array(buffer)], { type: contentType });
+}
+
+async function readImageSource(fileUrl: string): Promise<{ buffer: Buffer; contentType: string }> {
+  if (fileUrl.startsWith("data:")) {
+    const match = fileUrl.match(/^data:([^;,]+)?(;base64)?,(.*)$/s);
+    if (!match) throw new Error("Invalid data URL");
+    const contentType = match[1] || "image/jpeg";
+    const isBase64 = Boolean(match[2]);
+    const payload = match[3] || "";
+    return {
+      contentType,
+      buffer: isBase64 ? Buffer.from(payload, "base64") : Buffer.from(decodeURIComponent(payload))
+    };
+  }
+
+  const res = await fetch(fileUrl);
+  if (!res.ok) {
+    throw new Error(`Image fetch failed: ${res.status}`);
+  }
+  return {
+    contentType: res.headers.get("content-type") || "image/jpeg",
+    buffer: Buffer.from(await res.arrayBuffer())
+  };
 }

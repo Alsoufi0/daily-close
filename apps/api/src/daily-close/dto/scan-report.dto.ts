@@ -1,7 +1,7 @@
-import { IsString, IsUrl } from "class-validator";
+import { IsString } from "class-validator";
 
 export class ScanReportDto {
-  @IsUrl()
+  @IsString()
   imageUrl: string;
 
   @IsString()

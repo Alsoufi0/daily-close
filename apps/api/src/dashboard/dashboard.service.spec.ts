@@ -39,6 +39,9 @@ describe("DashboardService", () => {
     ).toBe(true);
     expect(
       DashboardService.isPastCloseTime("UTC", "02:00", new Date("2026-05-23T14:00:00.000Z"))
+    ).toBe(true);
+    expect(
+      DashboardService.isPastCloseTime("UTC", "02:00", new Date("2026-05-23T01:00:00.000Z"))
     ).toBe(false);
   });
 
