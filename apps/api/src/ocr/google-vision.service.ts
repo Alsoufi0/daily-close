@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { makeOcrImageVariants, scoreReceiptText } from "./ocr-quality";
+import { OcrSpaceOCRService } from "./ocr-space.service";
 import { OCRService } from "./ocr.service";
 
 /**
@@ -71,6 +72,15 @@ export class GoogleVisionOCRService implements OCRService {
         if (score >= 95) break;
       } catch (err: any) {
         this.logger.error(`Vision request failed for ${variant.name}: ${err?.message || err}`);
+      }
+    }
+
+    if (bestScore < 40) {
+      this.logger.warn(`Vision OCR quality was low (${bestScore}); trying OCR.space fallback`);
+      const fallbackText = await new OcrSpaceOCRService().extractText(fileUrl);
+      if (scoreReceiptText(fallbackText) > bestScore) {
+        bestText = fallbackText;
+        bestScore = scoreReceiptText(fallbackText);
       }
     }
 
