@@ -180,7 +180,7 @@ export function OwnerDashboard() {
           </h1>
           <p className="mt-1 text-sm font-bold text-ink/65 sm:text-base">{today}</p>
         </div>
-        <div className="flex w-full gap-2 sm:w-auto">
+        <div className="flex w-full min-w-0 gap-2 sm:w-auto">
           <button
             onClick={manualRefresh}
             disabled={refreshing}
@@ -197,7 +197,7 @@ export function OwnerDashboard() {
           <button
             onClick={exportCsv}
             disabled={downloading}
-            className="focus-ring inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-lg bg-ink px-4 font-bold text-white hover:bg-ink/90 disabled:opacity-60 sm:flex-none"
+            className="focus-ring inline-flex h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-lg bg-ink px-3 font-bold text-white hover:bg-ink/90 disabled:opacity-60 sm:flex-none sm:px-4"
           >
             {downloading ? <Loader2 className="animate-spin" size={18} aria-hidden /> : <Download size={18} aria-hidden />}
             {downloading ? "Downloading…" : "Export CSV"}
@@ -316,15 +316,15 @@ export function OwnerDashboard() {
                       <h3 className="text-xl font-black">{store.storeName}</h3>
                     </div>
                     {store.closedToday ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-leaf/10 px-2 py-1 text-xs font-black text-leaf">
-                        <CheckCircle2 size={14} aria-hidden /> Closed today
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-leaf/10 px-2 py-1 text-xs font-black text-leaf">
+                        <CheckCircle2 size={14} aria-hidden /> Closed
                       </span>
                     ) : needsClosing ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-1 text-xs font-black text-gold">
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-yellow-100 px-2 py-1 text-xs font-black text-gold">
                         <AlertTriangle size={14} aria-hidden /> Close not submitted
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-smoke px-2 py-1 text-xs font-black text-ink/60">
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-smoke px-2 py-1 text-xs font-black text-ink/60">
                         Open · closes {store.closeTime ?? "23:30"}
                       </span>
                     )}
