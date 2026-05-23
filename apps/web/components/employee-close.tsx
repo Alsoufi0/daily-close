@@ -58,6 +58,7 @@ export function EmployeeClose() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [ocrRawText, setOcrRawText] = useState<string | null>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const libraryInputRef = useRef<HTMLInputElement>(null);
 
@@ -97,6 +98,7 @@ export function EmployeeClose() {
       setTotalSales(String(parsed.totalSales));
       setTax(String(parsed.tax));
       setRefunds(String(parsed.refunds));
+      setOcrRawText(parsed.rawText ?? null);
       setReportReady(true);
     } catch (err: any) {
       setUploadError(err?.message || "Upload failed. Please try again.");
@@ -303,6 +305,18 @@ export function EmployeeClose() {
                       : "Photo saved. Enter the numbers from your report on the next step."}
                   </p>
                 </div>
+                {ocrRawText ? (
+                  <details className="mt-3 rounded-lg bg-white p-3 text-ink/75">
+                    <summary className="cursor-pointer text-sm font-black text-ink/80">
+                      OCR read this — tap to see what we got from the photo
+                    </summary>
+                    <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap text-xs leading-5">
+                      {ocrRawText.length > 0
+                        ? ocrRawText
+                        : "(OCR returned no text — the photo may be too dark, blurry, or rotated. Try retaking under more light.)"}
+                    </pre>
+                  </details>
+                ) : null}
                 <button
                   className="focus-ring mt-4 flex h-14 w-full items-center justify-center gap-2 rounded-lg bg-leaf px-5 text-lg font-black text-white"
                   onClick={() => setStep("sales")}

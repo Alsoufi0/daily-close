@@ -30,6 +30,19 @@ export class DashboardService {
     return hh * 60 + mm;
   }
 
+  /**
+   * Close times in the early morning (00:00 – 05:59) are conceptually the
+   * END of the previous business day — a store that closes at midnight is
+   * "open all day, close due at midnight", not "close was due at 00:00 this
+   * morning so we've been overdue all day". Shift those into the 24:00–29:59
+   * range so a nowMin in mid-afternoon (e.g. 14:00 = 840) is never >= the
+   * effective close minute. Times >= 06:00 are taken at face value.
+   */
+  static effectiveCloseMin(closeTime: string): number {
+    const raw = DashboardService.parseCloseTime(closeTime);
+    return raw < 6 * 60 ? raw + 24 * 60 : raw;
+  }
+
   // Returns the UTC instants spanning a store's *local* calendar day for `now`.
   // Without this, dashboard queries use the server's UTC day and miss closes
   // submitted late-evening in earlier timezones (e.g. a 23:00 PT close is at
@@ -93,7 +106,7 @@ export class DashboardService {
       const { start, end } = DashboardService.storeLocalDayRange(tz, date);
       const close = store.dailyCloses.find((c: any) => c.date >= start && c.date <= end);
       const nowMin = DashboardService.minutesNowInTimezone(tz, date);
-      const closeMin = DashboardService.parseCloseTime(closeTime);
+      const closeMin = DashboardService.effectiveCloseMin(closeTime);
       return {
         id: store.id,
         storeName: store.storeName,

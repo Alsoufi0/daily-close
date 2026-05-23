@@ -22,19 +22,15 @@ export class MissedCloseService {
       }
     });
 
-    // Only flag stores whose close_time has passed in their local timezone
-    const minutesAt = (t: string) => {
-      const [hh, mm] = (t || "23:30").split(":").map((x) => Number(x) || 0);
-      return hh * 60 + mm;
-    };
-
+    // Only flag stores whose close_time has passed in their local timezone.
+    // Use effectiveCloseMin so midnight-closing stores aren't flagged all day.
     const missing = stores.filter((store: any) => {
       const tz = store.timezone || "America/New_York";
       const { start, end } = DashboardService.storeLocalDayRange(tz, date);
       const hasCloseToday = store.dailyCloses.some((c: any) => c.date >= start && c.date <= end);
       if (hasCloseToday) return false;
       const nowMin = DashboardService.minutesNowInTimezone(tz, date);
-      return nowMin >= minutesAt(store.closeTime || "23:30");
+      return nowMin >= DashboardService.effectiveCloseMin(store.closeTime || "23:30");
     });
     const start = wideStart;
     const end = wideEnd;

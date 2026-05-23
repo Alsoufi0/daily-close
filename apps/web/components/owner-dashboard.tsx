@@ -407,9 +407,13 @@ export function OwnerDashboard() {
 function isPastCloseTimeLocal(closeTime?: string): boolean {
   if (!closeTime) return false;
   const [hh, mm] = closeTime.split(":").map((x) => Number(x) || 0);
+  const raw = hh * 60 + mm;
+  // Stores closing 00:00–05:59 are conceptually end-of-day for the *previous*
+  // business day; shift past 24h so we don't false-positive all day long.
+  const closeMin = raw < 6 * 60 ? raw + 24 * 60 : raw;
   const now = new Date();
   const nowMin = now.getHours() * 60 + now.getMinutes();
-  return nowMin >= hh * 60 + mm;
+  return nowMin >= closeMin;
 }
 
 function DashboardSkeleton() {

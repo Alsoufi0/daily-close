@@ -26,9 +26,14 @@ export class DailyCloseService {
     private readonly prisma: PrismaService
   ) {}
 
-  async scanReport(input: ScanReportDto): Promise<ParsedPOSReport> {
+  async scanReport(input: ScanReportDto): Promise<ParsedPOSReport & { rawText?: string }> {
     const text = await this.ocr.extractText(input.imageUrl);
-    return this.posParser.parse(text);
+    const parsed = this.posParser.parse(text);
+    // If the parser couldn't extract anything useful, pass the raw OCR text
+    // back so the UI can show the employee what was actually read off the
+    // receipt — way better than a silent "Photo saved, enter numbers".
+    const found = (parsed.cashSales || 0) + (parsed.cardSales || 0) + (parsed.totalSales || 0);
+    return found > 0 ? parsed : { ...parsed, rawText: text.slice(0, 4000) };
   }
 
   async debugOcr(input: ScanReportDto, user: RequestUser) {
@@ -59,7 +64,7 @@ export class DailyCloseService {
     if (!imageUrl) throw new BadRequestException("Report image is required.");
 
     const parsed = await this.scanReport({ imageUrl, storeId: input.storeId });
-    return { ...parsed, imageUrl };
+    return { ...parsed, imageUrl } as ParsedPOSReport & { imageUrl: string };
   }
 
   async finishClosing(input: CreateDailyCloseDto, user?: RequestUser): Promise<DailyCloseResult> {

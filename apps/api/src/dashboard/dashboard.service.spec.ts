@@ -28,21 +28,22 @@ const employeeNoOwner: RequestUser = {
 
 describe("DashboardService", () => {
   it("aggregates storesClosed, totalSales and missingCash correctly", async () => {
-    // closeTime 00:00 + UTC tz -> always "past close time" regardless of when tests run
-    // Pin "now" so the per-store-local-day filter has a deterministic window.
+    // closeTime 10:00 + pinned now at 12:00 UTC -> deterministically "past close time"
+    // (we don't use 00:00 anymore because effectiveCloseMin treats early-morning
+    // closes as next-day, so they're never past at midday).
     const now = new Date("2026-05-22T12:00:00.000Z");
     const closeDate = new Date("2026-05-22T05:00:00.000Z"); // inside UTC 2026-05-22
     const prisma = makePrisma([
       {
-        id: "s1", storeName: "Store #1", timezone: "UTC", closeTime: "00:00",
+        id: "s1", storeName: "Store #1", timezone: "UTC", closeTime: "10:00",
         dailyCloses: [{ date: closeDate, totalSales: 4500, cashSales: 1800, cardSales: 2700, difference: 5 }]
       },
       {
-        id: "s2", storeName: "Store #2", timezone: "UTC", closeTime: "00:00",
+        id: "s2", storeName: "Store #2", timezone: "UTC", closeTime: "10:00",
         dailyCloses: []
       },
       {
-        id: "s3", storeName: "Store #3", timezone: "UTC", closeTime: "00:00",
+        id: "s3", storeName: "Store #3", timezone: "UTC", closeTime: "10:00",
         dailyCloses: [{ date: closeDate, totalSales: 3900, cashSales: 1500, cardSales: 2400, difference: -40 }]
       }
     ]);

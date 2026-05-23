@@ -232,9 +232,9 @@ export async function uploadReport(
   token: string | undefined,
   storeId: string,
   upload?: { imageUrl: string; fileName: string; contentType: string }
-): Promise<ParsedPOSReport & { imageUrl: string }> {
+): Promise<ParsedPOSReport & { imageUrl: string; rawText?: string }> {
   if (!apiUrl || !token) return { ...scannedReport, imageUrl: upload?.imageUrl || "demo-report.jpg" };
-  return apiFetch<ParsedPOSReport & { imageUrl: string }>("/daily-close/upload-report", token, {
+  return apiFetch<ParsedPOSReport & { imageUrl: string; rawText?: string }>("/daily-close/upload-report", token, {
     method: "POST",
     body: JSON.stringify({
       storeId,
