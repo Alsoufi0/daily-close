@@ -18,27 +18,34 @@ export function readMoney(text: string, labels: string[]): number {
   const candidateGlobal = new RegExp(`(\\$)?\\s*\\(?(-?${D}+)\\)?`, "g");
 
   for (const label of labels) {
-    const labelPattern = label.replace(/\s+/g, "\\s+");
+    const labelPattern = escapeRegExp(label).replace(/\s+/g, "\\s+");
+    const guardedLabel = `(?:^|[^A-Za-z])${labelPattern}(?![A-Za-z])`;
 
     // 1) Same line: scan everything after the label on that line, gather all
     // numeric candidates, and pick the best money-shaped one.
-    const sameLine = new RegExp(`${labelPattern}\\s*[:\\-=]?\\s*([^\\n]*)`, "i");
+    const sameLine = new RegExp(`${guardedLabel}[ \\t]*[:\\-=]?[ \\t]*([^\\n]*)`, "i");
     const sameMatch = flattened.match(sameLine);
     if (sameMatch) {
       const picked = pickBestMoney(sameMatch[1] ?? "", candidateGlobal);
       if (picked !== null) return picked;
     }
 
-    // 2) Label and value on subsequent lines: "TOTAL SALES\n$5,550.00"
-    const multiLine = new RegExp(`${labelPattern}[^\\n]*\\n+\\s*([^\\n]*)`, "i");
+    // 2) Label and value on subsequent lines: "Gross Sales\n260\n$3,704.91".
+    // OCR often emits row counts between the label and the money amount, so
+    // scan a short window instead of a single next line.
+    const multiLine = new RegExp(`${guardedLabel}[^\\n]*(?:\\n+\\s*[^\\n]*){1,8}`, "i");
     const multiMatch = flattened.match(multiLine);
     if (multiMatch) {
-      const picked = pickBestMoney(multiMatch[1] ?? "", candidateGlobal);
+      const picked = pickBestMoney(multiMatch[0] ?? "", candidateGlobal);
       if (picked !== null) return picked;
     }
   }
 
   return 0;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function pickBestMoney(segment: string, candidateGlobal: RegExp): number | null {

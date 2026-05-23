@@ -11,7 +11,10 @@ function resolveMode(): string {
   if (explicit) return explicit;
   if (process.env.GOOGLE_VISION_API_KEY) return "google";
   if (process.env.OCR_SPACE_API_KEY) return "ocrspace";
-  return "manual";
+  // Pilot default: try real OCR with OCR.space's public demo key. Operators
+  // can still force manual entry with OCR_MODE=manual, but silent no-OCR is a
+  // bad default for store employees taking report photos.
+  return "ocrspace";
 }
 
 function pickProvider(): Type<any> {

@@ -18,13 +18,13 @@ export class GenericParser implements POSParser {
     const cashSales = readMoney(text, ["cash sales", "cash tender", "cash"]);
     const cardSales = readMoney(text, ["card sales", "credit card", "card", "credit", "debit"]);
     const totalSales = readMoney(text, [
+      "gross sales",
       "total sales",
       "net sales",
-      "gross sales",
       "grand total",
       "total"
     ]);
-    const tax = readMoney(text, ["sales tax", "tax"]);
+    const tax = readMoney(text, ["sales tax (tax)", "tax (tax)", "sales tax", "tax"]);
     const refunds = readMoney(text, ["refunds", "refund", "returns"]);
     const discounts = readMoney(text, ["discounts", "discount"]);
 

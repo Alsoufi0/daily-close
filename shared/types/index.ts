@@ -2,7 +2,7 @@ export type UserRole = "SUPER_ADMIN" | "STORE_OWNER" | "EMPLOYEE";
 
 export type CloseStatus = "CLOSED" | "SHORT" | "OVER" | "PENDING";
 
-export type ParserType = "CLOVER" | "NRS" | "UNKNOWN";
+export type ParserType = "CLOVER" | "NRS" | "TERMINAL_REPORT" | "UNKNOWN";
 
 export interface StoreSummary {
   id: string;

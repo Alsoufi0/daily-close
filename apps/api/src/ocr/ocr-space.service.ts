@@ -1,11 +1,12 @@
 import { Injectable, Logger } from "@nestjs/common";
+import { makeOcrImageVariants, scoreReceiptText } from "./ocr-quality";
 import { OCRService } from "./ocr.service";
 
 /**
  * Real OCR via api.ocr.space.
  *
  * Free tier: ~25k requests/month with a registered API key. The public
- * demo key 'helloworld' works out of the box but is rate-limited.
+ * demo key "helloworld" works out of the box but is rate-limited.
  * Get a real key at https://ocr.space/ocrapi/freekey
  *
  * Configured by env:
@@ -24,63 +25,64 @@ export class OcrSpaceOCRService implements OCRService {
   async extractText(fileUrl: string): Promise<string> {
     if (!fileUrl) return "";
 
-    // OCR.space's URL-based fetcher is unreliable for Supabase signed URLs
-    // (long query strings, geo restrictions). Always pull the bytes
-    // ourselves and forward as multipart — that path is rock solid.
-    let imageBlob: Blob;
-    let fileName: string;
+    let variants: Awaited<ReturnType<typeof makeOcrImageVariants>>;
     try {
-      const imgRes = await fetch(fileUrl);
-      if (!imgRes.ok) {
-        this.logger.warn(`OCR fetch image failed: ${imgRes.status}`);
-        return "";
-      }
-      imageBlob = await imgRes.blob();
-      fileName = `report.${this.detectFileType(fileUrl).toLowerCase()}`;
+      variants = await makeOcrImageVariants(fileUrl);
     } catch (err: any) {
       this.logger.warn(`OCR could not fetch image: ${err?.message || err}`);
       return "";
     }
 
-    const form = new FormData();
-    form.set("apikey", this.apiKey);
-    form.set("language", this.language);
-    form.set("OCREngine", this.engine);
-    form.set("isTable", "true");
-    form.set("scale", "true");
-    form.set("file", imageBlob, fileName);
+    let bestText = "";
+    let bestScore = -1;
 
-    try {
-      const res = await fetch("https://api.ocr.space/parse/image", {
-        method: "POST",
-        body: form
-      });
-      const body = (await res.json()) as {
-        ParsedResults?: Array<{ ParsedText?: string }>;
-        OCRExitCode?: number;
-        IsErroredOnProcessing?: boolean;
-        ErrorMessage?: string | string[];
-      };
+    for (const variant of variants) {
+      const form = new FormData();
+      form.set("apikey", this.apiKey);
+      form.set("language", this.language);
+      form.set("OCREngine", this.engine);
+      form.set("isTable", "true");
+      form.set("scale", "true");
+      form.set("file", variant.blob, this.fileNameForVariant(fileUrl, variant.name));
 
-      if (body.IsErroredOnProcessing) {
-        const msg = Array.isArray(body.ErrorMessage)
-          ? body.ErrorMessage.join("; ")
-          : body.ErrorMessage || "Unknown OCR error";
-        this.logger.warn(`OCR.space error: ${msg}`);
-        return "";
+      try {
+        const res = await fetch("https://api.ocr.space/parse/image", {
+          method: "POST",
+          body: form
+        });
+        const body = (await res.json()) as {
+          ParsedResults?: Array<{ ParsedText?: string }>;
+          OCRExitCode?: number;
+          IsErroredOnProcessing?: boolean;
+          ErrorMessage?: string | string[];
+        };
+
+        if (body.IsErroredOnProcessing) {
+          const msg = Array.isArray(body.ErrorMessage)
+            ? body.ErrorMessage.join("; ")
+            : body.ErrorMessage || "Unknown OCR error";
+          this.logger.warn(`OCR.space error for ${variant.name}: ${msg}`);
+          continue;
+        }
+
+        const text = body.ParsedResults?.map((r) => r.ParsedText || "").join("\n") || "";
+        const score = scoreReceiptText(text);
+        if (score > bestScore) {
+          bestText = text;
+          bestScore = score;
+        }
+        if (score >= 95) break;
+      } catch (err: any) {
+        this.logger.error(`OCR.space request failed for ${variant.name}: ${err?.message || err}`);
       }
-
-      const text = body.ParsedResults?.map((r) => r.ParsedText || "").join("\n") || "";
-      this.logger.log(`OCR.space extracted ${text.length} chars from ${fileUrl}`);
-      return text;
-    } catch (err: any) {
-      this.logger.error(`OCR.space request failed: ${err?.message || err}`);
-      return "";
     }
+
+    this.logger.log(
+      `OCR.space extracted ${bestText.length} chars from ${fileUrl} with score ${bestScore}`
+    );
+    return bestText;
   }
 
-  // OCR.space rejects URLs without an obvious extension - look at the path,
-  // strip Supabase signed-URL query string first.
   private detectFileType(fileUrl: string): string {
     try {
       const path = new URL(fileUrl).pathname.toLowerCase();
@@ -93,6 +95,12 @@ export class OcrSpaceOCRService implements OCRService {
     } catch {
       /* fall through */
     }
-    return "JPG"; // safe default for phone uploads
+    return "JPG";
+  }
+
+  private fileNameForVariant(fileUrl: string, variantName: string): string {
+    const detectedType = this.detectFileType(fileUrl).toLowerCase();
+    const extension = variantName === "original" ? detectedType : "jpg";
+    return `report-${variantName}.${extension}`;
   }
 }

@@ -4,12 +4,14 @@ import { CloverParser } from "./clover.parser";
 import { GenericParser } from "./generic.parser";
 import { NRSParser } from "./nrs.parser";
 import { POSParser } from "./pos-parser.interface";
+import { TerminalReportParser } from "./terminal-report.parser";
 
 @Injectable()
 export class PosParserService {
   private readonly parsers: POSParser[] = [
     new CloverParser(),
     new NRSParser(),
+    new TerminalReportParser(),
     new GenericParser()
   ];
 
