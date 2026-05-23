@@ -50,7 +50,7 @@ describe("DashboardService", () => {
     // (we don't use 00:00 anymore because effectiveCloseMin treats early-morning
     // closes as next-day, so they're never past at midday).
     const now = new Date("2026-05-22T12:00:00.000Z");
-    const closeDate = new Date("2026-05-22T05:00:00.000Z"); // inside UTC 2026-05-22
+    const closeDate = new Date("2026-05-22T11:00:00.000Z"); // inside the active close window
     const prisma = makePrisma([
       {
         id: "s1", storeName: "Store #1", timezone: "UTC", closeTime: "10:00",
@@ -91,6 +91,27 @@ describe("DashboardService", () => {
     const summary = await service.getMyToday(owner, fixedNow);
     expect(summary.stores[0].pastCloseTime).toBe(false);
     expect(summary.needsAttention).toBe(0);
+  });
+
+  it("counts a close submitted after midnight in the active close window", async () => {
+    const now = new Date("2026-05-24T05:07:00.000Z"); // 01:07 in New York
+    const closeDate = new Date("2026-05-24T04:45:00.000Z"); // after 23:30 local close
+    const prisma = makePrisma([
+      {
+        id: "s1",
+        storeName: "Main Street Smoke Shop",
+        timezone: "America/New_York",
+        closeTime: "23:30",
+        dailyCloses: [
+          { date: closeDate, totalSales: 5000, cashSales: 1800, cardSales: 3200, difference: 0 }
+        ]
+      }
+    ]);
+    const service = new DashboardService(prisma);
+    const summary = await service.getMyToday(owner, now);
+    expect(summary.stores[0].closedToday).toBe(true);
+    expect(summary.storesClosed).toBe(1);
+    expect(summary.totalSales).toBe(5000);
   });
 
   it("returns empty summary when the user has no ownerId", async () => {

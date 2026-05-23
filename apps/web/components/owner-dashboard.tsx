@@ -96,7 +96,7 @@ export function OwnerDashboard() {
     timer = setInterval(() => {
       if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
       load(false);
-    }, 60_000);
+    }, 15_000);
 
     const onVisible = () => {
       if (typeof document !== "undefined" && document.visibilityState === "visible") load(false);
@@ -178,7 +178,9 @@ export function OwnerDashboard() {
           <h1 className="mt-1 text-2xl font-black tracking-tight text-ink sm:text-4xl">
             Today's Store Close
           </h1>
-          <p className="mt-1 text-sm font-bold text-ink/65 sm:text-base">{today}</p>
+          <p className="mt-1 text-sm font-bold text-ink/65 sm:text-base">
+            {today} · updates every 15 seconds
+          </p>
         </div>
         <div className="flex w-full min-w-0 gap-2 sm:w-auto">
           <button
@@ -292,7 +294,7 @@ export function OwnerDashboard() {
             </p>
           </div>
         ) : (
-          <div className="grid gap-3 md:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {summary.stores.map((store) => {
               const barWidth = store.closedToday ? Math.max(6, (store.totalSales / maxSales) * 100) : 0;
               // Past-close is authoritative from the API using the store timezone.
@@ -306,14 +308,14 @@ export function OwnerDashboard() {
               return (
                 <article
                   key={store.id}
-                  className="flex flex-col rounded-xl border border-ink/10 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
+                  className="flex min-w-0 flex-col rounded-xl border border-ink/10 bg-white p-3 shadow-sm transition-shadow hover:shadow-md sm:p-4"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex min-w-0 items-center gap-2">
                       <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-smoke text-ink">
                         <Store size={18} aria-hidden />
                       </span>
-                      <h3 className="text-xl font-black">{store.storeName}</h3>
+                      <h3 className="min-w-0 text-lg font-black leading-tight sm:text-xl">{store.storeName}</h3>
                     </div>
                     {store.closedToday ? (
                       <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-leaf/10 px-2 py-1 text-xs font-black text-leaf">
@@ -324,14 +326,14 @@ export function OwnerDashboard() {
                         <AlertTriangle size={14} aria-hidden /> Close not submitted
                       </span>
                     ) : (
-                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-smoke px-2 py-1 text-xs font-black text-ink/60">
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-smoke px-2 py-1 text-[11px] font-black text-ink/60 sm:text-xs">
                         Open · closes {store.closeTime ?? "23:30"}
                       </span>
                     )}
                   </div>
 
                   <p className="mt-5 text-xs font-black uppercase tracking-wide text-ink/55">Sales Today</p>
-                  <p className="text-4xl font-black tracking-tight">
+                  <p className="text-3xl font-black tracking-tight sm:text-4xl">
                     {store.closedToday ? formatMoney(store.totalSales) : "—"}
                   </p>
                   <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-smoke">

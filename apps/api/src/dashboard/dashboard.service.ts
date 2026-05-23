@@ -79,6 +79,15 @@ export class DashboardService {
     }
   }
 
+  static storeCloseWindowRange(timezone: string, closeTime: string, now = new Date()): { start: Date; end: Date } {
+    const closeMin = DashboardService.parseCloseTime(closeTime);
+    const nowMin = DashboardService.minutesNowInTimezone(timezone, now);
+    const parts = DashboardService.localDateParts(timezone, now);
+    const startDayOffset = nowMin >= closeMin ? 0 : -1;
+    const start = DashboardService.localDateTimeToUtc(timezone, parts, closeMin, startDayOffset);
+    return { start, end: new Date(start.getTime() + 86_400_000 - 1) };
+  }
+
   // Minutes the given zone is ahead of UTC (positive east of UTC). Computed
   // from Intl rather than a hardcoded table so DST is correct year-round.
   static timezoneOffsetMinutes(timezone: string, now = new Date()): number {
@@ -92,6 +101,33 @@ export class DashboardService {
     const get = (t: string) => Number(parts.find((p) => p.type === t)!.value);
     const asUTC = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"), get("second"));
     return Math.round((asUTC - now.getTime()) / 60000);
+  }
+
+  private static localDateParts(timezone: string, now: Date): { year: number; month: number; day: number } {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    }).formatToParts(now);
+    return {
+      year: Number(parts.find((p) => p.type === "year")!.value),
+      month: Number(parts.find((p) => p.type === "month")!.value),
+      day: Number(parts.find((p) => p.type === "day")!.value)
+    };
+  }
+
+  private static localDateTimeToUtc(
+    timezone: string,
+    parts: { year: number; month: number; day: number },
+    minutes: number,
+    dayOffset = 0
+  ): Date {
+    const localMiddayUtc = new Date(Date.UTC(parts.year, parts.month - 1, parts.day + dayOffset, 12, 0, 0));
+    const offsetMin = DashboardService.timezoneOffsetMinutes(timezone, localMiddayUtc);
+    return new Date(
+      Date.UTC(parts.year, parts.month - 1, parts.day + dayOffset, 0, minutes, 0, 0) - offsetMin * 60 * 1000
+    );
   }
 
   async getOwnerToday(ownerId: string, date = new Date()): Promise<OwnerDashboardSummary["stores"]> {
@@ -110,7 +146,7 @@ export class DashboardService {
     return stores.map((store) => {
       const tz = (store as any).timezone || "America/New_York";
       const closeTime = (store as any).closeTime || "23:30";
-      const { start, end } = DashboardService.storeLocalDayRange(tz, date);
+      const { start, end } = DashboardService.storeCloseWindowRange(tz, closeTime, date);
       const close = store.dailyCloses.find((c: any) => c.date >= start && c.date <= end);
       return {
         id: store.id,

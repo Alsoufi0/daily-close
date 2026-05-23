@@ -87,7 +87,8 @@ export function HistoryPanel({ token }: { token?: string }) {
             No closes recorded in this range yet.
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          <div className="hidden overflow-x-auto sm:block">
             <table className="w-full text-left">
               <thead className="border-y border-ink/5 bg-smoke text-xs font-black uppercase tracking-wide text-ink/55">
                 <tr>
@@ -130,6 +131,42 @@ export function HistoryPanel({ token }: { token?: string }) {
               </tbody>
             </table>
           </div>
+          <div className="divide-y divide-ink/5 sm:hidden">
+            {rows.map((r) => (
+              <button
+                key={r.id}
+                type="button"
+                onClick={() => setEditing(r)}
+                className="focus-ring block w-full p-4 text-left"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-black text-ink">{r.storeName}</p>
+                    <p className="mt-0.5 text-xs font-bold text-ink/55">{r.date}</p>
+                  </div>
+                  <StatusPill status={r.status} />
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                  <div className="rounded-lg bg-smoke p-3">
+                    <p className="text-xs font-black uppercase text-ink/55">Sales</p>
+                    <p className="text-lg font-black">{formatMoney(r.totalSales)}</p>
+                  </div>
+                  <div className="rounded-lg bg-smoke p-3">
+                    <p className="text-xs font-black uppercase text-ink/55">Diff</p>
+                    <p
+                      className={clsx(
+                        "text-lg font-black",
+                        r.difference < 0 ? "text-warning" : r.difference > 0 ? "text-leaf" : "text-ink/55"
+                      )}
+                    >
+                      {formatMoney(r.difference)}
+                    </p>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+          </>
         )}
       </div>
 
