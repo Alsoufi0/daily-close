@@ -31,6 +31,20 @@ export class DailyCloseService {
     return this.posParser.parse(text);
   }
 
+  async debugOcr(input: ScanReportDto, user: RequestUser) {
+    if (user.role !== "STORE_OWNER") {
+      throw new ForbiddenException("Owner-only diagnostic.");
+    }
+    const text = await this.ocr.extractText(input.imageUrl);
+    const parsed = this.posParser.parse(text);
+    return {
+      ocrProvider: (this.ocr as any).constructor?.name ?? "unknown",
+      rawTextLength: text.length,
+      rawTextPreview: text.slice(0, 1500),
+      parsed
+    };
+  }
+
   async uploadReport(input: UploadReportDto, user: RequestUser): Promise<ParsedPOSReport & { imageUrl: string }> {
     await this.assertCanCloseStore(user, input.storeId);
 

@@ -20,6 +20,14 @@ export class DailyCloseController {
     return this.dailyCloseService.scanReport(input);
   }
 
+  // Debug: returns raw OCR text + parsed fields. Owner-only — never expose
+  // parsed sales for stores the caller doesn't own.
+  @Post("debug-ocr")
+  @UseGuards(SupabaseAuthGuard)
+  debugOcr(@Body() input: ScanReportDto, @CurrentUser() user: RequestUser) {
+    return this.dailyCloseService.debugOcr(input, user);
+  }
+
   @Post("upload-report")
   @UseGuards(SupabaseAuthGuard)
   uploadReport(@Body() input: UploadReportDto, @CurrentUser() user: RequestUser) {

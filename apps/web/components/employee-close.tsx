@@ -18,6 +18,7 @@ import { formatMoney } from "@smokeshop/shared/utils/money";
 import { scannedReport } from "../lib/mock-data";
 import { ApiError, finishDailyClose, uploadReport } from "../lib/api-client";
 import { uploadPosReportFile } from "../lib/upload-pos-report";
+import { preprocessReceipt } from "../lib/preprocess-image";
 import { useSession } from "../lib/use-session";
 import { MetricCard } from "./metric-card";
 
@@ -75,13 +76,16 @@ export function EmployeeClose() {
   const activeStore = availableStores[storeIdx] ?? availableStores[0];
   const employeeId = session.profile?.employeeId ?? "employee-maya";
 
-  async function handleFile(file: File | null) {
-    if (!file) return;
+  async function handleFile(rawFile: File | null) {
+    if (!rawFile) return;
     setUploadError(null);
     setIsReading(true);
     setReportReady(false);
-    setPreviewUrl(URL.createObjectURL(file));
+    setPreviewUrl(URL.createObjectURL(rawFile));
     try {
+      // Whiten the paper + bump contrast client-side before upload — phone
+      // photos of thermal receipts are otherwise too low-contrast for OCR.
+      const file = await preprocessReceipt(rawFile);
       let upload: { imageUrl: string; fileName: string; contentType: string } | undefined;
       if (session.token) {
         const u = await uploadPosReportFile(activeStore.id, file);
