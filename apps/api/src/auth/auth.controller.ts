@@ -59,6 +59,18 @@ export class AuthController {
     };
   }
 
+  @Post("signup-owner")
+  async signupOwner(@Body() body: { email?: string; name?: string; password?: string }) {
+    if (!body?.email) throw new BadRequestException("Email is required.");
+    if (!body?.name) throw new BadRequestException("Name is required.");
+    if (!body?.password) throw new BadRequestException("Password is required.");
+    return this.auth.signupOwner({
+      email: body.email,
+      name: body.name,
+      password: body.password
+    });
+  }
+
   /**
    * Admin-only: create an owner with email already confirmed and provision
    * their public.users + owners row. Bypasses Supabase's email verification —

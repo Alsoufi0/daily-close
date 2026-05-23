@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from "@nestjs/common";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { PrismaService } from "../prisma/prisma.service";
 import { RequestUser } from "./request-user";
@@ -244,6 +244,53 @@ export class SupabaseAuthService {
     }
 
     return { email, name, tempPassword, ownerId: user!.owner!.id };
+  }
+
+  async signupOwner(input: {
+    email: string;
+    name: string;
+    password: string;
+  }): Promise<{ email: string; name: string; ownerId: string }> {
+    if (!this.supabase) throw new UnauthorizedException("Supabase is not configured.");
+
+    const email = input.email.trim().toLowerCase();
+    const name = input.name.trim();
+    if (!email.includes("@")) throw new BadRequestException("Enter a valid email.");
+    if (!name) throw new BadRequestException("Name is required.");
+    if (input.password.length < 8) throw new BadRequestException("Password must be at least 8 characters.");
+
+    const existing = await this.prisma.user.findUnique({ where: { email } });
+    if (existing) throw new ConflictException("An account with this email already exists. Please sign in.");
+
+    const { data, error } = await this.supabase.auth.admin.createUser({
+      email,
+      password: input.password,
+      email_confirm: true,
+      user_metadata: { name, role: "STORE_OWNER" }
+    });
+    if (error || !data.user) {
+      throw new BadRequestException(error?.message || "Could not create account.");
+    }
+
+    const user = await this.prisma.user.create({
+      data: {
+        name,
+        email,
+        password: "",
+        role: "STORE_OWNER",
+        authUserId: data.user.id,
+        owner: {
+          create: {
+            subscriptionPlan: "Standard",
+            subscriptionStatus: "TRIALING",
+            trialEndsAt: new Date(Date.now() + 14 * 86_400_000)
+          }
+        }
+      },
+      include: { owner: true }
+    });
+
+    return { email, name, ownerId: user.owner!.id };
   }
 
   async getDemoUser(role: "owner" | "employee" = "owner"): Promise<RequestUser> {

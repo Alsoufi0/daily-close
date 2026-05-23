@@ -70,6 +70,17 @@ export async function bootstrapOwner(token: string, name?: string): Promise<Sess
   });
 }
 
+export async function signupOwner(input: {
+  name: string;
+  email: string;
+  password: string;
+}): Promise<{ email: string; name: string; ownerId: string }> {
+  return apiFetch("/auth/signup-owner", undefined, {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
 export interface StoreRecord {
   id: string;
   storeName: string;
@@ -242,7 +253,7 @@ export async function getOwnerDashboard(token?: string): Promise<OwnerDashboardS
 export async function uploadReport(
   token: string | undefined,
   storeId: string,
-  upload?: { imageUrl: string; fileName: string; contentType: string }
+  upload?: { imageUrl?: string; base64Data?: string; fileName: string; contentType: string }
 ): Promise<ParsedPOSReport & { imageUrl: string; rawText?: string }> {
   if (apiUrl && !token) throw new ApiError(401, "Please sign in before uploading a report.");
   if (!apiUrl || !token) return { ...scannedReport, imageUrl: upload?.imageUrl || "demo-report.jpg" };
@@ -252,6 +263,7 @@ export async function uploadReport(
       storeId,
       fileName: upload?.fileName || "pos-report.jpg",
       contentType: upload?.contentType || "image/jpeg",
+      base64Data: upload?.base64Data,
       imageUrl: upload?.imageUrl || "https://example.com/pos-report-demo.jpg"
     })
   });

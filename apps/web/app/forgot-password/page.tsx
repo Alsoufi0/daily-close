@@ -19,7 +19,7 @@ export default function ForgotPasswordPage() {
       setMessage("Supabase is not configured in this environment.");
       return;
     }
-    const redirectTo = `${window.location.origin}/`;
+    const redirectTo = `${window.location.origin}/account/password`;
     const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
     if (error) {
       setStatus("error");
@@ -53,7 +53,8 @@ export default function ForgotPasswordPage() {
           <div className="mt-6 rounded-xl bg-leaf/5 p-4 text-leaf">
             <p className="text-lg font-black">Check your email.</p>
             <p className="mt-1 text-sm font-bold text-ink/65">
-              We sent a reset link to <strong>{email}</strong>. The link expires in 1 hour.
+              If email delivery is enabled for this Supabase project, a reset link will arrive at{" "}
+              <strong>{email}</strong>. Employees can also ask the owner to reset their password from Admin.
             </p>
           </div>
         ) : (

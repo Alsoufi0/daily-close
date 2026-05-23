@@ -17,7 +17,6 @@ import { clsx } from "clsx";
 import { formatMoney } from "@smokeshop/shared/utils/money";
 import { scannedReport } from "../lib/mock-data";
 import { ApiError, finishDailyClose, uploadReport } from "../lib/api-client";
-import { uploadPosReportFile } from "../lib/upload-pos-report";
 import { preprocessReceipt } from "../lib/preprocess-image";
 import { useSession } from "../lib/use-session";
 import { MetricCard } from "./metric-card";
@@ -87,11 +86,13 @@ export function EmployeeClose() {
       // Whiten the paper + bump contrast client-side before upload — phone
       // photos of thermal receipts are otherwise too low-contrast for OCR.
       const file = await preprocessReceipt(rawFile);
-      let upload: { imageUrl: string; fileName: string; contentType: string } | undefined;
-      if (session.token) {
-        const u = await uploadPosReportFile(activeStore.id, file);
-        upload = { imageUrl: u.signedUrl, fileName: u.fileName, contentType: u.contentType };
-      }
+      const upload = session.token
+        ? {
+            base64Data: await fileToDataUrl(file),
+            fileName: file.name,
+            contentType: file.type || "image/jpeg"
+          }
+        : undefined;
       const parsed = await uploadReport(session.token, activeStore.id, upload);
       setCashSales(String(parsed.cashSales));
       setCardSales(String(parsed.cardSales));
@@ -424,6 +425,15 @@ export function EmployeeClose() {
       </div>
     </section>
   );
+}
+
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Could not read the photo. Please try again."));
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.readAsDataURL(file);
+  });
 }
 
 function StepProgress({

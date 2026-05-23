@@ -8,8 +8,8 @@
  * worse on real thermal receipts.
  *
  * What we still do, because it helps both providers:
- *   - Resize the longest edge to at most 2500px (Vision's sweet spot, and
- *     it shrinks cellular uploads ~10x for a typical 12MP phone photo).
+   *   - Resize the longest edge to at most 1800px so signed-in uploads can go
+   *     through the API safely on mobile networks.
  *   - Honour EXIF orientation so portrait-shot receipts upload upright.
  *   - Re-encode as JPEG q=0.92 to strip any HEIC/AVIF wrappers that some
  *     OCR providers reject.
@@ -27,7 +27,7 @@ export async function preprocessReceipt(file: File): Promise<File> {
 
   try {
     const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" } as any);
-    const maxEdge = 2500;
+    const maxEdge = 1800;
     const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
     const w = Math.max(1, Math.round(bitmap.width * scale));
     const h = Math.max(1, Math.round(bitmap.height * scale));
@@ -40,7 +40,7 @@ export async function preprocessReceipt(file: File): Promise<File> {
     ctx.drawImage(bitmap, 0, 0, w, h);
 
     const blob: Blob = await new Promise((resolve) =>
-      canvas.toBlob((b) => resolve(b ?? new Blob()), "image/jpeg", 0.92)
+      canvas.toBlob((b) => resolve(b ?? new Blob()), "image/jpeg", 0.82)
     );
     if (blob.size === 0) return file;
     const cleanName = file.name.replace(/\.[^.]+$/, "") + ".jpg";

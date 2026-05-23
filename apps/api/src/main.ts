@@ -56,6 +56,12 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const logger = new Logger("Bootstrap");
 
+  const express = require("express") as {
+    json: (options: { limit: string }) => unknown;
+    urlencoded: (options: { extended: boolean; limit: string }) => unknown;
+  };
+  app.use(express.json({ limit: process.env.REQUEST_BODY_LIMIT || "12mb" }));
+  app.use(express.urlencoded({ extended: true, limit: process.env.REQUEST_BODY_LIMIT || "12mb" }));
   app.use(securityHeaders);
   app.enableCors({
     origin: originChecker(process.env.ALLOWED_ORIGINS),
