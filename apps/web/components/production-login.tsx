@@ -95,10 +95,13 @@ export function ProductionLogin() {
             Multi-store · iOS · Android · Web
           </span>
           <h1 className="mt-4 text-3xl font-black leading-tight tracking-tight text-ink sm:text-6xl">
-            Daily closing for smoke shops, <span className="text-leaf">done in minutes.</span>
+            Daily closing for your store, <span className="text-leaf">done in 2 minutes.</span>
           </h1>
           <p className="mt-4 max-w-xl text-base font-bold leading-7 text-ink/70 sm:mt-5 sm:text-xl sm:leading-8">
-            Stop chasing paper sheets and late-night phone calls. Employees close the store from their phone. You see the truth.
+            Stop chasing paper sheets and late-night phone calls. Your employees close from their phone, you see the truth — and your accountant gets clean numbers.
+          </p>
+          <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-ink/5 px-3 py-1.5 text-sm font-black text-ink/75">
+            $29 per store / month · 14 days free · cancel anytime
           </p>
 
           <div className="mt-8 grid gap-3 sm:grid-cols-3">

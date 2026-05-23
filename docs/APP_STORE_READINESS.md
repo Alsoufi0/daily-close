@@ -6,7 +6,7 @@ Concrete steps from where we are today to **paid, production pilot live in both 
 
 ## Phase 0 — What's already done 🤖
 
-- [x] Web app deployed to Vercel and aliased to `https://daily-close.vercel.app`
+- [x] Web app deployed to Vercel and aliased to `https://daily-close-mvp.vercel.app`
 - [x] NestJS API hardened (CORS scoped, security headers, Swagger gated, `/health` + `/health/ready`, graceful shutdown, cross-owner authz fix)
 - [x] 22 backend tests passing
 - [x] Mobile app rebuilt with brand header, step progress, KeyboardAvoidingView, permission prompts
@@ -109,7 +109,7 @@ Per `docs/production-runbook.md` § 6:
   npx eas submit --platform ios
   npx eas submit --platform android
   ```
-- [ ] App Store Connect listing: app name, subtitle (max 30 chars), description, keywords, support URL, marketing URL, screenshots, privacy policy URL → `https://daily-close.vercel.app/privacy`.
+- [ ] App Store Connect listing: app name, subtitle (max 30 chars), description, keywords, support URL, marketing URL, screenshots, privacy policy URL → `https://daily-close-mvp.vercel.app/privacy`.
 - [ ] Play Console listing: short description (80), full description (4000), feature graphic 1024×500, app icon 512×512, screenshots, privacy URL.
 
 ---

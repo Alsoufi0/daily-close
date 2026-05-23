@@ -266,12 +266,21 @@ export async function markNotificationRead(token: string, id: string): Promise<v
 export async function downloadTodayCsv(token: string | undefined): Promise<Blob> {
   if (!apiUrl || !token) {
     const summary = getDemoDashboard();
+    const date = summary.date;
     const rows = summary.stores
       .map((s) =>
-        [s.storeName, s.closedToday ? "Yes" : "No", s.totalSales, s.cashSales, s.cardSales, s.difference].join(",")
+        [
+          date,
+          s.storeName,
+          s.closedToday ? "Closed" : "Pending",
+          s.totalSales.toFixed(2),
+          s.cashSales.toFixed(2),
+          s.cardSales.toFixed(2),
+          s.difference.toFixed(2)
+        ].join(",")
       )
       .join("\n");
-    const csv = `Store,Closed,Sales,Cash,Card,Difference\n${rows}`;
+    const csv = `Date,Store,Status,Total Sales,Cash,Card,Cash Difference\n${rows}\n`;
     return new Blob([csv], { type: "text/csv" });
   }
   const response = await fetch(`${apiUrl}/reports/today.csv`, {

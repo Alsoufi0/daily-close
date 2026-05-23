@@ -17,7 +17,7 @@ services:
       - key: ALLOW_DEMO_AUTH
         value: "false"
       - key: ALLOWED_ORIGINS
-        value: https://daily-close.vercel.app
+        value: https://daily-close-mvp.vercel.app
       # Secrets — set these in the Render dashboard after first deploy
       - key: DATABASE_URL
         sync: false

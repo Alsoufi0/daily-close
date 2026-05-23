@@ -4,7 +4,7 @@ import { TopBar } from "../components/top-bar";
 import { Footer } from "../components/footer";
 import { SentryInit } from "../components/sentry-init";
 
-const SITE_URL = "https://daily-close.vercel.app";
+const SITE_URL = "https://daily-close-mvp.vercel.app";
 const DESCRIPTION =
   "Close your store in 2 minutes. Owners see today's sales, missing cash, and missed closes across every location. Employees finish the daily close from any phone.";
 

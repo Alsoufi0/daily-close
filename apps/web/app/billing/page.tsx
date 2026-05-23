@@ -113,9 +113,12 @@ function BillingPageInner() {
                 <CreditCard size={18} /> {expired ? "Choose plan" : "Upgrade now"}
               </a>
             ) : (
-              <span className="text-sm font-bold text-ink/55">
-                Set <code className="rounded bg-smoke px-1">STRIPE_CHECKOUT_URL</code> to enable
-              </span>
+              <a
+                href="mailto:support@dailyclose.app?subject=Start%20paid%20plan"
+                className="focus-ring inline-flex h-12 items-center gap-2 rounded-lg bg-leaf px-4 font-black text-white"
+              >
+                <CreditCard size={18} /> Start paid plan
+              </a>
             )}
             {sub.portalUrl ? (
               <a
