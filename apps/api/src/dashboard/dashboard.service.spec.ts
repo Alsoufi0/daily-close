@@ -27,6 +27,21 @@ const employeeNoOwner: RequestUser = {
 };
 
 describe("DashboardService", () => {
+  it("uses the store timezone for close-time status, including early-morning closes", () => {
+    expect(
+      DashboardService.isPastCloseTime("America/New_York", "23:30", new Date("2026-05-23T03:45:00.000Z"))
+    ).toBe(true);
+    expect(
+      DashboardService.isPastCloseTime("America/Los_Angeles", "23:30", new Date("2026-05-23T03:45:00.000Z"))
+    ).toBe(false);
+    expect(
+      DashboardService.isPastCloseTime("UTC", "02:00", new Date("2026-05-23T03:00:00.000Z"))
+    ).toBe(true);
+    expect(
+      DashboardService.isPastCloseTime("UTC", "02:00", new Date("2026-05-23T14:00:00.000Z"))
+    ).toBe(false);
+  });
+
   it("aggregates storesClosed, totalSales and missingCash correctly", async () => {
     // closeTime 10:00 + pinned now at 12:00 UTC -> deterministically "past close time"
     // (we don't use 00:00 anymore because effectiveCloseMin treats early-morning

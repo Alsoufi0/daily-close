@@ -302,12 +302,9 @@ export function OwnerDashboard() {
           <div className="grid gap-3 md:grid-cols-3">
             {summary.stores.map((store) => {
               const barWidth = store.closedToday ? Math.max(6, (store.totalSales / maxSales) * 100) : 0;
-              // Past-close is authoritative from the API (uses store timezone),
-              // but if absent (e.g. demo data) fall back to the browser's local
-              // clock so the badge never says "Open" when the wall clock is
-              // already past the store's close time.
-              const pastCloseLocal = isPastCloseTimeLocal(store.closeTime);
-              const pastClose = store.pastCloseTime ?? pastCloseLocal;
+              // Past-close is authoritative from the API using the store timezone.
+              // Never infer this from the owner's browser timezone.
+              const pastClose = Boolean(store.pastCloseTime);
               const needsClosing = !store.closedToday && pastClose;
               const diffTone =
                 !store.closedToday

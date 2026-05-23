@@ -78,9 +78,9 @@ export function demoDashboard(): OwnerDashboardSummary {
     missingCash: -40,
     needsAttention: 2,
     stores: [
-      { id: "store-1", storeName: "Store #1", closedToday: true, totalSales: 4500, cashSales: 1800, cardSales: 2700, difference: 5 },
-      { id: "store-2", storeName: "Store #2", closedToday: false, totalSales: 0, cashSales: 0, cardSales: 0, difference: 0 },
-      { id: "store-3", storeName: "Store #3", closedToday: true, totalSales: 3900, cashSales: 1500, cardSales: 2400, difference: -40 }
+      { id: "store-1", storeName: "Store #1", closedToday: true, totalSales: 4500, cashSales: 1800, cardSales: 2700, difference: 5, timezone: "America/New_York", closeTime: "23:30", pastCloseTime: false },
+      { id: "store-2", storeName: "Store #2", closedToday: false, totalSales: 0, cashSales: 0, cardSales: 0, difference: 0, timezone: "America/New_York", closeTime: "22:00", pastCloseTime: true },
+      { id: "store-3", storeName: "Store #3", closedToday: true, totalSales: 3900, cashSales: 1500, cardSales: 2400, difference: -40, timezone: "America/Chicago", closeTime: "23:30", pastCloseTime: false }
     ],
     alerts: [
       {

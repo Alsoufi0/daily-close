@@ -12,6 +12,7 @@ export interface StoreSummary {
   cashSales: number;
   cardSales: number;
   difference: number;
+  timezone?: string;
   closeTime?: string;
   pastCloseTime?: boolean;
 }

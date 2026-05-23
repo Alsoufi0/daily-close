@@ -29,8 +29,7 @@ export class MissedCloseService {
       const { start, end } = DashboardService.storeLocalDayRange(tz, date);
       const hasCloseToday = store.dailyCloses.some((c: any) => c.date >= start && c.date <= end);
       if (hasCloseToday) return false;
-      const nowMin = DashboardService.minutesNowInTimezone(tz, date);
-      return nowMin >= DashboardService.effectiveCloseMin(store.closeTime || "23:30");
+      return DashboardService.isPastCloseTime(tz, store.closeTime || "23:30", date);
     });
     const start = wideStart;
     const end = wideEnd;

@@ -15,6 +15,7 @@ import { ScanReportDto } from "./dto/scan-report.dto";
 import { UploadReportDto } from "./dto/upload-report.dto";
 import { DailyCloseRepository } from "./daily-close.repository";
 import { PrismaService } from "../prisma/prisma.service";
+import { DashboardService } from "../dashboard/dashboard.service";
 
 @Injectable()
 export class DailyCloseService {
@@ -73,7 +74,16 @@ export class DailyCloseService {
       resolvedEmployeeId = await this.assertCanCloseStore(user, input.storeId);
     }
 
-    const existing = await this.repository.findByStoreAndDate(input.storeId, new Date(input.date));
+    const eventDate = new Date(input.date);
+    const store = await this.prisma.store.findUnique({
+      where: { id: input.storeId },
+      select: { timezone: true }
+    });
+    const { start, end } = DashboardService.storeLocalDayRange(
+      store?.timezone || "America/New_York",
+      eventDate
+    );
+    const existing = await this.repository.findByStoreAndRange(input.storeId, start, end);
     if (existing) throw new BadRequestException("This store is already closed for this date.");
 
     const expectedCash = input.cashSales - input.refunds - input.expenses;
@@ -86,7 +96,7 @@ export class DailyCloseService {
     const created = await this.repository.create({
       ...persisted,
       employeeId: resolvedEmployeeId,
-      date: new Date(input.date),
+      date: eventDate,
       expectedCash,
       difference,
       status

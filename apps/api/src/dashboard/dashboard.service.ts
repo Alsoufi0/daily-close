@@ -43,6 +43,17 @@ export class DashboardService {
     return raw < 6 * 60 ? raw + 24 * 60 : raw;
   }
 
+  static isPastCloseTime(timezone: string, closeTime: string, now = new Date()): boolean {
+    const rawCloseMin = DashboardService.parseCloseTime(closeTime);
+    const nowMin = DashboardService.minutesNowInTimezone(timezone, now);
+
+    if (rawCloseMin < 6 * 60) {
+      return nowMin < 6 * 60 && nowMin >= rawCloseMin;
+    }
+
+    return nowMin >= rawCloseMin;
+  }
+
   // Returns the UTC instants spanning a store's *local* calendar day for `now`.
   // Without this, dashboard queries use the server's UTC day and miss closes
   // submitted late-evening in earlier timezones (e.g. a 23:00 PT close is at
@@ -105,8 +116,6 @@ export class DashboardService {
       const closeTime = (store as any).closeTime || "23:30";
       const { start, end } = DashboardService.storeLocalDayRange(tz, date);
       const close = store.dailyCloses.find((c: any) => c.date >= start && c.date <= end);
-      const nowMin = DashboardService.minutesNowInTimezone(tz, date);
-      const closeMin = DashboardService.effectiveCloseMin(closeTime);
       return {
         id: store.id,
         storeName: store.storeName,
@@ -115,8 +124,9 @@ export class DashboardService {
         cashSales: close ? Number(close.cashSales) : 0,
         cardSales: close ? Number(close.cardSales) : 0,
         difference: close ? Number(close.difference) : 0,
+        timezone: tz,
         closeTime,
-        pastCloseTime: nowMin >= closeMin
+        pastCloseTime: DashboardService.isPastCloseTime(tz, closeTime, date)
       };
     });
   }

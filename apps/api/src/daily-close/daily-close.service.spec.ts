@@ -11,6 +11,7 @@ function makeService(overrides: Partial<{
 }> = {}) {
   const repository = {
     findByStoreAndDate: jest.fn().mockResolvedValue(overrides.existing ?? null),
+    findByStoreAndRange: jest.fn().mockResolvedValue(overrides.existing ?? null),
     create: jest.fn().mockResolvedValue(
       overrides.createReturn ?? { id: "close-1", createdAt: new Date("2026-05-22T20:00:00Z") }
     ),
@@ -25,7 +26,10 @@ function makeService(overrides: Partial<{
   const ocr = { extractText: jest.fn() };
   const storage = { uploadBase64: jest.fn() };
   const prisma = {
-    store: { findFirst: jest.fn().mockResolvedValue({ id: "store-1" }) },
+    store: {
+      findFirst: jest.fn().mockResolvedValue({ id: "store-1" }),
+      findUnique: jest.fn().mockResolvedValue({ timezone: "UTC" })
+    },
     employee: {
       findFirst: jest.fn().mockResolvedValue({ id: "employee-1" }),
       create: jest.fn().mockResolvedValue({ id: "employee-new" })

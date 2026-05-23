@@ -83,15 +83,16 @@ export function OwnerScreen({ onBack }: { onBack: () => void }) {
         <Text style={s.sectionTitle}>Store Comparison</Text>
         {summary.stores.map((store) => {
           const barWidth = store.closedToday ? Math.max(6, (store.totalSales / maxSales) * 100) : 0;
+          const needsClosing = !store.closedToday && Boolean(store.pastCloseTime);
           const diffTone: "good" | "bad" | "warn" =
-            !store.closedToday ? "warn" : store.difference < 0 ? "bad" : "good";
+            needsClosing ? "warn" : store.difference < 0 ? "bad" : "good";
           return (
             <Card key={store.id} style={{ gap: spacing.md }}>
               <View style={s.rowBetween}>
                 <Text style={s.cardTitle}>{store.storeName}</Text>
                 <Pill
-                  label={store.closedToday ? "CLOSED" : "OPEN"}
-                  tone={store.closedToday ? "good" : "warn"}
+                  label={store.closedToday ? "CLOSED" : needsClosing ? "NEEDS CLOSING" : "OPEN"}
+                  tone={store.closedToday ? "good" : needsClosing ? "warn" : "good"}
                 />
               </View>
 
@@ -119,7 +120,9 @@ export function OwnerScreen({ onBack }: { onBack: () => void }) {
                 title={
                   store.closedToday
                     ? `Cash difference: ${formatMoney(store.difference)}`
-                    : "Closing needed"
+                    : needsClosing
+                      ? "Closing needed"
+                      : `Open - closes ${store.closeTime ?? "23:30"}`
                 }
               />
             </Card>
