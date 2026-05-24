@@ -55,6 +55,11 @@ export function useSession(): Session {
 
   useEffect(() => {
     let cancelled = false;
+    async function reloadStores(currentToken: string) {
+      const s = await listStores(currentToken).catch(() => []);
+      if (!cancelled) setStores(s);
+    }
+
     (async () => {
       const stored = await readVerifiedBrowserToken();
       if (cancelled) return;
@@ -111,8 +116,15 @@ export function useSession(): Session {
       }
     })();
 
+    const onStoresChanged = () => {
+      const currentToken = readToken();
+      if (currentToken) reloadStores(currentToken);
+    };
+    window.addEventListener("dailyclose:stores-changed", onStoresChanged);
+
     return () => {
       cancelled = true;
+      window.removeEventListener("dailyclose:stores-changed", onStoresChanged);
     };
   }, []);
 

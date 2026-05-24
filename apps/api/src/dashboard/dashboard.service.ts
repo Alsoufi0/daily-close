@@ -132,7 +132,7 @@ export class DashboardService {
 
   async getOwnerToday(ownerId: string, date = new Date()): Promise<OwnerDashboardSummary["stores"]> {
     const stores = await this.prisma.store.findMany({
-      where: { ownerId },
+      where: { ownerId, deletedAt: null },
       include: {
         dailyCloses: {
           // Wide UTC window covers any timezone's "today"; we filter

@@ -23,7 +23,7 @@ import { useSession } from "../lib/use-session";
 import { MetricCard } from "./metric-card";
 import { HistoryPanel } from "./history-panel";
 import { ExportReportModal } from "./export-report-modal";
-import { LanguageSelect, useLanguage } from "./language-provider";
+import { useLanguage } from "./language-provider";
 
 const today = new Date().toLocaleDateString(undefined, {
   weekday: "long",
@@ -169,7 +169,6 @@ export function OwnerDashboard() {
           </p>
         </div>
         <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
-          <LanguageSelect />
           <button
             onClick={manualRefresh}
             disabled={refreshing}

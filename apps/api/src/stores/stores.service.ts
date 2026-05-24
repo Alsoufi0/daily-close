@@ -68,7 +68,7 @@ export class StoresService {
       throw new ForbiddenException("Only owners can edit stores.");
     }
     const existing = await this.prisma.store.findFirst({
-      where: { id: storeId, ownerId: user.ownerId }
+      where: { id: storeId, ownerId: user.ownerId, deletedAt: null }
     });
     if (!existing) throw new NotFoundException("Store not found.");
 

@@ -20,6 +20,7 @@ import { ApiError, finishDailyClose, uploadReport } from "../lib/api-client";
 import { preprocessReceipt } from "../lib/preprocess-image";
 import { useSession } from "../lib/use-session";
 import { MetricCard } from "./metric-card";
+import { useLanguage } from "./language-provider";
 
 type Step = "start" | "upload" | "sales" | "cash" | "expenses" | "finish" | "blocked";
 
@@ -38,6 +39,7 @@ function stepIndex(step: Step) {
 
 export function EmployeeClose() {
   const session = useSession();
+  const { t, dir } = useLanguage();
   const [step, setStep] = useState<Step>("start");
   const [storeIdx, setStoreIdx] = useState(0);
   const [isReading, setIsReading] = useState(false);
@@ -102,7 +104,7 @@ export function EmployeeClose() {
       setOcrRawText(parsed.rawText ?? null);
       setReportReady(true);
     } catch (err: any) {
-      setUploadError(err?.message || "Upload failed. Please try again.");
+      setUploadError(err?.message || t("closing.uploadFailed"));
     } finally {
       setIsReading(false);
     }
@@ -132,7 +134,7 @@ export function EmployeeClose() {
       if (err instanceof ApiError && err.status === 400 && /already.*closed/i.test(err.message)) {
         setStep("blocked");
       } else {
-        setSubmitError(err instanceof ApiError ? err.message : "Could not submit close. Try again.");
+        setSubmitError(err instanceof ApiError ? err.message : t("closing.submitFailed"));
       }
     } finally {
       setSubmitting(false);
@@ -146,19 +148,19 @@ export function EmployeeClose() {
   }
 
   return (
-    <section className="space-y-5">
+    <section className="space-y-5" dir={dir}>
       <div>
         <p className="text-sm font-black uppercase tracking-wide text-leaf">
-          {session.profile?.name ? `Hi ${session.profile.name}` : "Employee view"}
+          {session.profile?.name ? `Hi ${session.profile.name}` : t("closing.employeeView")}
         </p>
         <h1 className="mt-1 text-3xl font-black tracking-tight text-ink sm:text-4xl">
-          Close {activeStore.storeName}
+          {t("closing.finish")} {activeStore.storeName}
         </h1>
-        <p className="mt-1 text-base font-bold text-ink/65">Follow one simple step at a time.</p>
+        <p className="mt-1 text-base font-bold text-ink/65">{t("closing.followSteps")}</p>
 
         {availableStores.length > 1 ? (
           <label className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-ink/70">
-            <span>Store:</span>
+            <span>{t("common.store")}:</span>
             <select
               className="focus-ring rounded-lg border border-ink/15 bg-white px-2 py-1 font-black"
               value={storeIdx}
@@ -194,9 +196,9 @@ export function EmployeeClose() {
             ) : null}
             <h2 className="text-2xl font-black">
               {step === "start"
-                ? "Ready to close?"
+                ? t("closing.ready")
                 : step === "blocked"
-                  ? "Already closed today"
+                  ? t("closing.alreadyClosed")
                   : STEPS[currentIndex]?.label}
             </h2>
           </div>
@@ -214,10 +216,10 @@ export function EmployeeClose() {
               onClick={() => setStep("upload")}
             >
               <Receipt size={32} aria-hidden />
-              Start Closing
+              {t("closing.start")}
             </button>
             <p className="text-center text-base font-bold text-ink/60">
-              Takes about 2 minutes. You can edit any number before submitting.
+              {t("closing.followSteps")}
             </p>
           </div>
         ) : null}
@@ -225,15 +227,15 @@ export function EmployeeClose() {
         {step === "blocked" ? (
           <div className="space-y-4 rounded-xl bg-yellow-50 p-6 text-center">
             <CheckCircle2 className="mx-auto text-gold" size={48} aria-hidden />
-            <h3 className="text-2xl font-black text-ink">This store is already closed for today.</h3>
+            <h3 className="text-2xl font-black text-ink">{t("closing.alreadyClosed")}</h3>
             <p className="text-base font-bold text-ink/65">
-              If you need to change a submitted close, ask the owner to edit it from the dashboard.
+              {t("closing.alreadyClosedBody")}
             </p>
             <button
               className="focus-ring h-12 rounded-lg bg-leaf px-5 font-black text-white"
               onClick={reset}
             >
-              Back to Start
+              {t("closing.backStart")}
             </button>
           </div>
         ) : null}
@@ -263,7 +265,7 @@ export function EmployeeClose() {
                 onClick={() => cameraInputRef.current?.click()}
               >
                 <Camera size={32} aria-hidden />
-                Take Photo
+                {t("closing.takePhoto")}
               </button>
               <button
                 type="button"
@@ -272,13 +274,13 @@ export function EmployeeClose() {
                 onClick={() => libraryInputRef.current?.click()}
               >
                 <Upload size={32} aria-hidden />
-                Upload Report
+                {t("closing.uploadReport")}
               </button>
             </div>
 
             {previewUrl ? (
               <div className="rounded-xl border border-ink/10 bg-white p-3">
-                <p className="mb-2 text-xs font-black uppercase tracking-wide text-ink/55">Preview</p>
+                <p className="mb-2 text-xs font-black uppercase tracking-wide text-ink/55">{t("closing.preview")}</p>
                 <img src={previewUrl} alt="POS report preview" className="mx-auto max-h-64 rounded-lg" />
               </div>
             ) : null}
@@ -286,7 +288,7 @@ export function EmployeeClose() {
             {isReading ? (
               <div className="flex items-center gap-3 rounded-xl bg-yellow-50 p-4 text-gold">
                 <Loader2 className="animate-spin" size={24} aria-hidden />
-                <p className="text-lg font-black">Uploading & reading report…</p>
+                <p className="text-lg font-black">{t("closing.reading")}</p>
               </div>
             ) : null}
 
@@ -302,8 +304,8 @@ export function EmployeeClose() {
                   <FileImage size={22} aria-hidden />
                   <p className="text-lg font-black">
                     {Number(cashSales || 0) > 0
-                      ? "Report uploaded — numbers filled in."
-                      : "Photo saved. Enter the numbers from your report on the next step."}
+                      ? t("closing.reportFilled")
+                      : t("closing.photoSaved")}
                   </p>
                 </div>
                 {ocrRawText ? (
@@ -322,7 +324,7 @@ export function EmployeeClose() {
                   className="focus-ring mt-4 flex h-14 w-full items-center justify-center gap-2 rounded-lg bg-leaf px-5 text-lg font-black text-white"
                   onClick={() => setStep("sales")}
                 >
-                  Enter Sales Numbers
+                  {t("closing.enterSales")}
                   <ChevronRight size={22} aria-hidden />
                 </button>
               </div>
@@ -333,17 +335,17 @@ export function EmployeeClose() {
         {step === "sales" ? (
           <div className="space-y-4 fade-in">
             <div className="grid gap-3 sm:grid-cols-2">
-              <MoneyInput label="Cash Sales" value={cashSales} onChange={setCashSales} />
-              <MoneyInput label="Card Sales" value={cardSales} onChange={setCardSales} />
-              <MoneyInput label="Total Sales" value={totalSales} onChange={setTotalSales} />
-              <MoneyInput label="Tax" value={tax} onChange={setTax} />
-              <MoneyInput label="Refunds" value={refunds} onChange={setRefunds} />
+              <MoneyInput label={t("closing.cashSales")} value={cashSales} onChange={setCashSales} />
+              <MoneyInput label={t("closing.cardSales")} value={cardSales} onChange={setCardSales} />
+              <MoneyInput label={t("closing.totalSales")} value={totalSales} onChange={setTotalSales} />
+              <MoneyInput label={t("closing.tax")} value={tax} onChange={setTax} />
+              <MoneyInput label={t("closing.refunds")} value={refunds} onChange={setRefunds} />
             </div>
             <button
               className="focus-ring flex h-14 w-full items-center justify-center gap-2 rounded-lg bg-leaf px-5 text-lg font-black text-white"
               onClick={() => setStep("cash")}
             >
-              Numbers Look Right
+              {t("closing.numbersRight")}
               <ChevronRight size={22} aria-hidden />
             </button>
           </div>
@@ -352,13 +354,13 @@ export function EmployeeClose() {
         {step === "cash" ? (
           <div className="space-y-4 fade-in">
             <div className="grid gap-3 sm:grid-cols-2">
-              <MoneyInput label="Cash Counted" value={cashCounted} onChange={setCashCounted} />
-              <MoneyInput label="Safe Drop" value={safeDrop} onChange={setSafeDrop} />
+              <MoneyInput label={t("closing.cashCounted")} value={cashCounted} onChange={setCashCounted} />
+              <MoneyInput label={t("closing.safeDrop")} value={safeDrop} onChange={setSafeDrop} />
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <MetricCard label="Expected Cash" value={formatMoney(result.expectedCash)} />
+              <MetricCard label={t("closing.expectedCash")} value={formatMoney(result.expectedCash)} />
               <MetricCard
-                label="Difference"
+                label={t("closing.difference")}
                 value={formatMoney(result.difference)}
                 tone={result.difference < 0 ? "bad" : "good"}
               />
@@ -367,7 +369,7 @@ export function EmployeeClose() {
               className="focus-ring flex h-14 w-full items-center justify-center gap-2 rounded-lg bg-leaf px-5 text-lg font-black text-white"
               onClick={() => setStep("expenses")}
             >
-              Add Expenses
+              {t("closing.expenses")}
               <ChevronRight size={22} aria-hidden />
             </button>
           </div>
@@ -375,14 +377,14 @@ export function EmployeeClose() {
 
         {step === "expenses" ? (
           <div className="space-y-4 fade-in">
-            <MoneyInput label="Expenses" value={expenses} onChange={setExpenses} />
+            <MoneyInput label={t("closing.expenses")} value={expenses} onChange={setExpenses} />
             <label className="block">
-              <span className="text-base font-black">Notes</span>
+              <span className="text-base font-black">{t("closing.notes")}</span>
               <textarea
                 className="focus-ring mt-2 min-h-28 w-full rounded-lg border border-ink/15 p-4 text-lg"
                 value={notes}
                 onChange={(event) => setNotes(event.target.value)}
-                placeholder="Optional"
+                placeholder={t("common.optional")}
               />
             </label>
             {submitError ? (
@@ -396,7 +398,7 @@ export function EmployeeClose() {
               disabled={submitting}
             >
               {submitting ? <Loader2 className="animate-spin" size={22} aria-hidden /> : <CheckCircle2 size={22} aria-hidden />}
-              {submitting ? "Submitting…" : "Finish Closing"}
+              {submitting ? t("closing.submitting") : t("closing.finish")}
             </button>
           </div>
         ) : null}
@@ -411,14 +413,14 @@ export function EmployeeClose() {
             <h2 className="text-3xl font-black">
               {result.difference < 0
                 ? `Cash Shortage: ${formatMoney(result.difference)}`
-                : "Store Closed Successfully"}
+                : t("closing.success")}
             </h2>
-            <p className="text-base font-bold text-ink/65">Owner dashboard is updated.</p>
+            <p className="text-base font-bold text-ink/65">{t("closing.ownerUpdated")}</p>
             <button
               className="focus-ring h-12 rounded-lg bg-leaf px-5 font-black text-white"
               onClick={reset}
             >
-              Start Over
+              {t("closing.startOver")}
             </button>
           </div>
         ) : null}

@@ -47,6 +47,7 @@ export default function StoresAdminPage() {
     try {
       const s = await listStores(session.token);
       setStores(s as StoreRowWithMeta[]);
+      window.dispatchEvent(new Event("dailyclose:stores-changed"));
     } catch {
       /* noop */
     }

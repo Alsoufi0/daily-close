@@ -7,18 +7,20 @@ import { Leaf, LogOut, Menu, X } from "lucide-react";
 import { clsx } from "clsx";
 import { createBrowserSupabase } from "../lib/supabase-browser";
 import { useSession } from "../lib/use-session";
+import { LanguageSelect, useLanguage } from "./language-provider";
 
 const NAV = [
-  { href: "/owner", label: "Owner", ownerOnly: true },
-  { href: "/employee", label: "Employee" },
-  { href: "/admin", label: "Admin", ownerOnly: true },
-  { href: "/billing", label: "Billing", ownerOnly: true },
-  { href: "/account/password", label: "Password" }
+  { href: "/owner", labelKey: "nav.owner", ownerOnly: true },
+  { href: "/employee", labelKey: "nav.employee" },
+  { href: "/admin", labelKey: "nav.admin", ownerOnly: true },
+  { href: "/billing", labelKey: "nav.billing", ownerOnly: true },
+  { href: "/account/password", labelKey: "nav.password" }
 ];
 
 export function TopBar() {
   const pathname = usePathname() || "/";
   const session = useSession();
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
 
@@ -65,6 +67,7 @@ export function TopBar() {
 
         {/* Desktop nav */}
         <nav className="hidden items-center gap-1 text-sm font-black md:flex">
+          <LanguageSelect />
           {signedIn ? (
             <>
               {navItems.map((item) => {
@@ -79,7 +82,7 @@ export function TopBar() {
                       active ? "bg-leaf/10 text-leaf" : "text-ink/65 hover:bg-smoke hover:text-ink"
                     )}
                   >
-                    {item.label}
+                    {t(item.labelKey)}
                   </Link>
                 );
               })}
@@ -88,7 +91,7 @@ export function TopBar() {
                 className="focus-ring ml-2 inline-flex items-center gap-1.5 rounded-lg border border-ink/15 px-3 py-2 text-ink/70 hover:bg-smoke hover:text-ink"
               >
                 <LogOut size={16} aria-hidden />
-                Sign Out
+                {t("auth.signOut")}
               </button>
             </>
           ) : pathname === "/" ? (
@@ -96,14 +99,14 @@ export function TopBar() {
               href="/signup"
               className="focus-ring inline-flex h-10 items-center justify-center rounded-lg bg-leaf px-4 font-black text-white"
             >
-              Get started
+              {t("auth.getStarted")}
             </Link>
           ) : (
             <Link
               href="/"
               className="focus-ring inline-flex h-10 items-center justify-center rounded-lg border border-ink/15 px-4 font-black text-ink"
             >
-              Sign in
+              {t("auth.signIn")}
             </Link>
           )}
         </nav>
@@ -124,14 +127,14 @@ export function TopBar() {
             href="/signup"
             className="focus-ring inline-flex h-10 items-center justify-center rounded-lg bg-leaf px-3 text-sm font-black text-white md:hidden"
           >
-            Get started
+            {t("auth.getStarted")}
           </Link>
         ) : (
           <Link
             href="/"
             className="focus-ring inline-flex h-10 items-center justify-center rounded-lg border border-ink/15 px-3 text-sm font-black text-ink md:hidden"
           >
-            Sign in
+            {t("auth.signIn")}
           </Link>
         )}
       </div>
@@ -152,7 +155,7 @@ export function TopBar() {
                     active ? "bg-leaf/10 text-leaf" : "text-ink/75 hover:bg-smoke"
                   )}
                 >
-                  {item.label}
+                  {t(item.labelKey)}
                 </Link>
               );
             })}
@@ -161,9 +164,12 @@ export function TopBar() {
                 onClick={signOut}
                 className="focus-ring mt-2 inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-ink/15 px-3 text-ink/80"
               >
-                <LogOut size={18} aria-hidden /> Sign Out
+                <LogOut size={18} aria-hidden /> {t("auth.signOut")}
               </button>
             ) : null}
+            <div className="px-3 py-2">
+              <LanguageSelect />
+            </div>
           </nav>
         </div>
       ) : null}

@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException
 } from "@nestjs/common";
 import type { DailyCloseResult, ParsedPOSReport } from "@shared/types";
@@ -19,6 +20,8 @@ import { DashboardService } from "../dashboard/dashboard.service";
 
 @Injectable()
 export class DailyCloseService {
+  private readonly logger = new Logger(DailyCloseService.name);
+
   constructor(
     private readonly repository: DailyCloseRepository,
     private readonly posParser: PosParserService,
@@ -28,7 +31,12 @@ export class DailyCloseService {
   ) {}
 
   async scanReport(input: ScanReportDto): Promise<ParsedPOSReport & { rawText?: string }> {
-    const text = await this.ocr.extractText(input.imageUrl);
+    let text = "";
+    try {
+      text = await this.ocr.extractText(input.imageUrl);
+    } catch (err: any) {
+      this.logger.warn(`OCR failed, returning manual-entry result: ${err?.message || err}`);
+    }
     const parsed = this.posParser.parse(text);
     // If the parser couldn't extract anything useful, pass the raw OCR text
     // back so the UI can show the employee what was actually read off the
@@ -54,17 +62,26 @@ export class DailyCloseService {
   async uploadReport(input: UploadReportDto, user: RequestUser): Promise<ParsedPOSReport & { imageUrl: string }> {
     await this.assertCanCloseStore(user, input.storeId);
 
-    const imageUrl = input.base64Data
-      ? await this.storage.uploadBase64(
-          `${input.storeId}/${Date.now()}-${input.fileName}`,
-          input.base64Data,
-          input.contentType
-        )
-      : input.imageUrl;
+    let imageUrl = input.imageUrl;
+    if (input.base64Data) {
+      try {
+        imageUrl = await this.storage.uploadBase64(
+            `${input.storeId}/${Date.now()}-${input.fileName}`,
+            input.base64Data,
+            input.contentType
+          );
+      } catch (err: any) {
+        // Storage should not block closing. OCR can read the data URL directly,
+        // and the employee can still confirm/edit the parsed numbers.
+        this.logger.warn(`POS report storage failed, continuing with OCR only: ${err?.message || err}`);
+        imageUrl = "report-upload-not-stored";
+      }
+    }
 
-    if (!imageUrl) throw new BadRequestException("Report image is required.");
+    const imageForOcr = input.base64Data || imageUrl;
+    if (!imageForOcr) throw new BadRequestException("Report image is required.");
 
-    const parsed = await this.scanReport({ imageUrl: input.base64Data || imageUrl, storeId: input.storeId });
+    const parsed = await this.scanReport({ imageUrl: imageForOcr, storeId: input.storeId });
     return { ...parsed, imageUrl } as ParsedPOSReport & { imageUrl: string };
   }
 
@@ -226,13 +243,13 @@ export class DailyCloseService {
     }
     if (user.role === "STORE_OWNER" && user.ownerId) {
       const store = await this.prisma.store.findFirst({
-        where: { id: storeId, ownerId: user.ownerId },
+        where: { id: storeId, ownerId: user.ownerId, deletedAt: null },
         select: { id: true }
       });
       if (!store) throw new ForbiddenException("This store is not yours.");
       // Get-or-create an owner-as-employee row so we satisfy the FK.
       let employee = await this.prisma.employee.findFirst({
-        where: { userId: user.id, storeId }
+        where: { userId: user.id, storeId, deletedAt: null }
       });
       if (!employee) {
         employee = await this.prisma.employee.create({
