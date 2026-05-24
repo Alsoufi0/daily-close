@@ -65,9 +65,6 @@ model Owner {
   trialEndsAt          DateTime? @map("trial_ends_at")
   stripeCustomerId     String?   @unique @map("stripe_customer_id")
   stripeSubscriptionId String?   @unique @map("stripe_subscription_id")
-  whatsappPhone        String?   @map("whatsapp_phone")
-  whatsappAlertsEnabled Boolean  @default(false) @map("whatsapp_alerts_enabled")
-  whatsappReportsEnabled Boolean @default(false) @map("whatsapp_reports_enabled")
   user                 User      @relation(fields: [userId], references: [id])
   stores               Store[]
 

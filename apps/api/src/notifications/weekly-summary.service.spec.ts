@@ -6,8 +6,7 @@ describe("WeeklySummaryService WhatsApp reports", () => {
       owner: {
         findMany: jest.fn().mockResolvedValue([
           {
-            whatsappPhone: "+15551234567",
-            whatsappReportsEnabled: true,
+            id: "owner-1",
             user: { email: "owner@example.com", name: "Owner" },
             stores: [
               {
@@ -21,7 +20,14 @@ describe("WeeklySummaryService WhatsApp reports", () => {
       }
     };
     const whatsapp = { sendSummaryTemplate: jest.fn().mockResolvedValue(true) };
-    const service = new WeeklySummaryService(prisma as any, whatsapp as any);
+    const notifications = {
+      getOwnerWhatsAppPreferences: jest.fn().mockResolvedValue({
+        phone: "+15551234567",
+        alertsEnabled: true,
+        reportsEnabled: true
+      })
+    };
+    const service = new WeeklySummaryService(prisma as any, whatsapp as any, notifications as any);
 
     const result = await service.sendForAllOwners(new Date("2026-05-25T12:00:00.000Z"));
 
@@ -42,8 +48,7 @@ describe("WeeklySummaryService WhatsApp reports", () => {
       owner: {
         findMany: jest.fn().mockResolvedValue([
           {
-            whatsappPhone: "+15551234567",
-            whatsappReportsEnabled: true,
+            id: "owner-1",
             user: { email: "owner@example.com", name: "Owner" },
             stores: [{ dailyCloses: [] }]
           }
@@ -51,7 +56,14 @@ describe("WeeklySummaryService WhatsApp reports", () => {
       }
     };
     const whatsapp = { sendSummaryTemplate: jest.fn().mockResolvedValue(true) };
-    const service = new WeeklySummaryService(prisma as any, whatsapp as any);
+    const notifications = {
+      getOwnerWhatsAppPreferences: jest.fn().mockResolvedValue({
+        phone: "+15551234567",
+        alertsEnabled: true,
+        reportsEnabled: true
+      })
+    };
+    const service = new WeeklySummaryService(prisma as any, whatsapp as any, notifications as any);
 
     await service.sendMonthlyForAllOwners(new Date("2026-05-30T12:00:00.000Z"));
 

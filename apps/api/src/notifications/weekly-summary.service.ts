@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { NotificationsService } from "./notifications.service";
 import { WhatsAppService } from "./whatsapp.service";
 
 /**
@@ -20,7 +21,8 @@ export class WeeklySummaryService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly whatsapp: WhatsAppService
+    private readonly whatsapp: WhatsAppService,
+    private readonly notifications: NotificationsService
   ) {}
 
   async sendForAllOwners(now = new Date()): Promise<{ sent: number; skipped: number }> {
@@ -107,9 +109,10 @@ export class WeeklySummaryService {
     owner: any,
     summary: { period: "weekly" | "monthly"; ownerName: string; sales: number; diff: number; closes: number; from: string; to: string }
   ): Promise<boolean> {
-    if (!owner.whatsappReportsEnabled || !owner.whatsappPhone) return false;
+    const prefs = await this.notifications.getOwnerWhatsAppPreferences(owner.id);
+    if (!prefs.reportsEnabled || !prefs.phone) return false;
     return this.whatsapp.sendSummaryTemplate({
-      toPhone: owner.whatsappPhone,
+      toPhone: prefs.phone,
       period: summary.period,
       ownerName: summary.ownerName,
       sales: money(summary.sales),

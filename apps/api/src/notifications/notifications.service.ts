@@ -45,13 +45,7 @@ export class NotificationsService {
     if (user.role !== "STORE_OWNER" || !user.ownerId) {
       throw new ForbiddenException("Only owners can manage WhatsApp settings.");
     }
-    const owner = await this.prisma.owner.findUnique({ where: { id: user.ownerId } });
-    if (!owner) throw new NotFoundException("Owner not found.");
-    return {
-      whatsappPhone: (owner as any).whatsappPhone ?? null,
-      whatsappAlertsEnabled: Boolean((owner as any).whatsappAlertsEnabled),
-      whatsappReportsEnabled: Boolean((owner as any).whatsappReportsEnabled)
-    };
+    return this.readWhatsAppSettings(user.ownerId);
   }
 
   async updateWhatsAppSettings(
@@ -65,18 +59,73 @@ export class NotificationsService {
     if ((input.whatsappAlertsEnabled || input.whatsappReportsEnabled) && !cleanPhone) {
       throw new BadRequestException("Enter a WhatsApp phone number before turning on WhatsApp messages.");
     }
-    const updated = await this.prisma.owner.update({
-      where: { id: user.ownerId },
-      data: {
-        whatsappPhone: cleanPhone,
-        whatsappAlertsEnabled: Boolean(input.whatsappAlertsEnabled),
-        whatsappReportsEnabled: Boolean(input.whatsappReportsEnabled)
-      } as any
+    await this.writeWhatsAppSettings(user.ownerId, {
+      whatsappPhone: cleanPhone,
+      alertsEnabled: Boolean(input.whatsappAlertsEnabled),
+      reportsEnabled: Boolean(input.whatsappReportsEnabled)
     });
+    return this.readWhatsAppSettings(user.ownerId);
+  }
+
+  async readWhatsAppSettings(ownerId: string) {
+    try {
+      const rows = await this.prisma.$queryRawUnsafe<Array<{
+        whatsapp_phone: string | null;
+        alerts_enabled: boolean;
+        reports_enabled: boolean;
+      }>>(
+        `select whatsapp_phone, alerts_enabled, reports_enabled
+         from public.owner_whatsapp_preferences
+         where owner_id = $1
+         limit 1`,
+        ownerId
+      );
+      const row = rows[0];
+      return {
+        whatsappPhone: row?.whatsapp_phone ?? null,
+        whatsappAlertsEnabled: Boolean(row?.alerts_enabled),
+        whatsappReportsEnabled: Boolean(row?.reports_enabled)
+      };
+    } catch {
+      return {
+        whatsappPhone: null,
+        whatsappAlertsEnabled: false,
+        whatsappReportsEnabled: false
+      };
+    }
+  }
+
+  private async writeWhatsAppSettings(
+    ownerId: string,
+    input: { whatsappPhone: string | null; alertsEnabled: boolean; reportsEnabled: boolean }
+  ) {
+    try {
+      await this.prisma.$executeRawUnsafe(
+        `insert into public.owner_whatsapp_preferences
+           (owner_id, whatsapp_phone, alerts_enabled, reports_enabled, updated_at)
+         values ($1, $2, $3, $4, now())
+         on conflict (owner_id)
+         do update set
+           whatsapp_phone = excluded.whatsapp_phone,
+           alerts_enabled = excluded.alerts_enabled,
+           reports_enabled = excluded.reports_enabled,
+           updated_at = now()`,
+        ownerId,
+        input.whatsappPhone,
+        input.alertsEnabled,
+        input.reportsEnabled
+      );
+    } catch {
+      throw new BadRequestException("WhatsApp settings table is not ready. Please run the latest database migration.");
+    }
+  }
+
+  async getOwnerWhatsAppPreferences(ownerId: string) {
+    const settings = await this.readWhatsAppSettings(ownerId);
     return {
-      whatsappPhone: (updated as any).whatsappPhone ?? null,
-      whatsappAlertsEnabled: Boolean((updated as any).whatsappAlertsEnabled),
-      whatsappReportsEnabled: Boolean((updated as any).whatsappReportsEnabled)
+      phone: settings.whatsappPhone,
+      alertsEnabled: settings.whatsappAlertsEnabled,
+      reportsEnabled: settings.whatsappReportsEnabled
     };
   }
 

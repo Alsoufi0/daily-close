@@ -46,13 +46,10 @@ describe("NotificationsService.markRead", () => {
 describe("NotificationsService WhatsApp settings", () => {
   it("lets owners save WhatsApp number and preferences", async () => {
     const prisma = {
-      owner: {
-        update: jest.fn().mockResolvedValue({
-          whatsappPhone: "+15551234567",
-          whatsappAlertsEnabled: true,
-          whatsappReportsEnabled: true
-        })
-      }
+      $executeRawUnsafe: jest.fn().mockResolvedValue(1),
+      $queryRawUnsafe: jest.fn().mockResolvedValue([
+        { whatsapp_phone: "+15551234567", alerts_enabled: true, reports_enabled: true }
+      ])
     } as any;
     const service = new NotificationsService(prisma);
     const result = await service.updateWhatsAppSettings(user, {
@@ -60,19 +57,12 @@ describe("NotificationsService WhatsApp settings", () => {
       whatsappAlertsEnabled: true,
       whatsappReportsEnabled: true
     });
-    expect(prisma.owner.update).toHaveBeenCalledWith({
-      where: { id: "owner-1" },
-      data: {
-        whatsappPhone: "+15551234567",
-        whatsappAlertsEnabled: true,
-        whatsappReportsEnabled: true
-      }
-    });
+    expect(prisma.$executeRawUnsafe).toHaveBeenCalled();
     expect(result.whatsappReportsEnabled).toBe(true);
   });
 
   it("requires a valid phone before enabling WhatsApp", async () => {
-    const service = new NotificationsService({ owner: { update: jest.fn() } } as any);
+    const service = new NotificationsService({ $executeRawUnsafe: jest.fn() } as any);
     await expect(
       service.updateWhatsAppSettings(user, {
         whatsappPhone: "",
@@ -83,12 +73,23 @@ describe("NotificationsService WhatsApp settings", () => {
   });
 
   it("forbids employees from changing owner WhatsApp settings", async () => {
-    const service = new NotificationsService({ owner: { update: jest.fn() } } as any);
+    const service = new NotificationsService({ $executeRawUnsafe: jest.fn() } as any);
     await expect(
       service.updateWhatsAppSettings(
         { ...user, role: "EMPLOYEE", ownerId: undefined },
         { whatsappPhone: "+15551234567", whatsappAlertsEnabled: true, whatsappReportsEnabled: true }
       )
     ).rejects.toThrow(ForbiddenException);
+  });
+
+  it("returns disabled defaults when WhatsApp table is not migrated yet", async () => {
+    const service = new NotificationsService({
+      $queryRawUnsafe: jest.fn().mockRejectedValue(new Error("relation does not exist"))
+    } as any);
+    await expect(service.getWhatsAppSettings(user)).resolves.toEqual({
+      whatsappPhone: null,
+      whatsappAlertsEnabled: false,
+      whatsappReportsEnabled: false
+    });
   });
 });

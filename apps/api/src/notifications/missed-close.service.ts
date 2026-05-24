@@ -44,9 +44,9 @@ export class MissedCloseService {
         if (!owner) return;
 
         // Best-effort WhatsApp ping to the owner. No-op when WhatsApp env is unset.
-        const ownerPhone = (owner as any).whatsappPhone;
-        if ((owner as any).whatsappAlertsEnabled && ownerPhone && this.whatsapp.isConfigured()) {
-          await this.whatsapp.sendMissedCloseTemplate(ownerPhone, store.storeName);
+        const prefs = await this.notifications.getOwnerWhatsAppPreferences(owner.id);
+        if (prefs.alertsEnabled && prefs.phone && this.whatsapp.isConfigured()) {
+          await this.whatsapp.sendMissedCloseTemplate(prefs.phone, store.storeName);
         }
 
         const existing = await this.prisma.notification.findFirst({
