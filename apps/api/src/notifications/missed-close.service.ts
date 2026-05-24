@@ -17,6 +17,7 @@ export class MissedCloseService {
     const wideStart = new Date(date.getTime() - 36 * 3600_000);
     const wideEnd = new Date(date.getTime() + 12 * 3600_000);
     const stores = await this.prisma.store.findMany({
+      where: { deletedAt: null },
       include: {
         dailyCloses: { where: { date: { gte: wideStart, lte: wideEnd } } }
       }
@@ -43,8 +44,8 @@ export class MissedCloseService {
         if (!owner) return;
 
         // Best-effort WhatsApp ping to the owner. No-op when WhatsApp env is unset.
-        const ownerPhone = (owner.user as any)?.phone || (owner as any).phone;
-        if (ownerPhone && this.whatsapp.isConfigured()) {
+        const ownerPhone = (owner as any).whatsappPhone;
+        if ((owner as any).whatsappAlertsEnabled && ownerPhone && this.whatsapp.isConfigured()) {
           await this.whatsapp.sendMissedCloseTemplate(ownerPhone, store.storeName);
         }
 

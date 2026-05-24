@@ -150,6 +150,26 @@ export async function deleteNotification(token: string, id: string) {
   return apiFetch(`/notifications/${id}`, token, { method: "DELETE" });
 }
 
+export interface WhatsAppSettings {
+  whatsappPhone: string | null;
+  whatsappAlertsEnabled: boolean;
+  whatsappReportsEnabled: boolean;
+}
+
+export async function getWhatsAppSettings(token: string): Promise<WhatsAppSettings> {
+  return apiFetch<WhatsAppSettings>("/notifications/whatsapp-settings", token);
+}
+
+export async function updateWhatsAppSettings(
+  token: string,
+  input: WhatsAppSettings
+): Promise<WhatsAppSettings> {
+  return apiFetch<WhatsAppSettings>("/notifications/whatsapp-settings", token, {
+    method: "PATCH",
+    body: JSON.stringify(input)
+  });
+}
+
 export interface EmployeeRecord {
   id: string;
   name: string;

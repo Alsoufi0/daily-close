@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { WhatsAppService } from "./whatsapp.service";
 
 /**
  * Weekly owner summary email — the habit-hook that keeps owners signed in.
@@ -17,17 +18,38 @@ import { PrismaService } from "../prisma/prisma.service";
 export class WeeklySummaryService {
   private readonly logger = new Logger(WeeklySummaryService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly whatsapp: WhatsAppService
+  ) {}
 
   async sendForAllOwners(now = new Date()): Promise<{ sent: number; skipped: number }> {
+    return this.sendSummaryForAllOwners("weekly", 7, now);
+  }
+
+  async sendMonthlyForAllOwners(now = new Date()): Promise<{ sent: number; skipped: number }> {
+    return this.sendSummaryForAllOwners("monthly", 30, now);
+  }
+
+  private async sendSummaryForAllOwners(
+    period: "weekly" | "monthly",
+    days: number,
+    now = new Date()
+  ): Promise<{ sent: number; skipped: number }> {
     const end = new Date(now);
     end.setUTCHours(23, 59, 59, 999);
     const start = new Date(end);
-    start.setUTCDate(start.getUTCDate() - 6);
+    start.setUTCDate(start.getUTCDate() - (days - 1));
     start.setUTCHours(0, 0, 0, 0);
 
     const owners = await this.prisma.owner.findMany({
-      include: { user: true, stores: { include: { dailyCloses: { where: { date: { gte: start, lte: end } } } } } }
+      include: {
+        user: true,
+        stores: {
+          where: { deletedAt: null },
+          include: { dailyCloses: { where: { date: { gte: start, lte: end } } } }
+        }
+      }
     });
 
     let sent = 0;
@@ -50,9 +72,9 @@ export class WeeklySummaryService {
         },
         { sales: 0, cash: 0, diff: 0, closes: 0 }
       );
-      const missed = owner.stores.length * 7 - totals.closes; // upper bound; good enough for the headline
+      const missed = owner.stores.length * days - totals.closes; // upper bound; good enough for the headline
 
-      const subject = `Daily Close · last week: ${money(totals.sales)} sales, ${totals.closes} closes`;
+      const subject = `Daily Close · last ${days} days: ${money(totals.sales)} sales, ${totals.closes} closes`;
       const html = renderHtml({
         ownerName: owner.user?.name || "there",
         sales: totals.sales,
@@ -64,11 +86,38 @@ export class WeeklySummaryService {
         to: end.toISOString().slice(0, 10)
       });
 
-      const ok = await this.send(email, subject, html);
+      const emailOk = await this.send(email, subject, html);
+      const whatsappOk = await this.sendWhatsAppSummary(owner as any, {
+        period,
+        ownerName: owner.user?.name || "there",
+        sales: totals.sales,
+        diff: totals.diff,
+        closes: totals.closes,
+        from: start.toISOString().slice(0, 10),
+        to: end.toISOString().slice(0, 10)
+      });
+      const ok = emailOk || whatsappOk;
       if (ok) sent++;
       else skipped++;
     }
     return { sent, skipped };
+  }
+
+  private async sendWhatsAppSummary(
+    owner: any,
+    summary: { period: "weekly" | "monthly"; ownerName: string; sales: number; diff: number; closes: number; from: string; to: string }
+  ): Promise<boolean> {
+    if (!owner.whatsappReportsEnabled || !owner.whatsappPhone) return false;
+    return this.whatsapp.sendSummaryTemplate({
+      toPhone: owner.whatsappPhone,
+      period: summary.period,
+      ownerName: summary.ownerName,
+      sales: money(summary.sales),
+      closes: String(summary.closes),
+      cashDifference: money(summary.diff),
+      from: summary.from,
+      to: summary.to
+    });
   }
 
   private async send(to: string, subject: string, html: string): Promise<boolean> {

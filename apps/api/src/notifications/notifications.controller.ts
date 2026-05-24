@@ -1,4 +1,5 @@
 import {
+  Body,
   Controller,
   Delete,
   ForbiddenException,
@@ -47,6 +48,23 @@ export class NotificationsController {
     return this.notifications.remove(id, user);
   }
 
+  @Get("whatsapp-settings")
+  @ApiBearerAuth()
+  @UseGuards(SupabaseAuthGuard)
+  getWhatsAppSettings(@CurrentUser() user: RequestUser) {
+    return this.notifications.getWhatsAppSettings(user);
+  }
+
+  @Patch("whatsapp-settings")
+  @ApiBearerAuth()
+  @UseGuards(SupabaseAuthGuard)
+  updateWhatsAppSettings(
+    @CurrentUser() user: RequestUser,
+    @Body() input: { whatsappPhone?: string | null; whatsappAlertsEnabled?: boolean; whatsappReportsEnabled?: boolean }
+  ) {
+    return this.notifications.updateWhatsAppSettings(user, input);
+  }
+
   // Hit by the Render cron - secured by a shared CRON_SECRET header.
   // When CRON_SECRET is unset, the route is open (dev convenience).
   @Post("check-missed-close")
@@ -66,5 +84,14 @@ export class NotificationsController {
       throw new ForbiddenException("Bad cron secret.");
     }
     return this.weekly.sendForAllOwners();
+  }
+
+  @Post("monthly-summary")
+  monthlySummary(@Headers("x-cron-secret") provided: string | undefined) {
+    const expected = process.env.CRON_SECRET;
+    if (expected && provided !== expected) {
+      throw new ForbiddenException("Bad cron secret.");
+    }
+    return this.weekly.sendMonthlyForAllOwners();
   }
 }

@@ -14,6 +14,7 @@ const NAV = [
   { href: "/employee", labelKey: "nav.employee" },
   { href: "/admin", labelKey: "nav.admin", ownerOnly: true },
   { href: "/billing", labelKey: "nav.billing", ownerOnly: true },
+  { href: "/account/whatsapp", labelKey: "nav.whatsapp", ownerOnly: true },
   { href: "/account/password", labelKey: "nav.password" }
 ];
 

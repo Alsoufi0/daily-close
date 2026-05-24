@@ -71,4 +71,83 @@ export class WhatsAppService {
       return false;
     }
   }
+
+  async sendSummaryTemplate(input: {
+    toPhone: string;
+    period: "weekly" | "monthly";
+    ownerName: string;
+    sales: string;
+    closes: string;
+    cashDifference: string;
+    from: string;
+    to: string;
+  }): Promise<boolean> {
+    if (!this.isConfigured()) {
+      this.logger.warn(`WhatsApp not configured — would have sent ${input.period} summary to ${input.toPhone}`);
+      return false;
+    }
+
+    const template =
+      input.period === "monthly"
+        ? process.env.WHATSAPP_TEMPLATE_MONTHLY || "monthly_summary"
+        : process.env.WHATSAPP_TEMPLATE_WEEKLY || "weekly_summary";
+
+    return this.sendTemplate({
+      toPhone: input.toPhone,
+      template,
+      parameters: [
+        input.ownerName,
+        input.from,
+        input.to,
+        input.sales,
+        input.closes,
+        input.cashDifference
+      ]
+    });
+  }
+
+  private async sendTemplate(input: {
+    toPhone: string;
+    template: string;
+    parameters: string[];
+  }): Promise<boolean> {
+    if (!this.isConfigured()) return false;
+    const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID!;
+    const token = process.env.WHATSAPP_ACCESS_TOKEN!;
+    const clean = input.toPhone.replace(/[^\d]/g, "");
+
+    try {
+      const res = await fetch(`https://graph.facebook.com/v20.0/${phoneId}/messages`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          messaging_product: "whatsapp",
+          to: clean,
+          type: "template",
+          template: {
+            name: input.template,
+            language: { code: process.env.WHATSAPP_TEMPLATE_LANGUAGE || "en_US" },
+            components: [
+              {
+                type: "body",
+                parameters: input.parameters.map((text) => ({ type: "text", text }))
+              }
+            ]
+          }
+        })
+      });
+      if (!res.ok) {
+        const body = await res.text();
+        this.logger.warn(`WhatsApp ${res.status} for ${clean}: ${body.slice(0, 200)}`);
+        return false;
+      }
+      return true;
+    } catch (err: any) {
+      this.logger.warn(`WhatsApp send failed for ${clean}: ${err?.message || err}`);
+      return false;
+    }
+  }
 }

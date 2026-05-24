@@ -1,4 +1,4 @@
-import { NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, NotFoundException } from "@nestjs/common";
 import { NotificationsService } from "./notifications.service";
 import { RequestUser } from "../auth/request-user";
 
@@ -40,5 +40,55 @@ describe("NotificationsService.markRead", () => {
     const service = new NotificationsService(prisma);
     await expect(service.markRead("n1", user)).rejects.toThrow(NotFoundException);
     expect(prisma.notification.update).not.toHaveBeenCalled();
+  });
+});
+
+describe("NotificationsService WhatsApp settings", () => {
+  it("lets owners save WhatsApp number and preferences", async () => {
+    const prisma = {
+      owner: {
+        update: jest.fn().mockResolvedValue({
+          whatsappPhone: "+15551234567",
+          whatsappAlertsEnabled: true,
+          whatsappReportsEnabled: true
+        })
+      }
+    } as any;
+    const service = new NotificationsService(prisma);
+    const result = await service.updateWhatsAppSettings(user, {
+      whatsappPhone: "+15551234567",
+      whatsappAlertsEnabled: true,
+      whatsappReportsEnabled: true
+    });
+    expect(prisma.owner.update).toHaveBeenCalledWith({
+      where: { id: "owner-1" },
+      data: {
+        whatsappPhone: "+15551234567",
+        whatsappAlertsEnabled: true,
+        whatsappReportsEnabled: true
+      }
+    });
+    expect(result.whatsappReportsEnabled).toBe(true);
+  });
+
+  it("requires a valid phone before enabling WhatsApp", async () => {
+    const service = new NotificationsService({ owner: { update: jest.fn() } } as any);
+    await expect(
+      service.updateWhatsAppSettings(user, {
+        whatsappPhone: "",
+        whatsappAlertsEnabled: true,
+        whatsappReportsEnabled: false
+      })
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it("forbids employees from changing owner WhatsApp settings", async () => {
+    const service = new NotificationsService({ owner: { update: jest.fn() } } as any);
+    await expect(
+      service.updateWhatsAppSettings(
+        { ...user, role: "EMPLOYEE", ownerId: undefined },
+        { whatsappPhone: "+15551234567", whatsappAlertsEnabled: true, whatsappReportsEnabled: true }
+      )
+    ).rejects.toThrow(ForbiddenException);
   });
 });

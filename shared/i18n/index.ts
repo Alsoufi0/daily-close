@@ -102,7 +102,16 @@ export const translations: Record<Language, Dictionary> = {
     "nav.admin": "Admin",
     "nav.billing": "Billing",
     "nav.password": "Password",
-    "auth.getStarted": "Get started"
+    "nav.whatsapp": "WhatsApp",
+    "auth.getStarted": "Get started",
+    "settings.whatsappTitle": "WhatsApp reports",
+    "settings.whatsappSubtitle": "Send missed-close alerts and weekly/monthly summaries to your WhatsApp.",
+    "settings.whatsappPhone": "WhatsApp phone number",
+    "settings.whatsappPhoneHelp": "Use country code, like +15551234567.",
+    "settings.missedAlerts": "Missed close alerts",
+    "settings.weeklyMonthlyReports": "Weekly and monthly reports",
+    "settings.saved": "WhatsApp settings saved.",
+    "settings.saveFailed": "Could not save WhatsApp settings."
   },
   ar: {
     "common.export": "تصدير",
@@ -196,7 +205,16 @@ export const translations: Record<Language, Dictionary> = {
     "nav.admin": "الإدارة",
     "nav.billing": "الفواتير",
     "nav.password": "كلمة المرور",
-    "auth.getStarted": "ابدأ"
+    "nav.whatsapp": "واتساب",
+    "auth.getStarted": "ابدأ",
+    "settings.whatsappTitle": "تقارير واتساب",
+    "settings.whatsappSubtitle": "أرسل تنبيهات الإغلاق الفائت والملخصات الأسبوعية/الشهرية إلى واتساب.",
+    "settings.whatsappPhone": "رقم واتساب",
+    "settings.whatsappPhoneHelp": "استخدم رمز الدولة مثل +15551234567.",
+    "settings.missedAlerts": "تنبيهات الإغلاق الفائت",
+    "settings.weeklyMonthlyReports": "التقارير الأسبوعية والشهرية",
+    "settings.saved": "تم حفظ إعدادات واتساب.",
+    "settings.saveFailed": "تعذر حفظ إعدادات واتساب."
   },
   es: {
     "common.export": "Exportar",
@@ -290,7 +308,16 @@ export const translations: Record<Language, Dictionary> = {
     "nav.admin": "Admin",
     "nav.billing": "Facturación",
     "nav.password": "Contraseña",
-    "auth.getStarted": "Comenzar"
+    "nav.whatsapp": "WhatsApp",
+    "auth.getStarted": "Comenzar",
+    "settings.whatsappTitle": "Reportes por WhatsApp",
+    "settings.whatsappSubtitle": "Envía alertas de cierre perdido y resúmenes semanales/mensuales a WhatsApp.",
+    "settings.whatsappPhone": "Número de WhatsApp",
+    "settings.whatsappPhoneHelp": "Usa código de país, como +15551234567.",
+    "settings.missedAlerts": "Alertas de cierre perdido",
+    "settings.weeklyMonthlyReports": "Reportes semanales y mensuales",
+    "settings.saved": "Configuración de WhatsApp guardada.",
+    "settings.saveFailed": "No se pudo guardar WhatsApp."
   },
   hi: {
     "common.export": "एक्सपोर्ट",
@@ -384,7 +411,16 @@ export const translations: Record<Language, Dictionary> = {
     "nav.admin": "एडमिन",
     "nav.billing": "बिलिंग",
     "nav.password": "पासवर्ड",
-    "auth.getStarted": "शुरू करें"
+    "nav.whatsapp": "WhatsApp",
+    "auth.getStarted": "शुरू करें",
+    "settings.whatsappTitle": "WhatsApp रिपोर्ट",
+    "settings.whatsappSubtitle": "मिस्ड क्लोज अलर्ट और साप्ताहिक/मासिक सारांश WhatsApp पर भेजें.",
+    "settings.whatsappPhone": "WhatsApp फोन नंबर",
+    "settings.whatsappPhoneHelp": "देश कोड के साथ लिखें, जैसे +15551234567.",
+    "settings.missedAlerts": "मिस्ड क्लोज अलर्ट",
+    "settings.weeklyMonthlyReports": "साप्ताहिक और मासिक रिपोर्ट",
+    "settings.saved": "WhatsApp सेटिंग सेव हुई.",
+    "settings.saveFailed": "WhatsApp सेटिंग सेव नहीं हुई."
   }
 };
 
