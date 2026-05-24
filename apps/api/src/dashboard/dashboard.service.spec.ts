@@ -114,6 +114,27 @@ describe("DashboardService", () => {
     expect(summary.totalSales).toBe(5000);
   });
 
+  it("counts a close submitted before the store close time on the same local day", async () => {
+    const now = new Date("2026-05-24T23:27:00.000Z"); // 19:27 in New York, before 23:30 close time
+    const closeDate = new Date("2026-05-24T23:20:00.000Z"); // early close on the current store-local day
+    const prisma = makePrisma([
+      {
+        id: "s1",
+        storeName: "Smoke",
+        timezone: "America/New_York",
+        closeTime: "23:30",
+        dailyCloses: [
+          { date: closeDate, totalSales: 3704.91, cashSales: 1169.27, cardSales: 2535.64, difference: 1 }
+        ]
+      }
+    ]);
+    const service = new DashboardService(prisma);
+    const summary = await service.getMyToday(owner, now);
+    expect(summary.stores[0].closedToday).toBe(true);
+    expect(summary.storesClosed).toBe(1);
+    expect(summary.totalSales).toBe(3704.91);
+  });
+
   it("returns empty summary when the user has no ownerId", async () => {
     const prisma = makePrisma([]);
     const service = new DashboardService(prisma);

@@ -146,8 +146,13 @@ export class DashboardService {
     return stores.map((store) => {
       const tz = (store as any).timezone || "America/New_York";
       const closeTime = (store as any).closeTime || "23:30";
-      const { start, end } = DashboardService.storeCloseWindowRange(tz, closeTime, date);
-      const close = store.dailyCloses.find((c: any) => c.date >= start && c.date <= end);
+      const closeWindow = DashboardService.storeCloseWindowRange(tz, closeTime, date);
+      const localDay = DashboardService.storeLocalDayRange(tz, date);
+      const close = store.dailyCloses.find(
+        (c: any) =>
+          (c.date >= closeWindow.start && c.date <= closeWindow.end) ||
+          (c.date >= localDay.start && c.date <= localDay.end)
+      );
       return {
         id: store.id,
         storeName: store.storeName,
