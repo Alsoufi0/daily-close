@@ -100,24 +100,54 @@ export class NotificationsService {
     input: { whatsappPhone: string | null; alertsEnabled: boolean; reportsEnabled: boolean }
   ) {
     try {
-      await this.prisma.$executeRawUnsafe(
-        `insert into public.owner_whatsapp_preferences
-           (owner_id, whatsapp_phone, alerts_enabled, reports_enabled, updated_at)
-         values ($1, $2, $3, $4, now())
-         on conflict (owner_id)
-         do update set
-           whatsapp_phone = excluded.whatsapp_phone,
-           alerts_enabled = excluded.alerts_enabled,
-           reports_enabled = excluded.reports_enabled,
-           updated_at = now()`,
-        ownerId,
-        input.whatsappPhone,
-        input.alertsEnabled,
-        input.reportsEnabled
-      );
-    } catch {
-      throw new BadRequestException("WhatsApp settings table is not ready. Please run the latest database migration.");
+      await this.upsertWhatsAppSettings(ownerId, input);
+    } catch (err) {
+      if (!this.isMissingWhatsAppTableError(err)) {
+        throw err;
+      }
+      await this.ensureWhatsAppSettingsTable();
+      await this.upsertWhatsAppSettings(ownerId, input);
     }
+  }
+
+  private async upsertWhatsAppSettings(
+    ownerId: string,
+    input: { whatsappPhone: string | null; alertsEnabled: boolean; reportsEnabled: boolean }
+  ) {
+    await this.prisma.$executeRawUnsafe(
+      `insert into public.owner_whatsapp_preferences
+         (owner_id, whatsapp_phone, alerts_enabled, reports_enabled, updated_at)
+       values ($1, $2, $3, $4, now())
+       on conflict (owner_id)
+       do update set
+         whatsapp_phone = excluded.whatsapp_phone,
+         alerts_enabled = excluded.alerts_enabled,
+         reports_enabled = excluded.reports_enabled,
+         updated_at = now()`,
+      ownerId,
+      input.whatsappPhone,
+      input.alertsEnabled,
+      input.reportsEnabled
+    );
+  }
+
+  private async ensureWhatsAppSettingsTable() {
+    await this.prisma.$executeRawUnsafe(
+      `create table if not exists public.owner_whatsapp_preferences (
+        owner_id text primary key references public.owners(id) on delete cascade,
+        whatsapp_phone text,
+        alerts_enabled boolean not null default false,
+        reports_enabled boolean not null default false,
+        created_at timestamptz not null default now(),
+        updated_at timestamptz not null default now()
+      )`
+    );
+  }
+
+  private isMissingWhatsAppTableError(err: unknown): boolean {
+    const code = (err as { code?: string })?.code;
+    const message = (err as { message?: string })?.message || "";
+    return code === "42P01" || /owner_whatsapp_preferences|relation .* does not exist/i.test(message);
   }
 
   async getOwnerWhatsAppPreferences(ownerId: string) {

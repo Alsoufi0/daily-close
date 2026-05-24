@@ -61,6 +61,27 @@ describe("NotificationsService WhatsApp settings", () => {
     expect(result.whatsappReportsEnabled).toBe(true);
   });
 
+  it("creates the WhatsApp settings table and retries when production is missing the migration", async () => {
+    const missingTable = Object.assign(new Error("relation owner_whatsapp_preferences does not exist"), {
+      code: "42P01"
+    });
+    const prisma = {
+      $executeRawUnsafe: jest.fn().mockRejectedValueOnce(missingTable).mockResolvedValue(1),
+      $queryRawUnsafe: jest.fn().mockResolvedValue([
+        { whatsapp_phone: "+15551234567", alerts_enabled: true, reports_enabled: false }
+      ])
+    } as any;
+    const service = new NotificationsService(prisma);
+    const result = await service.updateWhatsAppSettings(user, {
+      whatsappPhone: "+15551234567",
+      whatsappAlertsEnabled: true,
+      whatsappReportsEnabled: false
+    });
+    expect(prisma.$executeRawUnsafe).toHaveBeenCalledTimes(3);
+    expect(prisma.$executeRawUnsafe.mock.calls[1][0]).toContain("create table if not exists public.owner_whatsapp_preferences");
+    expect(result.whatsappAlertsEnabled).toBe(true);
+  });
+
   it("requires a valid phone before enabling WhatsApp", async () => {
     const service = new NotificationsService({ $executeRawUnsafe: jest.fn() } as any);
     await expect(

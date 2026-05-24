@@ -8,6 +8,8 @@ const { Client } = require("pg");
 const files = [
   "supabase/migrations/001_production_schema.sql",
   "supabase/migrations/002_subscriptions.sql",
+  "supabase/migrations/003_soft_delete.sql",
+  "supabase/migrations/004_whatsapp_preferences.sql",
   "supabase/seed.sql"
 ];
 
