@@ -17,6 +17,8 @@ import { UploadReportDto } from "./dto/upload-report.dto";
 import { DailyCloseRepository } from "./daily-close.repository";
 import { PrismaService } from "../prisma/prisma.service";
 import { DashboardService } from "../dashboard/dashboard.service";
+import { NotificationsService } from "../notifications/notifications.service";
+import { WhatsAppService } from "../notifications/whatsapp.service";
 
 @Injectable()
 export class DailyCloseService {
@@ -27,7 +29,9 @@ export class DailyCloseService {
     private readonly posParser: PosParserService,
     @Inject("OCRService") private readonly ocr: OCRService,
     private readonly storage: SupabaseStorageService,
-    private readonly prisma: PrismaService
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+    private readonly whatsapp: WhatsAppService
   ) {}
 
   async scanReport(input: ScanReportDto): Promise<ParsedPOSReport & { rawText?: string }> {
@@ -130,6 +134,8 @@ export class DailyCloseService {
       });
     }
 
+    await this.sendCloseCompletedWhatsApp(input.storeId);
+
     return {
       id: created.id,
       expectedCash,
@@ -230,6 +236,29 @@ export class DailyCloseService {
     if (user.role !== "EMPLOYEE") throw new ForbiddenException("Only employees can submit daily closes.");
     if (user.storeId !== storeId) throw new ForbiddenException("Employee cannot close another store.");
     if (!user.employeeId) throw new ForbiddenException("Employee profile is incomplete.");
+  }
+
+  private async sendCloseCompletedWhatsApp(storeId: string) {
+    try {
+      const store = await this.prisma.store.findUnique({
+        where: { id: storeId },
+        select: {
+          storeName: true,
+          ownerId: true,
+          owner: { select: { user: { select: { name: true } } } }
+        }
+      });
+      if (!store) return;
+      const prefs = await this.notifications.getOwnerWhatsAppPreferences(store.ownerId);
+      if (!prefs.closeAlertsEnabled || !prefs.phone || !this.whatsapp.isConfigured()) return;
+      await this.whatsapp.sendCloseCompletedTemplate({
+        toPhone: prefs.phone,
+        ownerName: store.owner.user.name,
+        storeName: store.storeName
+      });
+    } catch (err: any) {
+      this.logger.warn(`Close-completed WhatsApp alert skipped: ${err?.message || err}`);
+    }
   }
 
   // Allows owners (for stores they own) and employees (for their store).

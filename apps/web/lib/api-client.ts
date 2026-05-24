@@ -153,6 +153,7 @@ export async function deleteNotification(token: string, id: string) {
 export interface WhatsAppSettings {
   whatsappPhone: string | null;
   whatsappAlertsEnabled: boolean;
+  whatsappCloseAlertsEnabled: boolean;
   whatsappReportsEnabled: boolean;
 }
 

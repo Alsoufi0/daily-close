@@ -50,18 +50,24 @@ export class NotificationsService {
 
   async updateWhatsAppSettings(
     user: RequestUser,
-    input: { whatsappPhone?: string | null; whatsappAlertsEnabled?: boolean; whatsappReportsEnabled?: boolean }
+    input: {
+      whatsappPhone?: string | null;
+      whatsappAlertsEnabled?: boolean;
+      whatsappCloseAlertsEnabled?: boolean;
+      whatsappReportsEnabled?: boolean;
+    }
   ) {
     if (user.role !== "STORE_OWNER" || !user.ownerId) {
       throw new ForbiddenException("Only owners can manage WhatsApp settings.");
     }
     const cleanPhone = input.whatsappPhone ? this.normalizePhone(input.whatsappPhone) : null;
-    if ((input.whatsappAlertsEnabled || input.whatsappReportsEnabled) && !cleanPhone) {
+    if ((input.whatsappAlertsEnabled || input.whatsappCloseAlertsEnabled || input.whatsappReportsEnabled) && !cleanPhone) {
       throw new BadRequestException("Enter a WhatsApp phone number before turning on WhatsApp messages.");
     }
     await this.writeWhatsAppSettings(user.ownerId, {
       whatsappPhone: cleanPhone,
       alertsEnabled: Boolean(input.whatsappAlertsEnabled),
+      closeAlertsEnabled: Boolean(input.whatsappCloseAlertsEnabled),
       reportsEnabled: Boolean(input.whatsappReportsEnabled)
     });
     return this.readWhatsAppSettings(user.ownerId);
@@ -69,40 +75,55 @@ export class NotificationsService {
 
   async readWhatsAppSettings(ownerId: string) {
     try {
-      const rows = await this.prisma.$queryRawUnsafe<Array<{
-        whatsapp_phone: string | null;
-        alerts_enabled: boolean;
-        reports_enabled: boolean;
-      }>>(
-        `select whatsapp_phone, alerts_enabled, reports_enabled
-         from public.owner_whatsapp_preferences
-         where owner_id = $1
-         limit 1`,
-        ownerId
-      );
-      const row = rows[0];
-      return {
-        whatsappPhone: row?.whatsapp_phone ?? null,
-        whatsappAlertsEnabled: Boolean(row?.alerts_enabled),
-        whatsappReportsEnabled: Boolean(row?.reports_enabled)
-      };
-    } catch {
+      return await this.readWhatsAppSettingsRow(ownerId);
+    } catch (err) {
+      if (this.isMissingWhatsAppSchemaError(err)) {
+        try {
+          await this.ensureWhatsAppSettingsTable();
+          return await this.readWhatsAppSettingsRow(ownerId);
+        } catch {
+          /* fall through to disabled defaults */
+        }
+      }
       return {
         whatsappPhone: null,
         whatsappAlertsEnabled: false,
+        whatsappCloseAlertsEnabled: false,
         whatsappReportsEnabled: false
       };
     }
   }
 
+  private async readWhatsAppSettingsRow(ownerId: string) {
+    const rows = await this.prisma.$queryRawUnsafe<Array<{
+      whatsapp_phone: string | null;
+      alerts_enabled: boolean;
+      close_alerts_enabled?: boolean;
+      reports_enabled: boolean;
+    }>>(
+      `select whatsapp_phone, alerts_enabled, close_alerts_enabled, reports_enabled
+       from public.owner_whatsapp_preferences
+       where owner_id = $1
+       limit 1`,
+      ownerId
+    );
+    const row = rows[0];
+    return {
+      whatsappPhone: row?.whatsapp_phone ?? null,
+      whatsappAlertsEnabled: Boolean(row?.alerts_enabled),
+      whatsappCloseAlertsEnabled: Boolean(row?.close_alerts_enabled),
+      whatsappReportsEnabled: Boolean(row?.reports_enabled)
+    };
+  }
+
   private async writeWhatsAppSettings(
     ownerId: string,
-    input: { whatsappPhone: string | null; alertsEnabled: boolean; reportsEnabled: boolean }
+    input: { whatsappPhone: string | null; alertsEnabled: boolean; closeAlertsEnabled: boolean; reportsEnabled: boolean }
   ) {
     try {
       await this.upsertWhatsAppSettings(ownerId, input);
     } catch (err) {
-      if (!this.isMissingWhatsAppTableError(err)) {
+      if (!this.isMissingWhatsAppSchemaError(err)) {
         throw err;
       }
       await this.ensureWhatsAppSettingsTable();
@@ -112,21 +133,23 @@ export class NotificationsService {
 
   private async upsertWhatsAppSettings(
     ownerId: string,
-    input: { whatsappPhone: string | null; alertsEnabled: boolean; reportsEnabled: boolean }
+    input: { whatsappPhone: string | null; alertsEnabled: boolean; closeAlertsEnabled: boolean; reportsEnabled: boolean }
   ) {
     await this.prisma.$executeRawUnsafe(
       `insert into public.owner_whatsapp_preferences
-         (owner_id, whatsapp_phone, alerts_enabled, reports_enabled, updated_at)
-       values ($1, $2, $3, $4, now())
+         (owner_id, whatsapp_phone, alerts_enabled, close_alerts_enabled, reports_enabled, updated_at)
+       values ($1, $2, $3, $4, $5, now())
        on conflict (owner_id)
        do update set
          whatsapp_phone = excluded.whatsapp_phone,
          alerts_enabled = excluded.alerts_enabled,
+         close_alerts_enabled = excluded.close_alerts_enabled,
          reports_enabled = excluded.reports_enabled,
          updated_at = now()`,
       ownerId,
       input.whatsappPhone,
       input.alertsEnabled,
+      input.closeAlertsEnabled,
       input.reportsEnabled
     );
   }
@@ -137,17 +160,26 @@ export class NotificationsService {
         owner_id text primary key references public.owners(id) on delete cascade,
         whatsapp_phone text,
         alerts_enabled boolean not null default false,
+        close_alerts_enabled boolean not null default false,
         reports_enabled boolean not null default false,
         created_at timestamptz not null default now(),
         updated_at timestamptz not null default now()
       )`
     );
+    await this.prisma.$executeRawUnsafe(
+      `alter table public.owner_whatsapp_preferences
+       add column if not exists close_alerts_enabled boolean not null default false`
+    );
   }
 
-  private isMissingWhatsAppTableError(err: unknown): boolean {
+  private isMissingWhatsAppSchemaError(err: unknown): boolean {
     const code = (err as { code?: string })?.code;
     const message = (err as { message?: string })?.message || "";
-    return code === "42P01" || /owner_whatsapp_preferences|relation .* does not exist/i.test(message);
+    return (
+      code === "42P01" ||
+      code === "42703" ||
+      /owner_whatsapp_preferences|relation .* does not exist|close_alerts_enabled|column .* does not exist/i.test(message)
+    );
   }
 
   async getOwnerWhatsAppPreferences(ownerId: string) {
@@ -155,6 +187,7 @@ export class NotificationsService {
     return {
       phone: settings.whatsappPhone,
       alertsEnabled: settings.whatsappAlertsEnabled,
+      closeAlertsEnabled: settings.whatsappCloseAlertsEnabled,
       reportsEnabled: settings.whatsappReportsEnabled
     };
   }

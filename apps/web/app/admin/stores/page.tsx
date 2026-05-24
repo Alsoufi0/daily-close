@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Loader2, Pencil, Plus, Store, Trash2 } from "lucide-react";
+import { getBrowserTimeZone, getSupportedTimeZones } from "@smokeshop/shared/timezones";
+import { useLanguage } from "../../../components/language-provider";
 import { useSession } from "../../../lib/use-session";
 import {
   ApiError,
@@ -22,6 +24,7 @@ interface StoreRowWithMeta extends StoreRecord {
 
 export default function StoresAdminPage() {
   const session = useSession();
+  const { t } = useLanguage();
   const [stores, setStores] = useState<StoreRowWithMeta[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -53,46 +56,30 @@ export default function StoresAdminPage() {
     }
   }
 
-  async function onCreated() {
-    setShowCreate(false);
-    await refresh();
-  }
-
-  async function onUpdated() {
-    setEditing(null);
-    await refresh();
-  }
-
   async function remove(s: StoreRowWithMeta) {
     if (!session.token) return;
-    if (!window.confirm(
-      `Remove ${s.storeName}? Existing daily closes stay on record, but the store stops appearing on dashboards and employees can't sign in to it.`
-    )) {
-      return;
-    }
+    if (!window.confirm(t("admin.removeStoreConfirm").replace("{store}", s.storeName))) return;
     try {
       await deleteStore(session.token, s.id);
       await refresh();
     } catch (err) {
-      window.alert(err instanceof ApiError ? err.message : "Could not remove store");
+      window.alert(err instanceof ApiError ? err.message : t("admin.removeStoreFailed"));
     }
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-black">Stores</h1>
-          <p className="text-sm font-bold text-ink/65">
-            Add locations and set the close time for each one.
-          </p>
+          <h1 className="text-2xl font-black">{t("admin.stores")}</h1>
+          <p className="text-sm font-bold text-ink/65">{t("admin.storesHelp")}</p>
         </div>
         {!showCreate ? (
           <button
             onClick={() => setShowCreate(true)}
             className="focus-ring inline-flex h-11 items-center gap-2 rounded-lg bg-leaf px-4 font-black text-white"
           >
-            <Plus size={16} /> New store
+            <Plus size={16} /> {t("admin.newStore")}
           </button>
         ) : null}
       </div>
@@ -102,7 +89,10 @@ export default function StoresAdminPage() {
           mode="create"
           token={session.token}
           onCancel={() => setShowCreate(false)}
-          onSaved={onCreated as any}
+          onSaved={async () => {
+            setShowCreate(false);
+            await refresh();
+          }}
         />
       ) : null}
 
@@ -112,18 +102,21 @@ export default function StoresAdminPage() {
           initial={editing}
           token={session.token}
           onCancel={() => setEditing(null)}
-          onSaved={onUpdated as any}
+          onSaved={async () => {
+            setEditing(null);
+            await refresh();
+          }}
         />
       ) : null}
 
       <div className="space-y-2">
         {loading ? (
           <div className="rounded-xl border border-ink/10 bg-white p-6 text-center text-sm font-bold text-ink/55">
-            <Loader2 className="mx-auto mb-2 animate-spin" size={18} /> Loading stores…
+            <Loader2 className="mx-auto mb-2 animate-spin" size={18} /> {t("admin.loadingStores")}
           </div>
         ) : stores.length === 0 ? (
           <div className="rounded-xl border border-ink/10 bg-white p-8 text-center">
-            <p className="text-base font-bold text-ink/65">No stores yet — add your first one.</p>
+            <p className="text-base font-bold text-ink/65">{t("admin.noStoresAdd")}</p>
           </div>
         ) : (
           stores.map((s) => (
@@ -134,24 +127,24 @@ export default function StoresAdminPage() {
               <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-leaf/10 text-leaf">
                 <Store size={18} aria-hidden />
               </span>
-              <div className="flex-1">
+              <div className="min-w-0 flex-1">
                 <p className="font-black">{s.storeName}</p>
-                <p className="text-xs font-bold text-ink/55">
-                  Closes {s.closeTime ?? "23:30"}
+                <p className="truncate text-xs font-bold text-ink/55">
+                  {t("dashboard.closesAt")} {s.closeTime ?? "23:30"}
                   {s.timezone ? ` · ${s.timezone}` : ""}
                   {s.address ? ` · ${s.address}` : ""}
                 </p>
               </div>
               <button
                 onClick={() => setEditing(s)}
-                aria-label="Edit store"
+                aria-label={t("admin.editStore")}
                 className="focus-ring rounded-lg p-2 text-ink/60 hover:bg-smoke hover:text-ink"
               >
                 <Pencil size={16} />
               </button>
               <button
                 onClick={() => remove(s)}
-                aria-label="Remove store"
+                aria-label={t("admin.removeStore")}
                 className="focus-ring rounded-lg p-2 text-warning hover:bg-red-50"
               >
                 <Trash2 size={16} />
@@ -177,7 +170,9 @@ function StoreForm({
   onCancel: () => void;
   onSaved: (s: StoreRowWithMeta) => void;
 }) {
-  const browserTz = typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : "America/New_York";
+  const { t } = useLanguage();
+  const browserTz = getBrowserTimeZone();
+  const timeZones = useMemo(() => getSupportedTimeZones(), []);
   const [storeName, setStoreName] = useState(initial?.storeName ?? "");
   const [address, setAddress] = useState(initial?.address ?? "");
   const [closeTime, setCloseTime] = useState(initial?.closeTime ?? "23:30");
@@ -197,13 +192,10 @@ function StoreForm({
         closeTime,
         timezone
       };
-      const r =
-        mode === "create"
-          ? await createStore(token, input)
-          : await updateStore(token, initial!.id, input);
+      const r = mode === "create" ? await createStore(token, input) : await updateStore(token, initial!.id, input);
       onSaved(r as StoreRowWithMeta);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not save store");
+      setError(err instanceof ApiError ? err.message : t("admin.saveStoreFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -211,13 +203,15 @@ function StoreForm({
 
   return (
     <form onSubmit={submit} className="space-y-4 rounded-xl border border-ink/10 bg-white p-5 shadow-sm">
-      <h2 className="text-lg font-black">{mode === "create" ? "New store" : `Edit ${initial?.storeName}`}</h2>
+      <h2 className="text-lg font-black">
+        {mode === "create" ? t("admin.newStore") : `${t("common.edit")} ${initial?.storeName}`}
+      </h2>
       {error ? (
         <div className="rounded-lg border border-warning/30 bg-red-50 p-3 text-sm font-bold text-warning">
           {error}
         </div>
       ) : null}
-      <Field label="Store name">
+      <Field label={t("admin.storeName")}>
         <input
           required
           autoFocus
@@ -226,14 +220,14 @@ function StoreForm({
           onChange={(e) => setStoreName(e.target.value)}
         />
       </Field>
-      <Field label="Address (optional)">
+      <Field label={t("admin.addressOptional")}>
         <input
           className="focus-ring h-12 w-full rounded-lg border border-ink/15 px-4 font-bold"
           value={address ?? ""}
           onChange={(e) => setAddress(e.target.value)}
         />
       </Field>
-      <Field label="Daily close time">
+      <Field label={t("admin.dailyCloseTime")}>
         <input
           type="time"
           className="focus-ring h-12 w-44 rounded-lg border border-ink/15 px-4 font-bold"
@@ -241,15 +235,21 @@ function StoreForm({
           onChange={(e) => setCloseTime(e.target.value)}
         />
       </Field>
-      <Field label="Timezone">
-        <input
+      <Field label={t("admin.timezone")}>
+        <select
           className="focus-ring h-12 w-full rounded-lg border border-ink/15 px-4 font-bold"
           value={timezone}
           onChange={(e) => setTimezone(e.target.value)}
-          placeholder="America/New_York"
-        />
+        >
+          {timeZones.map((zone) => (
+            <option key={zone} value={zone}>
+              {zone}
+              {zone === browserTz ? ` (${t("admin.detectedTimezone")})` : ""}
+            </option>
+          ))}
+        </select>
         <p className="mt-1 text-xs font-bold text-ink/55">
-          Defaults to your browser timezone ({browserTz}). Set this so "open" / "needs closing" math matches the store's local clock.
+          {t("admin.timezoneHelp")} ({browserTz})
         </p>
       </Field>
       <div className="flex gap-3">
@@ -258,7 +258,7 @@ function StoreForm({
           onClick={onCancel}
           className="focus-ring h-12 flex-1 rounded-lg border-2 border-ink/15 bg-white font-black text-ink hover:bg-smoke"
         >
-          Cancel
+          {t("common.cancel")}
         </button>
         <button
           type="submit"
@@ -266,7 +266,7 @@ function StoreForm({
           className="focus-ring flex h-12 flex-1 items-center justify-center gap-2 rounded-lg bg-leaf font-black text-white disabled:opacity-60"
         >
           {submitting ? <Loader2 className="animate-spin" size={18} /> : null}
-          {submitting ? "Saving…" : mode === "create" ? "Create store" : "Save changes"}
+          {submitting ? t("admin.saving") : mode === "create" ? t("admin.createStore") : t("admin.saveChanges")}
         </button>
       </div>
     </form>

@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { RequestUser } from "../auth/request-user";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateStoreDto } from "./dto/create-store.dto";
@@ -57,8 +57,8 @@ export class StoresService {
         storeName: input.storeName,
         address: input.address,
         phone: input.phone,
-        timezone: input.timezone ?? "America/New_York",
-        closeTime: input.closeTime ?? "23:30"
+        timezone: this.validTimezone(input.timezone),
+        closeTime: this.validCloseTime(input.closeTime)
       }
     });
   }
@@ -76,8 +76,8 @@ export class StoresService {
     if (input.storeName !== undefined) data.storeName = input.storeName;
     if (input.address !== undefined) data.address = input.address;
     if (input.phone !== undefined) data.phone = input.phone;
-    if (input.timezone !== undefined) data.timezone = input.timezone;
-    if (input.closeTime !== undefined) data.closeTime = input.closeTime;
+    if (input.timezone !== undefined) data.timezone = this.validTimezone(input.timezone);
+    if (input.closeTime !== undefined) data.closeTime = this.validCloseTime(input.closeTime);
 
     const updated = await this.prisma.store.update({ where: { id: storeId }, data });
     await this.prisma.auditLog.create({
@@ -89,5 +89,27 @@ export class StoresService {
       }
     });
     return updated;
+  }
+
+  private validTimezone(timezone?: string): string {
+    const value = timezone || "America/New_York";
+    try {
+      new Intl.DateTimeFormat("en-US", { timeZone: value }).format(new Date());
+      return value;
+    } catch {
+      throw new BadRequestException("Choose a valid store timezone.");
+    }
+  }
+
+  private validCloseTime(closeTime?: string): string {
+    const value = closeTime || "23:30";
+    if (!/^\d{2}:\d{2}$/.test(value)) {
+      throw new BadRequestException("Choose a valid daily close time.");
+    }
+    const [hh, mm] = value.split(":").map(Number);
+    if (hh < 0 || hh > 23 || mm < 0 || mm > 59) {
+      throw new BadRequestException("Choose a valid daily close time.");
+    }
+    return value;
   }
 }

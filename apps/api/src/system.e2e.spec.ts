@@ -192,7 +192,24 @@ function makeSystem() {
     ].join("\n"))
   };
   const storage = { uploadBase64: jest.fn().mockRejectedValue(new Error("storage offline")) };
-  const dailyClose = new DailyCloseService(repository, new PosParserService(), ocr as any, storage as any, prisma as any);
+  const notifications = {
+    getOwnerWhatsAppPreferences: jest.fn().mockResolvedValue({
+      phone: null,
+      alertsEnabled: false,
+      closeAlertsEnabled: false,
+      reportsEnabled: false
+    })
+  };
+  const whatsapp = { isConfigured: jest.fn().mockReturnValue(false), sendCloseCompletedTemplate: jest.fn() };
+  const dailyClose = new DailyCloseService(
+    repository,
+    new PosParserService(),
+    ocr as any,
+    storage as any,
+    prisma as any,
+    notifications as any,
+    whatsapp as any
+  );
   return { prisma, stores, dashboard, reports, dailyClose, ocr, storage };
 }
 

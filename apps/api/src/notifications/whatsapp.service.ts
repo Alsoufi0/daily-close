@@ -106,6 +106,22 @@ export class WhatsAppService {
     });
   }
 
+  async sendCloseCompletedTemplate(input: {
+    toPhone: string;
+    ownerName: string;
+    storeName: string;
+  }): Promise<boolean> {
+    if (!this.isConfigured()) {
+      this.logger.warn(`WhatsApp not configured - would have sent close-completed alert to ${input.toPhone}`);
+      return false;
+    }
+    return this.sendTemplate({
+      toPhone: input.toPhone,
+      template: process.env.WHATSAPP_TEMPLATE_CLOSE_COMPLETED || "close_completed",
+      parameters: [input.ownerName, input.storeName]
+    });
+  }
+
   private async sendTemplate(input: {
     toPhone: string;
     template: string;

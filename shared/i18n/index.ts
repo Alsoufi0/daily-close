@@ -111,7 +111,8 @@ export const translations: Record<Language, Dictionary> = {
     "settings.missedAlerts": "Missed close alerts",
     "settings.weeklyMonthlyReports": "Weekly and monthly reports",
     "settings.saved": "WhatsApp settings saved.",
-    "settings.saveFailed": "Could not save WhatsApp settings."
+    "settings.saveFailed": "Could not save WhatsApp settings.",
+    "settings.closeAlerts": "Store closed alerts"
   },
   ar: {
     "common.export": "تصدير",
@@ -214,7 +215,8 @@ export const translations: Record<Language, Dictionary> = {
     "settings.missedAlerts": "تنبيهات الإغلاق الفائت",
     "settings.weeklyMonthlyReports": "التقارير الأسبوعية والشهرية",
     "settings.saved": "تم حفظ إعدادات واتساب.",
-    "settings.saveFailed": "تعذر حفظ إعدادات واتساب."
+    "settings.saveFailed": "تعذر حفظ إعدادات واتساب.",
+    "settings.closeAlerts": "\u062a\u0646\u0628\u064a\u0647\u0627\u062a \u0639\u0646\u062f \u0625\u063a\u0644\u0627\u0642 \u0627\u0644\u0645\u062a\u062c\u0631"
   },
   es: {
     "common.export": "Exportar",
@@ -317,7 +319,8 @@ export const translations: Record<Language, Dictionary> = {
     "settings.missedAlerts": "Alertas de cierre perdido",
     "settings.weeklyMonthlyReports": "Reportes semanales y mensuales",
     "settings.saved": "Configuración de WhatsApp guardada.",
-    "settings.saveFailed": "No se pudo guardar WhatsApp."
+    "settings.saveFailed": "No se pudo guardar WhatsApp.",
+    "settings.closeAlerts": "Alertas cuando una tienda cierra"
   },
   hi: {
     "common.export": "एक्सपोर्ट",
@@ -420,7 +423,8 @@ export const translations: Record<Language, Dictionary> = {
     "settings.missedAlerts": "मिस्ड क्लोज अलर्ट",
     "settings.weeklyMonthlyReports": "साप्ताहिक और मासिक रिपोर्ट",
     "settings.saved": "WhatsApp सेटिंग सेव हुई.",
-    "settings.saveFailed": "WhatsApp सेटिंग सेव नहीं हुई."
+    "settings.saveFailed": "WhatsApp सेटिंग सेव नहीं हुई.",
+    "settings.closeAlerts": "\u0938\u094d\u091f\u094b\u0930 \u092c\u0902\u0926 \u0939\u094b\u0928\u0947 \u0915\u0947 \u0905\u0932\u0930\u094d\u091f"
   }
 };
 
@@ -460,6 +464,16 @@ const supplementalTranslations: Record<Language, Dictionary> = {
     "admin.openingStores": "Opening Stores...",
     "admin.noStores": "No stores yet.",
     "admin.noStoresAdd": "No stores yet — add your first one.",
+    "admin.storesHelp": "Add locations and set the close time for each one.",
+    "admin.loadingStores": "Loading stores...",
+    "admin.saving": "Saving...",
+    "admin.detectedTimezone": "detected",
+    "admin.timezoneHelp": "Detected from your device. Choose the store's real timezone so open and needs-closing times match the store clock.",
+    "admin.editStore": "Edit store",
+    "admin.removeStore": "Remove store",
+    "admin.removeStoreConfirm": "Remove {store}? Existing daily closes stay on record, but the store stops appearing on dashboards and employees can't sign in to it.",
+    "admin.removeStoreFailed": "Could not remove store",
+    "admin.saveStoreFailed": "Could not save store",
     "billing.dailyClose2Min": "Daily close in 2 min",
     "billing.multiStoreDashboard": "Multi-store dashboard",
     "billing.auditReadyCsv": "Audit-ready CSV",
@@ -556,6 +570,16 @@ const supplementalTranslations: Record<Language, Dictionary> = {
     "admin.openingStores": "\u062c\u0627\u0631\u064a \u0641\u062a\u062d \u0627\u0644\u0645\u062a\u0627\u062c\u0631...",
     "admin.noStores": "\u0644\u0627 \u062a\u0648\u062c\u062f \u0645\u062a\u0627\u062c\u0631 \u0628\u0639\u062f.",
     "admin.noStoresAdd": "\u0644\u0627 \u062a\u0648\u062c\u062f \u0645\u062a\u0627\u062c\u0631 \u0628\u0639\u062f - \u0623\u0636\u0641 \u0623\u0648\u0644 \u0645\u062a\u062c\u0631.",
+    "admin.storesHelp": "\u0623\u0636\u0641 \u0627\u0644\u0645\u0648\u0627\u0642\u0639 \u0648\u062d\u062f\u062f \u0648\u0642\u062a \u0627\u0644\u0625\u063a\u0644\u0627\u0642 \u0644\u0643\u0644 \u0645\u062a\u062c\u0631.",
+    "admin.loadingStores": "\u062c\u0627\u0631\u064a \u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u0645\u062a\u0627\u062c\u0631...",
+    "admin.saving": "\u062c\u0627\u0631\u064a \u0627\u0644\u062d\u0641\u0638...",
+    "admin.detectedTimezone": "\u062a\u0645 \u0627\u0643\u062a\u0634\u0627\u0641\u0647",
+    "admin.timezoneHelp": "\u062a\u0645 \u0627\u0643\u062a\u0634\u0627\u0641\u0647 \u0645\u0646 \u062c\u0647\u0627\u0632\u0643. \u0627\u062e\u062a\u0631 \u0645\u0646\u0637\u0642\u0629 \u0627\u0644\u0645\u062a\u062c\u0631 \u0627\u0644\u062d\u0642\u064a\u0642\u064a\u0629 \u0644\u062a\u0637\u0627\u0628\u0642 \u0623\u0648\u0642\u0627\u062a \u0627\u0644\u0625\u063a\u0644\u0627\u0642.",
+    "admin.editStore": "\u062a\u0639\u062f\u064a\u0644 \u0627\u0644\u0645\u062a\u062c\u0631",
+    "admin.removeStore": "\u0625\u0632\u0627\u0644\u0629 \u0627\u0644\u0645\u062a\u062c\u0631",
+    "admin.removeStoreConfirm": "\u0625\u0632\u0627\u0644\u0629 {store}\u061f \u0633\u062a\u0628\u0642\u0649 \u0627\u0644\u0625\u063a\u0644\u0627\u0642\u0627\u062a \u0645\u062d\u0641\u0648\u0638\u0629 \u0648\u0644\u0643\u0646 \u0644\u0646 \u064a\u0638\u0647\u0631 \u0627\u0644\u0645\u062a\u062c\u0631 \u0641\u064a \u0627\u0644\u0644\u0648\u062d\u0627\u062a.",
+    "admin.removeStoreFailed": "\u062a\u0639\u0630\u0631\u062a \u0625\u0632\u0627\u0644\u0629 \u0627\u0644\u0645\u062a\u062c\u0631",
+    "admin.saveStoreFailed": "\u062a\u0639\u0630\u0631 \u062d\u0641\u0638 \u0627\u0644\u0645\u062a\u062c\u0631",
     "billing.dailyClose2Min": "\u0625\u063a\u0644\u0627\u0642 \u064a\u0648\u0645\u064a \u0641\u064a \u062f\u0642\u064a\u0642\u062a\u064a\u0646",
     "billing.multiStoreDashboard": "\u0644\u0648\u062d\u0629 \u0645\u062a\u0627\u062c\u0631 \u0645\u062a\u0639\u062f\u062f\u0629",
     "billing.auditReadyCsv": "\u0645\u0644\u0641 CSV \u062c\u0627\u0647\u0632 \u0644\u0644\u0645\u0631\u0627\u062c\u0639\u0629",
@@ -652,6 +676,16 @@ const supplementalTranslations: Record<Language, Dictionary> = {
     "admin.openingStores": "Abriendo tiendas...",
     "admin.noStores": "A\u00fan no hay tiendas.",
     "admin.noStoresAdd": "A\u00fan no hay tiendas - agrega la primera.",
+    "admin.storesHelp": "Agrega ubicaciones y define la hora de cierre de cada una.",
+    "admin.loadingStores": "Cargando tiendas...",
+    "admin.saving": "Guardando...",
+    "admin.detectedTimezone": "detectada",
+    "admin.timezoneHelp": "Detectada desde tu dispositivo. Elige la zona real de la tienda para que abierto y necesita cierre coincidan con su reloj.",
+    "admin.editStore": "Editar tienda",
+    "admin.removeStore": "Quitar tienda",
+    "admin.removeStoreConfirm": "\u00bfQuitar {store}? Los cierres existentes quedan guardados, pero la tienda deja de aparecer en paneles.",
+    "admin.removeStoreFailed": "No se pudo quitar la tienda",
+    "admin.saveStoreFailed": "No se pudo guardar la tienda",
     "billing.dailyClose2Min": "Cierre diario en 2 min",
     "billing.multiStoreDashboard": "Panel multi-tienda",
     "billing.auditReadyCsv": "CSV listo para auditor\u00eda",
@@ -748,6 +782,16 @@ const supplementalTranslations: Record<Language, Dictionary> = {
     "admin.openingStores": "\u0938\u094d\u091f\u094b\u0930 \u0916\u0941\u0932 \u0930\u0939\u0947 \u0939\u0948\u0902...",
     "admin.noStores": "\u0905\u092d\u0940 \u0915\u094b\u0908 \u0938\u094d\u091f\u094b\u0930 \u0928\u0939\u0940\u0902.",
     "admin.noStoresAdd": "\u0905\u092d\u0940 \u0915\u094b\u0908 \u0938\u094d\u091f\u094b\u0930 \u0928\u0939\u0940\u0902 - \u092a\u0939\u0932\u093e \u091c\u094b\u0921\u093c\u0947\u0902.",
+    "admin.storesHelp": "\u0932\u094b\u0915\u0947\u0936\u0928 \u091c\u094b\u0921\u093c\u0947\u0902 \u0914\u0930 \u0939\u0930 \u0938\u094d\u091f\u094b\u0930 \u0915\u093e \u0915\u094d\u0932\u094b\u091c \u0938\u092e\u092f \u0938\u0947\u091f \u0915\u0930\u0947\u0902.",
+    "admin.loadingStores": "\u0938\u094d\u091f\u094b\u0930 \u0932\u094b\u0921 \u0939\u094b \u0930\u0939\u0947 \u0939\u0948\u0902...",
+    "admin.saving": "\u0938\u0947\u0935 \u0939\u094b \u0930\u0939\u093e \u0939\u0948...",
+    "admin.detectedTimezone": "\u0921\u093f\u091f\u0947\u0915\u094d\u091f \u0939\u0941\u0906",
+    "admin.timezoneHelp": "\u0906\u092a\u0915\u0947 \u0921\u093f\u0935\u093e\u0907\u0938 \u0938\u0947 \u092e\u093f\u0932\u093e. \u0938\u094d\u091f\u094b\u0930 \u0915\u093e \u0938\u0939\u0940 \u091f\u093e\u0907\u092e\u091c\u094b\u0928 \u091a\u0941\u0928\u0947\u0902.",
+    "admin.editStore": "\u0938\u094d\u091f\u094b\u0930 \u090f\u0921\u093f\u091f",
+    "admin.removeStore": "\u0938\u094d\u091f\u094b\u0930 \u0939\u091f\u093e\u090f\u0902",
+    "admin.removeStoreConfirm": "{store} \u0939\u091f\u093e\u090f\u0902? \u092a\u0941\u0930\u093e\u0928\u0947 \u0915\u094d\u0932\u094b\u091c \u0930\u0939\u0947\u0902\u0917\u0947, \u092a\u0930 \u0938\u094d\u091f\u094b\u0930 \u0921\u0948\u0936\u092c\u094b\u0930\u094d\u0921 \u092e\u0947\u0902 \u0928\u0939\u0940\u0902 \u0926\u093f\u0916\u0947\u0917\u093e.",
+    "admin.removeStoreFailed": "\u0938\u094d\u091f\u094b\u0930 \u0939\u091f\u093e \u0928\u0939\u0940\u0902",
+    "admin.saveStoreFailed": "\u0938\u094d\u091f\u094b\u0930 \u0938\u0947\u0935 \u0928\u0939\u0940\u0902",
     "billing.dailyClose2Min": "2 \u092e\u093f\u0928\u091f \u092e\u0947\u0902 \u0926\u0948\u0928\u093f\u0915 \u0915\u094d\u0932\u094b\u091c",
     "billing.multiStoreDashboard": "\u092e\u0932\u094d\u091f\u0940-\u0938\u094d\u091f\u094b\u0930 \u0921\u0948\u0936\u092c\u094b\u0930\u094d\u0921",
     "billing.auditReadyCsv": "\u0911\u0921\u093f\u091f \u0915\u0947 \u0932\u093f\u090f CSV",

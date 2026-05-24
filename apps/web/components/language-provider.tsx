@@ -151,7 +151,12 @@ const phraseKeys: Record<string, string> = {
   "WhatsApp reports": "settings.whatsappTitle",
   "WhatsApp phone number": "settings.whatsappPhone",
   "Missed close alerts": "settings.missedAlerts",
-  "Weekly and monthly reports": "settings.weeklyMonthlyReports"
+  "Store closed alerts": "settings.closeAlerts",
+  "Weekly and monthly reports": "settings.weeklyMonthlyReports",
+  "Add locations and set the close time for each one.": "admin.storesHelp",
+  "Saving...": "admin.saving",
+  "Edit store": "admin.editStore",
+  "Remove store": "admin.removeStore"
   ,"Every assigned store has reported in.": "dashboard.everyStoreReported",
   "Call the store or remind the employee.": "dashboard.callStore",
   "Counted cash matches expected for every store.": "dashboard.cashMatches",
@@ -197,6 +202,9 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const setLang = (next: Language) => {
     setLangState(next);
     window.localStorage.setItem("dailyclose-lang", next);
+    document.documentElement.lang = next;
+    document.documentElement.dir = languageDir(next);
+    window.dispatchEvent(new CustomEvent("dailyclose:language-changed", { detail: next }));
   };
 
   const value = useMemo(
@@ -242,7 +250,7 @@ function localizeDom(
     acceptNode(node) {
       const parent = node.parentElement;
       if (!parent) return NodeFilter.FILTER_REJECT;
-      if (["SCRIPT", "STYLE", "TEXTAREA", "INPUT", "SELECT", "OPTION"].includes(parent.tagName)) {
+      if (["SCRIPT", "STYLE", "TEXTAREA", "INPUT", "SELECT"].includes(parent.tagName)) {
         return NodeFilter.FILTER_REJECT;
       }
       const text = node.textContent?.trim() || "";

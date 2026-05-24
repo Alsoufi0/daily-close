@@ -35,14 +35,28 @@ function makeService(overrides: Partial<{
       create: jest.fn().mockResolvedValue({ id: "employee-new" })
     }
   };
+  const notifications = {
+    getOwnerWhatsAppPreferences: jest.fn().mockResolvedValue({
+      phone: null,
+      alertsEnabled: false,
+      closeAlertsEnabled: false,
+      reportsEnabled: false
+    })
+  };
+  const whatsapp = {
+    isConfigured: jest.fn().mockReturnValue(false),
+    sendCloseCompletedTemplate: jest.fn().mockResolvedValue(false)
+  };
   const service = new DailyCloseService(
     repository as any,
     posParser as any,
     ocr as any,
     storage as any,
-    prisma as any
+    prisma as any,
+    notifications as any,
+    whatsapp as any
   );
-  return { service, repository, prisma, ocr, posParser, storage };
+  return { service, repository, prisma, ocr, posParser, storage, notifications, whatsapp };
 }
 
 const baseInput: CreateDailyCloseDto = {
@@ -154,6 +168,30 @@ describe("DailyCloseService.finishClosing", () => {
     expect(repository.createExpenseAndAudit).toHaveBeenCalledWith(
       expect.objectContaining({ expenses: 25, storeId: "store-1", userId: "user-employee" })
     );
+  });
+
+  it("sends an owner WhatsApp alert when close-completed alerts are enabled", async () => {
+    const { service, prisma, notifications, whatsapp } = makeService();
+    prisma.store.findUnique
+      .mockResolvedValueOnce({ timezone: "UTC" })
+      .mockResolvedValueOnce({
+        storeName: "Main Street Smoke Shop",
+        ownerId: "owner-1",
+        owner: { user: { name: "Owner" } }
+      });
+    notifications.getOwnerWhatsAppPreferences.mockResolvedValueOnce({
+      phone: "+15551234567",
+      alertsEnabled: false,
+      closeAlertsEnabled: true,
+      reportsEnabled: false
+    });
+    whatsapp.isConfigured.mockReturnValueOnce(true);
+    await service.finishClosing(baseInput, employeeUser);
+    expect(whatsapp.sendCloseCompletedTemplate).toHaveBeenCalledWith({
+      toPhone: "+15551234567",
+      ownerName: "Owner",
+      storeName: "Main Street Smoke Shop"
+    });
   });
 });
 

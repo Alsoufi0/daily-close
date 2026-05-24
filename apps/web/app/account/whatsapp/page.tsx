@@ -27,6 +27,7 @@ function WhatsAppSettingsInner() {
   const [settings, setSettings] = useState<WhatsAppSettings>({
     whatsappPhone: "",
     whatsappAlertsEnabled: false,
+    whatsappCloseAlertsEnabled: false,
     whatsappReportsEnabled: false
   });
   const [loading, setLoading] = useState(true);
@@ -110,6 +111,11 @@ function WhatsAppSettingsInner() {
               label={t("settings.missedAlerts")}
               checked={settings.whatsappAlertsEnabled}
               onChange={(checked) => setSettings((prev) => ({ ...prev, whatsappAlertsEnabled: checked }))}
+            />
+            <Toggle
+              label={t("settings.closeAlerts")}
+              checked={settings.whatsappCloseAlertsEnabled}
+              onChange={(checked) => setSettings((prev) => ({ ...prev, whatsappCloseAlertsEnabled: checked }))}
             />
             <Toggle
               label={t("settings.weeklyMonthlyReports")}
