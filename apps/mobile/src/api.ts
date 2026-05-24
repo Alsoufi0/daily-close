@@ -95,7 +95,7 @@ export function demoDashboard(): OwnerDashboardSummary {
 }
 
 export async function getOwnerDashboard(): Promise<OwnerDashboardSummary> {
-  if (!apiUrl) return demoDashboard();
+  if (!apiUrl) throw new ApiError(0, "API URL is not configured.");
   return apiFetch<OwnerDashboardSummary>("/dashboard/me/today");
 }
 

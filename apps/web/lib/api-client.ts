@@ -212,6 +212,10 @@ export async function editDailyClose(
   });
 }
 
+export async function deleteDailyClose(token: string, id: string) {
+  return apiFetch(`/daily-close/${id}`, token, { method: "DELETE" });
+}
+
 export interface HistoryRow {
   id: string;
   date: string;
@@ -225,7 +229,8 @@ export interface HistoryRow {
 }
 
 export async function getOwnerHistory(token: string | undefined, days = 7): Promise<HistoryRow[]> {
-  if (!apiUrl || !token) {
+  if (apiUrl && !token) throw new ApiError(401, "Please sign in to view history.");
+  if (!apiUrl) {
     // Demo: synthesize 3 days of fake history
     const today = new Date();
     return [0, 1, 2].flatMap((offset) =>
@@ -246,7 +251,8 @@ export async function getOwnerHistory(token: string | undefined, days = 7): Prom
 }
 
 export async function getOwnerDashboard(token?: string): Promise<OwnerDashboardSummary> {
-  if (!apiUrl || !token) return getDemoDashboard();
+  if (apiUrl && !token) throw new ApiError(401, "Please sign in to view the dashboard.");
+  if (!apiUrl) return getDemoDashboard();
   return apiFetch<OwnerDashboardSummary>("/dashboard/me/today", token);
 }
 
@@ -295,7 +301,8 @@ export async function markNotificationRead(token: string, id: string): Promise<v
 }
 
 export async function downloadTodayCsv(token: string | undefined): Promise<Blob> {
-  if (!apiUrl || !token) {
+  if (apiUrl && !token) throw new ApiError(401, "Please sign in before exporting reports.");
+  if (!apiUrl) {
     const summary = getDemoDashboard();
     const date = summary.date;
     const rows = summary.stores
@@ -318,5 +325,34 @@ export async function downloadTodayCsv(token: string | undefined): Promise<Blob>
     headers: { Authorization: `Bearer ${token}` }
   });
   if (!response.ok) throw new ApiError(response.status, response.statusText);
+  return response.blob();
+}
+
+export interface ReportExportFilters {
+  from?: string;
+  to?: string;
+  quick?: "last-day" | "last-week" | "last-month";
+  storeId?: string;
+  employeeId?: string;
+  lang?: "en" | "ar" | "es" | "hi";
+}
+
+export async function downloadReport(
+  token: string | undefined,
+  type: "csv" | "pdf",
+  filters: ReportExportFilters
+): Promise<Blob> {
+  if (!apiUrl || !token) throw new ApiError(401, "Please sign in before exporting reports.");
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) params.set(key, value);
+  });
+  const response = await fetch(`${apiUrl}/reports/export.${type}?${params.toString()}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new ApiError(response.status, text || response.statusText);
+  }
   return response.blob();
 }

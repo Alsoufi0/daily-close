@@ -1,4 +1,4 @@
-import { Body, Controller, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { EditDailyCloseDto } from "./dto/edit-daily-close.dto";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
@@ -48,5 +48,11 @@ export class DailyCloseController {
     @CurrentUser() user: RequestUser
   ) {
     return this.dailyCloseService.editClosing(id, input, user);
+  }
+
+  @Delete(":id")
+  @UseGuards(SupabaseAuthGuard)
+  deleteClosing(@Param("id") id: string, @CurrentUser() user: RequestUser) {
+    return this.dailyCloseService.deleteClosing(id, user);
   }
 }

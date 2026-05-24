@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CalendarDays, Loader2, Pencil } from "lucide-react";
+import { CalendarDays, Loader2, Pencil, Trash2 } from "lucide-react";
 import { clsx } from "clsx";
 import { formatMoney } from "@smokeshop/shared/utils/money";
-import { getOwnerHistory, HistoryRow } from "../lib/api-client";
+import { deleteDailyClose, getOwnerHistory, HistoryRow } from "../lib/api-client";
 import { EditCloseModal } from "./edit-close-modal";
 
 const ranges = [7, 14, 30] as const;
@@ -15,6 +15,7 @@ export function HistoryPanel({ token }: { token?: string }) {
   const [rows, setRows] = useState<HistoryRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<HistoryRow | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -30,6 +31,17 @@ export function HistoryPanel({ token }: { token?: string }) {
 
   const totalSales = rows.reduce((sum, r) => sum + r.totalSales, 0);
   const totalShortage = rows.reduce((sum, r) => sum + Math.min(r.difference, 0), 0);
+
+  async function removeRow(row: HistoryRow) {
+    if (!token || !window.confirm(`Delete close for ${row.storeName} on ${row.date}?`)) return;
+    setDeleting(row.id);
+    try {
+      await deleteDailyClose(token, row.id);
+      setRows((prev) => prev.filter((r) => r.id !== row.id));
+    } finally {
+      setDeleting(null);
+    }
+  }
 
   return (
     <section>
@@ -125,6 +137,14 @@ export function HistoryPanel({ token }: { token?: string }) {
                       >
                         <Pencil size={14} />
                       </button>
+                      <button
+                        onClick={() => removeRow(r)}
+                        disabled={deleting === r.id}
+                        aria-label="Delete close"
+                        className="focus-ring rounded-lg p-2 text-warning/70 hover:bg-red-50 hover:text-warning disabled:opacity-50"
+                      >
+                        {deleting === r.id ? <Loader2 className="animate-spin" size={14} /> : <Trash2 size={14} />}
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -133,10 +153,8 @@ export function HistoryPanel({ token }: { token?: string }) {
           </div>
           <div className="divide-y divide-ink/5 sm:hidden">
             {rows.map((r) => (
-              <button
+              <div
                 key={r.id}
-                type="button"
-                onClick={() => setEditing(r)}
                 className="focus-ring block w-full p-4 text-left"
               >
                 <div className="flex items-start justify-between gap-3">
@@ -163,7 +181,15 @@ export function HistoryPanel({ token }: { token?: string }) {
                     </p>
                   </div>
                 </div>
-              </button>
+                <div className="mt-3 flex gap-2">
+                  <button onClick={() => setEditing(r)} className="focus-ring flex-1 rounded-lg bg-ink px-3 py-2 text-sm font-black text-white">
+                    Edit
+                  </button>
+                  <button onClick={() => removeRow(r)} disabled={deleting === r.id} className="focus-ring flex-1 rounded-lg bg-red-50 px-3 py-2 text-sm font-black text-warning disabled:opacity-50">
+                    Delete
+                  </button>
+                </div>
+              </div>
             ))}
           </div>
           </>

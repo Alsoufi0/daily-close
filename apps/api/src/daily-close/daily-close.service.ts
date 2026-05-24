@@ -185,6 +185,24 @@ export class DailyCloseService {
     };
   }
 
+  async deleteClosing(id: string, user: RequestUser) {
+    if (user.role !== "STORE_OWNER" || !user.ownerId) {
+      throw new ForbiddenException("Only owners can delete a submitted close.");
+    }
+    const existing = await this.repository.findByIdForOwner(id, user.ownerId);
+    if (!existing) throw new NotFoundException("Close not found.");
+
+    const deleted = await this.repository.deleteClose(id);
+    await this.repository.writeAudit({
+      userId: user.id,
+      storeId: existing.storeId,
+      action: "daily_close.deleted",
+      metadata: { dailyCloseId: id }
+    });
+
+    return { id: deleted.id, deleted: true };
+  }
+
   private getStatus(difference: number): "CLOSED" | "SHORT" | "OVER" {
     if (difference < 0) return "SHORT";
     if (difference > 0) return "OVER";

@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
-  Download,
   Loader2,
   RefreshCcw,
   Store,
@@ -15,8 +14,6 @@ import { formatMoney } from "@smokeshop/shared/utils/money";
 import type { OwnerDashboardSummary } from "@smokeshop/shared/types";
 import {
   ApiError,
-  downloadTodayCsv,
-  getDemoDashboard,
   getOwnerDashboard,
   listEmployees,
   listStores,
@@ -25,6 +22,8 @@ import {
 import { useSession } from "../lib/use-session";
 import { MetricCard } from "./metric-card";
 import { HistoryPanel } from "./history-panel";
+import { ExportReportModal } from "./export-report-modal";
+import { LanguageSelect, useLanguage } from "./language-provider";
 
 const today = new Date().toLocaleDateString(undefined, {
   weekday: "long",
@@ -34,12 +33,13 @@ const today = new Date().toLocaleDateString(undefined, {
 
 export function OwnerDashboard() {
   const session = useSession();
+  const { t } = useLanguage();
   const [summary, setSummary] = useState<OwnerDashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dismissing, setDismissing] = useState<string | null>(null);
-  const [downloading, setDownloading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
 
   async function manualRefresh() {
     setRefreshing(true);
@@ -80,7 +80,6 @@ export function OwnerDashboard() {
         if (!initial) setError(null);
       } catch (err) {
         if (cancelled) return;
-        if (initial) setSummary(getDemoDashboard());
         setError(err instanceof ApiError ? err.message : "Could not load dashboard");
       } finally {
         if (initial && !cancelled) setLoading(false);
@@ -140,27 +139,14 @@ export function OwnerDashboard() {
     }
   }
 
-  async function exportCsv() {
-    setDownloading(true);
-    try {
-      const blob = await downloadTodayCsv(session.token);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `daily-close-${new Date().toISOString().slice(0, 10)}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not download CSV");
-    } finally {
-      setDownloading(false);
-    }
-  }
-
   if (loading && !summary) return <DashboardSkeleton />;
-  if (!summary) return null;
+  if (!summary) {
+    return (
+      <div className="rounded-xl border border-warning/30 bg-red-50 p-4 text-sm font-bold text-warning">
+        {error || "Could not load dashboard"}
+      </div>
+    );
+  }
 
   const ownerName = session.profile?.name ?? "there";
   const modeLabel = session.mode === "production" ? "Production data" : "Demo data";
@@ -176,13 +162,14 @@ export function OwnerDashboard() {
             {loading ? <Loader2 className="animate-spin text-ink/40" size={14} aria-hidden /> : null}
           </p>
           <h1 className="mt-1 text-2xl font-black tracking-tight text-ink sm:text-4xl">
-            Today's Store Close
+            {t("dashboard.title")}
           </h1>
           <p className="mt-1 text-sm font-bold text-ink/65 sm:text-base">
             {today} · updates every 15 seconds
           </p>
         </div>
-        <div className="flex w-full min-w-0 gap-2 sm:w-auto">
+        <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
+          <LanguageSelect />
           <button
             onClick={manualRefresh}
             disabled={refreshing}
@@ -197,12 +184,10 @@ export function OwnerDashboard() {
             <span className="sm:hidden">Refresh</span>
           </button>
           <button
-            onClick={exportCsv}
-            disabled={downloading}
+            onClick={() => setExportOpen(true)}
             className="focus-ring inline-flex h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-lg bg-ink px-3 font-bold text-white hover:bg-ink/90 disabled:opacity-60 sm:flex-none sm:px-4"
           >
-            {downloading ? <Loader2 className="animate-spin" size={18} aria-hidden /> : <Download size={18} aria-hidden />}
-            {downloading ? "Downloading…" : "Export CSV"}
+            {t("common.export")}
           </button>
         </div>
       </div>
@@ -214,19 +199,19 @@ export function OwnerDashboard() {
       ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard label="Today's Sales" value={formatMoney(summary.totalSales)} />
+        <MetricCard label={t("dashboard.salesToday")} value={formatMoney(summary.totalSales)} />
         <MetricCard
-          label="Stores Closed"
+          label={t("dashboard.storesClosed")}
           value={`${summary.storesClosed}/${summary.totalStores}`}
           tone={allClosed ? "good" : "warning"}
         />
         <MetricCard
-          label="Missing Cash"
+          label={t("dashboard.missingCash")}
           value={formatMoney(summary.missingCash)}
           tone={summary.missingCash < 0 ? "bad" : "good"}
         />
         <MetricCard
-          label="Needs Attention"
+          label={t("dashboard.needsAttention")}
           value={String(summary.needsAttention)}
           tone={summary.needsAttention === 0 ? "good" : "warning"}
         />
@@ -257,7 +242,7 @@ export function OwnerDashboard() {
           <div className="flex items-start gap-3 rounded-xl border border-leaf/30 bg-green-50 p-4 text-leaf">
             <CheckCircle2 size={26} aria-hidden className="mt-0.5" />
             <div className="space-y-0.5">
-              <p className="text-lg font-black leading-snug">No missed close alerts.</p>
+              <p className="text-lg font-black leading-snug">{t("dashboard.noMissedAlerts")}</p>
               <p className="text-sm font-bold text-ink/65">Every assigned store has reported in.</p>
             </div>
           </div>
@@ -277,7 +262,7 @@ export function OwnerDashboard() {
           <div className="flex items-start gap-3 rounded-xl border border-leaf/30 bg-green-50 p-4 text-leaf">
             <CheckCircle2 size={26} aria-hidden className="mt-0.5" />
             <div className="space-y-0.5">
-              <p className="text-lg font-black leading-snug">No cash shortage today.</p>
+              <p className="text-lg font-black leading-snug">{t("dashboard.noCashShortage")}</p>
               <p className="text-sm font-bold text-ink/65">Counted cash matches expected for every store.</p>
             </div>
           </div>
@@ -285,7 +270,7 @@ export function OwnerDashboard() {
       </div>
 
       <div>
-        <h2 className="mb-3 text-2xl font-black">Store Comparison</h2>
+        <h2 className="mb-3 text-2xl font-black">{t("dashboard.storeComparison")}</h2>
         {summary.stores.length === 0 ? (
           <div className="rounded-xl border border-ink/10 bg-white p-8 text-center">
             <p className="text-lg font-black">No stores yet.</p>
@@ -319,11 +304,11 @@ export function OwnerDashboard() {
                     </div>
                     {store.closedToday ? (
                       <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-leaf/10 px-2 py-1 text-xs font-black text-leaf">
-                        <CheckCircle2 size={14} aria-hidden /> Closed
+                        <CheckCircle2 size={14} aria-hidden /> {t("dashboard.closed")}
                       </span>
                     ) : needsClosing ? (
                       <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-yellow-100 px-2 py-1 text-xs font-black text-gold">
-                        <AlertTriangle size={14} aria-hidden /> Close not submitted
+                        <AlertTriangle size={14} aria-hidden /> {t("dashboard.needsClosing")}
                       </span>
                     ) : (
                       <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-smoke px-2 py-1 text-[11px] font-black text-ink/60 sm:text-xs">
@@ -332,7 +317,7 @@ export function OwnerDashboard() {
                     )}
                   </div>
 
-                  <p className="mt-5 text-xs font-black uppercase tracking-wide text-ink/55">Sales Today</p>
+                  <p className="mt-5 text-xs font-black uppercase tracking-wide text-ink/55">{t("dashboard.salesToday")}</p>
                   <p className="text-3xl font-black tracking-tight sm:text-4xl">
                     {store.closedToday ? formatMoney(store.totalSales) : "—"}
                   </p>
@@ -392,6 +377,7 @@ export function OwnerDashboard() {
       </div>
 
       <HistoryPanel token={session.token} />
+      {exportOpen ? <ExportReportModal token={session.token} onClose={() => setExportOpen(false)} /> : null}
     </section>
   );
 }

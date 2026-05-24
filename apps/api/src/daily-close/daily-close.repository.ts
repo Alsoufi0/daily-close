@@ -88,6 +88,14 @@ export class DailyCloseRepository {
     return this.prisma.dailyClose.update({ where: { id }, data });
   }
 
+  deleteClose(id: string) {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.expense.deleteMany({ where: { dailyCloseId: id } });
+      await tx.uploadedReport.deleteMany({ where: { dailyCloseId: id } });
+      return tx.dailyClose.delete({ where: { id } });
+    });
+  }
+
   writeAudit(input: { userId: string; storeId: string; action: string; metadata: any }) {
     return this.prisma.auditLog.create({ data: input });
   }

@@ -6,6 +6,7 @@ import { demoDashboard, getOwnerDashboard } from "../api";
 import { useSession } from "../use-session";
 import { Banner, Card, Header, MetricCard, Pill } from "../ui";
 import { colors, font, radius, spacing } from "../theme";
+import { t } from "../i18n";
 
 const today = new Date().toLocaleDateString(undefined, {
   weekday: "long",
@@ -24,7 +25,9 @@ export function OwnerScreen({ onBack }: { onBack: () => void }) {
         setSummary(data);
         setMode(process.env.EXPO_PUBLIC_API_URL ? "Production data" : "Demo data");
       })
-      .catch(() => setSummary(demoDashboard()));
+      .catch(() => {
+        if (!process.env.EXPO_PUBLIC_API_URL) setSummary(demoDashboard());
+      });
   }, []);
 
   const allClosed = summary.storesClosed === summary.totalStores;
@@ -46,19 +49,19 @@ export function OwnerScreen({ onBack }: { onBack: () => void }) {
         </View>
 
         <View style={s.metricGrid}>
-          <MetricCard label="Today's Sales" value={formatMoney(summary.totalSales)} />
+          <MetricCard label={t("dashboard.salesToday")} value={formatMoney(summary.totalSales)} />
           <MetricCard
-            label="Stores Closed"
+            label={t("dashboard.storesClosed")}
             value={`${summary.storesClosed}/${summary.totalStores}`}
             tone={allClosed ? "good" : "warn"}
           />
           <MetricCard
-            label="Missing Cash"
+            label={t("dashboard.missingCash")}
             value={formatMoney(summary.missingCash)}
             tone={summary.missingCash < 0 ? "bad" : "good"}
           />
           <MetricCard
-            label="Needs Attention"
+            label={t("dashboard.needsAttention")}
             value={String(summary.needsAttention)}
             tone={summary.needsAttention === 0 ? "good" : "warn"}
           />
@@ -67,7 +70,7 @@ export function OwnerScreen({ onBack }: { onBack: () => void }) {
         {summary.alerts.length > 0 ? (
           <Banner tone="warn" title={summary.alerts[0].message} body="Call the store or remind the employee." />
         ) : (
-          <Banner tone="good" title="No missed close alerts." body="Every assigned store has reported in." />
+          <Banner tone="good" title={t("dashboard.noMissedAlerts")} body="Every assigned store has reported in." />
         )}
 
         {shortage ? (
@@ -77,10 +80,10 @@ export function OwnerScreen({ onBack }: { onBack: () => void }) {
             body="Cash counted is lower than expected."
           />
         ) : (
-          <Banner tone="good" title="No cash shortage today." body="Counted cash matches expected for every store." />
+          <Banner tone="good" title={t("dashboard.noCashShortage")} body="Counted cash matches expected for every store." />
         )}
 
-        <Text style={s.sectionTitle}>Store Comparison</Text>
+        <Text style={s.sectionTitle}>{t("dashboard.storeComparison")}</Text>
         {summary.stores.map((store) => {
           const barWidth = store.closedToday ? Math.max(6, (store.totalSales / maxSales) * 100) : 0;
           const needsClosing = !store.closedToday && Boolean(store.pastCloseTime);
@@ -91,13 +94,13 @@ export function OwnerScreen({ onBack }: { onBack: () => void }) {
               <View style={s.rowBetween}>
                 <Text style={s.cardTitle}>{store.storeName}</Text>
                 <Pill
-                  label={store.closedToday ? "CLOSED" : needsClosing ? "NEEDS CLOSING" : "OPEN"}
+                  label={store.closedToday ? t("dashboard.closed").toUpperCase() : needsClosing ? t("dashboard.needsClosing").toUpperCase() : t("dashboard.open").toUpperCase()}
                   tone={store.closedToday ? "good" : needsClosing ? "warn" : "good"}
                 />
               </View>
 
               <View>
-                <Text style={s.kicker}>Sales Today</Text>
+                <Text style={s.kicker}>{t("dashboard.salesToday")}</Text>
                 <Text style={s.bigNumber}>{store.closedToday ? formatMoney(store.totalSales) : "—"}</Text>
                 <View style={s.bar}>
                   <View style={[s.barFill, { width: `${barWidth}%` }]} />

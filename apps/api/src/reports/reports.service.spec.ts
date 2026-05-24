@@ -9,36 +9,65 @@ const owner: RequestUser = {
   ownerId: "owner-1"
 };
 
+const close = {
+  storeId: "store-1",
+  employeeId: "employee-1",
+  date: new Date("2026-05-23T04:00:00.000Z"),
+  createdAt: new Date("2026-05-23T04:06:00.000Z"),
+  totalSales: 5000,
+  cashSales: 2000,
+  cardSales: 3000,
+  expectedCash: 1980,
+  countedCash: 1940,
+  difference: -40,
+  expenses: 20,
+  status: "SHORT",
+  notes: "Register was short, needs review",
+  store: { storeName: "Main Street Smoke Shop", timezone: "America/New_York" },
+  employee: { user: { name: "Maya" } }
+};
+
 describe("ReportsService", () => {
-  it("returns empty string when no rows are provided", () => {
-    const service = new ReportsService({} as any);
-    expect(service.buildCsv([])).toBe("");
+  const prisma = {
+    dailyClose: {
+      findMany: jest.fn()
+    }
+  };
+
+  beforeEach(() => {
+    prisma.dailyClose.findMany.mockReset().mockResolvedValue([close]);
   });
 
-  it("emits header row then one row per record using the first row's keys", () => {
-    const service = new ReportsService({} as any);
-    const csv = service.buildCsv([
-      { Store: "A", Sales: 100 },
-      { Store: "B", Sales: 200 }
-    ]);
-    expect(csv).toBe("Store,Sales\nA,100\nB,200");
+  it("exports escaped UTF-8 CSV with localized headers and currency", async () => {
+    const service = new ReportsService({} as any, prisma as any);
+    const csv = await service.buildFilteredCsv(owner, { quick: "last-week", lang: "en" });
+
+    expect(csv.charCodeAt(0)).toBe(0xfeff);
+    expect(csv).toContain("\"Store\"");
+    expect(csv).toContain("\"Main Street Smoke Shop\"");
+    expect(csv).toContain("\"$5,000.00\"");
+    expect(csv).toContain("\"Register was short, needs review\"");
   });
 
-  it("builds today's CSV with the expected columns from dashboard data", async () => {
-    const dashboard = {
-      getMyToday: jest.fn().mockResolvedValue({
-        stores: [
-          { storeName: "Store #1", closedToday: true, totalSales: 4500, cashSales: 1800, cardSales: 2700, difference: 5 },
-          { storeName: "Store #2", closedToday: false, totalSales: 0, cashSales: 0, cardSales: 0, difference: 0 }
-        ]
+  it("filters close rows using the store local date", async () => {
+    const service = new ReportsService({} as any, prisma as any);
+    const { rows } = await service.buildRows(owner, { from: "2026-05-23", to: "2026-05-23" });
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].closeDate).toBe("2026-05-23");
+    expect(prisma.dailyClose.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          store: { ownerId: owner.ownerId, deletedAt: null }
+        })
       })
-    };
-    const service = new ReportsService(dashboard as any);
-    const csv = await service.buildTodayCsv(owner);
-    const [header, row1, row2] = csv.split("\n");
-    expect(header).toBe("Store,Closed,Sales,Cash,Card,Difference");
-    expect(row1).toBe("Store #1,Yes,4500,1800,2700,5");
-    expect(row2).toBe("Store #2,No,0,0,0,0");
-    expect(dashboard.getMyToday).toHaveBeenCalledWith(owner);
+    );
+  });
+
+  it("builds a readable PDF buffer", async () => {
+    const service = new ReportsService({} as any, prisma as any);
+    const pdf = await service.buildPdf(owner, { quick: "last-week", lang: "en" });
+
+    expect(Buffer.from(pdf).toString("utf8", 0, 4)).toBe("%PDF");
   });
 });
