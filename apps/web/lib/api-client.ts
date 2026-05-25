@@ -171,6 +171,12 @@ export async function updateWhatsAppSettings(
   });
 }
 
+export async function sendWhatsAppTest(token: string): Promise<{ sent: boolean; message: string }> {
+  return apiFetch<{ sent: boolean; message: string }>("/notifications/whatsapp-settings/test", token, {
+    method: "POST"
+  });
+}
+
 export interface EmployeeRecord {
   id: string;
   name: string;

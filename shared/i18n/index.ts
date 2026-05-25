@@ -112,7 +112,10 @@ export const translations: Record<Language, Dictionary> = {
     "settings.weeklyMonthlyReports": "Weekly and monthly reports",
     "settings.saved": "WhatsApp settings saved.",
     "settings.saveFailed": "Could not save WhatsApp settings.",
-    "settings.closeAlerts": "Store closed alerts"
+    "settings.closeAlerts": "Store closed alerts",
+    "settings.sendTest": "Send test WhatsApp",
+    "settings.testSent": "Test WhatsApp message sent.",
+    "settings.testFailed": "WhatsApp test did not send."
   },
   ar: {
     "common.export": "تصدير",
@@ -216,7 +219,10 @@ export const translations: Record<Language, Dictionary> = {
     "settings.weeklyMonthlyReports": "التقارير الأسبوعية والشهرية",
     "settings.saved": "تم حفظ إعدادات واتساب.",
     "settings.saveFailed": "تعذر حفظ إعدادات واتساب.",
-    "settings.closeAlerts": "\u062a\u0646\u0628\u064a\u0647\u0627\u062a \u0639\u0646\u062f \u0625\u063a\u0644\u0627\u0642 \u0627\u0644\u0645\u062a\u062c\u0631"
+    "settings.closeAlerts": "\u062a\u0646\u0628\u064a\u0647\u0627\u062a \u0639\u0646\u062f \u0625\u063a\u0644\u0627\u0642 \u0627\u0644\u0645\u062a\u062c\u0631",
+    "settings.sendTest": "\u0625\u0631\u0633\u0627\u0644 \u0627\u062e\u062a\u0628\u0627\u0631 \u0648\u0627\u062a\u0633\u0627\u0628",
+    "settings.testSent": "\u062a\u0645 \u0625\u0631\u0633\u0627\u0644 \u0631\u0633\u0627\u0644\u0629 \u0627\u062e\u062a\u0628\u0627\u0631 \u0648\u0627\u062a\u0633\u0627\u0628.",
+    "settings.testFailed": "\u0644\u0645 \u064a\u062a\u0645 \u0625\u0631\u0633\u0627\u0644 \u0627\u062e\u062a\u0628\u0627\u0631 \u0648\u0627\u062a\u0633\u0627\u0628."
   },
   es: {
     "common.export": "Exportar",
@@ -320,7 +326,10 @@ export const translations: Record<Language, Dictionary> = {
     "settings.weeklyMonthlyReports": "Reportes semanales y mensuales",
     "settings.saved": "Configuración de WhatsApp guardada.",
     "settings.saveFailed": "No se pudo guardar WhatsApp.",
-    "settings.closeAlerts": "Alertas cuando una tienda cierra"
+    "settings.closeAlerts": "Alertas cuando una tienda cierra",
+    "settings.sendTest": "Enviar prueba de WhatsApp",
+    "settings.testSent": "Mensaje de prueba enviado por WhatsApp.",
+    "settings.testFailed": "La prueba de WhatsApp no se envió."
   },
   hi: {
     "common.export": "एक्सपोर्ट",
@@ -424,7 +433,10 @@ export const translations: Record<Language, Dictionary> = {
     "settings.weeklyMonthlyReports": "साप्ताहिक और मासिक रिपोर्ट",
     "settings.saved": "WhatsApp सेटिंग सेव हुई.",
     "settings.saveFailed": "WhatsApp सेटिंग सेव नहीं हुई.",
-    "settings.closeAlerts": "\u0938\u094d\u091f\u094b\u0930 \u092c\u0902\u0926 \u0939\u094b\u0928\u0947 \u0915\u0947 \u0905\u0932\u0930\u094d\u091f"
+    "settings.closeAlerts": "\u0938\u094d\u091f\u094b\u0930 \u092c\u0902\u0926 \u0939\u094b\u0928\u0947 \u0915\u0947 \u0905\u0932\u0930\u094d\u091f",
+    "settings.sendTest": "WhatsApp \u091f\u0947\u0938\u094d\u091f \u092d\u0947\u091c\u0947\u0902",
+    "settings.testSent": "WhatsApp \u091f\u0947\u0938\u094d\u091f \u092e\u0948\u0938\u0947\u091c \u092d\u0947\u091c\u093e \u0917\u092f\u093e.",
+    "settings.testFailed": "WhatsApp \u091f\u0947\u0938\u094d\u091f \u0928\u0939\u0940\u0902 \u092d\u0947\u091c\u093e."
   }
 };
 

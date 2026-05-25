@@ -153,6 +153,7 @@ const phraseKeys: Record<string, string> = {
   "Missed close alerts": "settings.missedAlerts",
   "Store closed alerts": "settings.closeAlerts",
   "Weekly and monthly reports": "settings.weeklyMonthlyReports",
+  "Send test WhatsApp": "settings.sendTest",
   "Add locations and set the close time for each one.": "admin.storesHelp",
   "Saving...": "admin.saving",
   "Edit store": "admin.editStore",

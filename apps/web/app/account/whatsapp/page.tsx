@@ -9,6 +9,7 @@ import { useSession } from "../../../lib/use-session";
 import {
   ApiError,
   getWhatsAppSettings,
+  sendWhatsAppTest,
   updateWhatsAppSettings,
   type WhatsAppSettings
 } from "../../../lib/api-client";
@@ -32,6 +33,7 @@ function WhatsAppSettingsInner() {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -65,6 +67,25 @@ function WhatsAppSettingsInner() {
       setError(err instanceof ApiError ? err.message : t("settings.saveFailed"));
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function sendTest() {
+    if (!session.token) return;
+    setTesting(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const result = await sendWhatsAppTest(session.token);
+      if (result.sent) {
+        setMessage(t("settings.testSent"));
+      } else {
+        setError(result.message || t("settings.testFailed"));
+      }
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("settings.testFailed"));
+    } finally {
+      setTesting(false);
     }
   }
 
@@ -137,6 +158,15 @@ function WhatsAppSettingsInner() {
             >
               {saving ? <Loader2 className="animate-spin" size={20} /> : null}
               {saving ? t("common.loading") : t("common.save")}
+            </button>
+            <button
+              type="button"
+              disabled={testing || saving}
+              onClick={sendTest}
+              className="focus-ring flex h-12 w-full items-center justify-center gap-2 rounded-lg border-2 border-leaf bg-white text-base font-black text-leaf disabled:opacity-60"
+            >
+              {testing ? <Loader2 className="animate-spin" size={18} /> : null}
+              {testing ? t("common.loading") : t("settings.sendTest")}
             </button>
           </div>
         )}

@@ -50,6 +50,21 @@ services:
         sync: false
       - key: RESEND_FROM
         value: "Daily Close <reports@dailyclose.app>"
+      # WhatsApp Business Cloud API
+      - key: WHATSAPP_ACCESS_TOKEN
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_TEMPLATE_LANGUAGE
+        value: en_US
+      - key: WHATSAPP_TEMPLATE_CLOSE_COMPLETED
+        value: close_completed
+      - key: WHATSAPP_TEMPLATE_MISSED
+        value: missed_close
+      - key: WHATSAPP_TEMPLATE_WEEKLY
+        value: weekly_summary
+      - key: WHATSAPP_TEMPLATE_MONTHLY
+        value: monthly_summary
       # Shared secret for cron endpoints
       - key: CRON_SECRET
         sync: false

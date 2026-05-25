@@ -16,6 +16,7 @@ import { RequestUser } from "../auth/request-user";
 import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
 import { MissedCloseService } from "./missed-close.service";
 import { NotificationsService } from "./notifications.service";
+import { WhatsAppService } from "./whatsapp.service";
 import { WeeklySummaryService } from "./weekly-summary.service";
 
 @ApiTags("Notifications")
@@ -24,7 +25,8 @@ export class NotificationsController {
   constructor(
     private readonly notifications: NotificationsService,
     private readonly missedClose: MissedCloseService,
-    private readonly weekly: WeeklySummaryService
+    private readonly weekly: WeeklySummaryService,
+    private readonly whatsapp: WhatsAppService
   ) {}
 
   @Get()
@@ -60,9 +62,41 @@ export class NotificationsController {
   @UseGuards(SupabaseAuthGuard)
   updateWhatsAppSettings(
     @CurrentUser() user: RequestUser,
-    @Body() input: { whatsappPhone?: string | null; whatsappAlertsEnabled?: boolean; whatsappReportsEnabled?: boolean }
+    @Body() input: {
+      whatsappPhone?: string | null;
+      whatsappAlertsEnabled?: boolean;
+      whatsappCloseAlertsEnabled?: boolean;
+      whatsappReportsEnabled?: boolean;
+    }
   ) {
     return this.notifications.updateWhatsAppSettings(user, input);
+  }
+
+  @Post("whatsapp-settings/test")
+  @ApiBearerAuth()
+  @UseGuards(SupabaseAuthGuard)
+  async testWhatsApp(@CurrentUser() user: RequestUser) {
+    if (user.role !== "STORE_OWNER" || !user.ownerId) {
+      throw new ForbiddenException("Only owners can test WhatsApp settings.");
+    }
+    const prefs = await this.notifications.getOwnerWhatsAppPreferences(user.ownerId);
+    if (!prefs.phone) {
+      return { sent: false, message: "Add a WhatsApp phone number first." };
+    }
+    if (!this.whatsapp.isConfigured()) {
+      return { sent: false, message: "WhatsApp is not configured on the server." };
+    }
+    const sent = await this.whatsapp.sendCloseCompletedTemplate({
+      toPhone: prefs.phone,
+      ownerName: user.name || "Owner",
+      storeName: "Daily Close test"
+    });
+    return {
+      sent,
+      message: sent
+        ? "Test WhatsApp message sent."
+        : "WhatsApp test did not send. Check Meta template approval, recipient access, and Render env vars."
+    };
   }
 
   // Hit by the Render cron - secured by a shared CRON_SECRET header.
