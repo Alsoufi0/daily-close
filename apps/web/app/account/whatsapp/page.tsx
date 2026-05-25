@@ -60,11 +60,14 @@ function WhatsAppSettingsInner() {
     setError(null);
     setMessage(null);
     try {
-      const updated = await updateWhatsAppSettings(session.token, settings);
+      const updated = await updateWhatsAppSettings(session.token, {
+        ...settings,
+        whatsappPhone: settings.whatsappPhone?.trim() || null
+      });
       setSettings(updated);
       setMessage(t("settings.saved"));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("settings.saveFailed"));
+      setError(err instanceof ApiError ? localizeWhatsAppError(err.message, t) : t("settings.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -80,10 +83,10 @@ function WhatsAppSettingsInner() {
       if (result.sent) {
         setMessage(t("settings.testSent"));
       } else {
-        setError(result.message || t("settings.testFailed"));
+        setError(localizeWhatsAppError(result.message, t) || t("settings.testFailed"));
       }
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("settings.testFailed"));
+      setError(err instanceof ApiError ? localizeWhatsAppError(err.message, t) : t("settings.testFailed"));
     } finally {
       setTesting(false);
     }
@@ -95,7 +98,7 @@ function WhatsAppSettingsInner() {
         href="/owner"
         className="focus-ring inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm font-black text-ink/65 hover:text-ink"
       >
-        <ArrowLeft size={16} aria-hidden /> Back
+        <ArrowLeft size={16} aria-hidden /> {t("common.back")}
       </Link>
 
       <form onSubmit={save} className="mt-6 rounded-2xl border border-ink/10 bg-white p-6 shadow-sm">
@@ -173,6 +176,22 @@ function WhatsAppSettingsInner() {
       </form>
     </main>
   );
+}
+
+function localizeWhatsAppError(message: string, t: (key: string) => string) {
+  if (/before turning on WhatsApp messages|Add a WhatsApp phone number first/i.test(message)) {
+    return t("settings.whatsappPhoneRequired");
+  }
+  if (/country code|valid phone/i.test(message)) {
+    return t("settings.whatsappPhoneInvalid");
+  }
+  if (/not configured on the server/i.test(message)) {
+    return t("settings.whatsappServerNotReady");
+  }
+  if (/template approval|recipient access|Render env vars/i.test(message)) {
+    return t("settings.whatsappTestCheckSetup");
+  }
+  return message;
 }
 
 function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (checked: boolean) => void }) {

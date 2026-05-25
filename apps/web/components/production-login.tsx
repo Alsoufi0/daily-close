@@ -14,26 +14,16 @@ import {
   TrendingUp
 } from "lucide-react";
 import { createBrowserSupabase } from "../lib/supabase-browser";
+import { useLanguage } from "./language-provider";
 
 const FEATURES = [
-  {
-    icon: Clock,
-    title: "Close in 2 minutes",
-    body: "Employees upload the POS report, count cash, and submit — straight from their phone."
-  },
-  {
-    icon: TrendingUp,
-    title: "Owner sees everything",
-    body: "Today's sales, which stores closed, and any cash that's missing — in one glance."
-  },
-  {
-    icon: BadgeCheck,
-    title: "Built for accountants",
-    body: "Secure auth, full audit trail, CSV export, missed-close alerts — ready for your books."
-  }
+  { icon: Clock, titleKey: "home.featureCloseTitle", bodyKey: "home.featureCloseBody" },
+  { icon: TrendingUp, titleKey: "home.featureOwnerTitle", bodyKey: "home.featureOwnerBody" },
+  { icon: BadgeCheck, titleKey: "home.featureBooksTitle", bodyKey: "home.featureBooksBody" }
 ];
 
 export function ProductionLogin() {
+  const { t, dir } = useLanguage();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
@@ -46,12 +36,9 @@ export function ProductionLogin() {
     const params = new URLSearchParams(window.location.search);
     if (params.get("expired") === "1") setExpired(true);
 
-    // Pre-warm the API so the post-login dashboard load is fast.
     const apiUrl = process.env.NEXT_PUBLIC_API_URL;
     if (apiUrl) {
-      fetch(`${apiUrl}/health`, { cache: "no-store" }).catch(() => {
-        /* ignore */
-      });
+      fetch(`${apiUrl}/health`, { cache: "no-store" }).catch(() => {});
     }
   }, []);
 
@@ -59,7 +46,7 @@ export function ProductionLogin() {
     setLoading(true);
     const supabase = createBrowserSupabase();
     if (!supabase) {
-      setMessage("Supabase not configured — opening demo mode.");
+      setMessage(t("auth.demoFallback"));
       window.location.href = "/demo";
       return;
     }
@@ -67,7 +54,7 @@ export function ProductionLogin() {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error || !data.session) {
-      setMessage(error?.message || "Login failed. Check your email and password.");
+      setMessage(error?.message || t("auth.loginFailed"));
       return;
     }
 
@@ -76,42 +63,41 @@ export function ProductionLogin() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-14 lg:px-8">
-      {/* Phone-only condensed hero so the sign-in stays the focus. */}
+    <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-14 lg:px-8" dir={dir}>
       <div className="mb-5 lg:hidden">
         <span className="inline-flex items-center gap-2 rounded-full bg-leaf/10 px-3 py-1 text-xs font-black uppercase tracking-wide text-leaf">
           <Store size={14} aria-hidden />
-          Daily Close
+          {t("brand.name")}
         </span>
         <h1 className="mt-3 text-2xl font-black leading-tight tracking-tight text-ink">
-          Daily closing, <span className="text-leaf">done in minutes.</span>
+          {t("home.mobileHero")}
         </h1>
       </div>
+
       <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-start lg:gap-10">
-        {/* Marketing column — hidden on phone so the sign-in is the focus. */}
         <div className="hidden lg:block">
           <span className="inline-flex items-center gap-2 rounded-full bg-leaf/10 px-3 py-1 text-xs font-black uppercase tracking-wide text-leaf">
             <Store size={14} aria-hidden />
-            Multi-store · iOS · Android · Web
+            {t("home.platforms")}
           </span>
           <h1 className="mt-4 text-3xl font-black leading-tight tracking-tight text-ink sm:text-6xl">
-            Daily closing for your store, <span className="text-leaf">done in 2 minutes.</span>
+            {t("home.hero")}
           </h1>
           <p className="mt-4 max-w-xl text-base font-bold leading-7 text-ink/70 sm:mt-5 sm:text-xl sm:leading-8">
-            Stop chasing paper sheets and late-night phone calls. Your employees close from their phone, you see the truth — and your accountant gets clean numbers.
+            {t("home.value")}
           </p>
           <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-ink/5 px-3 py-1.5 text-sm font-black text-ink/75">
-            $29 per store / month · 14 days free · cancel anytime
+            {t("home.price")}
           </p>
 
           <div className="mt-8 grid gap-3 sm:grid-cols-3">
-            {FEATURES.map(({ icon: Icon, title, body }) => (
-              <div key={title} className="rounded-xl border border-ink/10 bg-white p-4 shadow-sm">
+            {FEATURES.map(({ icon: Icon, titleKey, bodyKey }) => (
+              <div key={titleKey} className="rounded-xl border border-ink/10 bg-white p-4 shadow-sm">
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-leaf/10 text-leaf">
                   <Icon size={18} aria-hidden />
                 </div>
-                <p className="mt-3 text-base font-black text-ink">{title}</p>
-                <p className="mt-1 text-sm font-semibold leading-6 text-ink/65">{body}</p>
+                <p className="mt-3 text-base font-black text-ink">{t(titleKey)}</p>
+                <p className="mt-1 text-sm font-semibold leading-6 text-ink/65">{t(bodyKey)}</p>
               </div>
             ))}
           </div>
@@ -121,8 +107,8 @@ export function ProductionLogin() {
               <Smartphone size={20} aria-hidden />
             </div>
             <div>
-              <p className="text-sm font-black text-ink">iOS & Android apps</p>
-              <p className="text-sm font-semibold text-ink/65">Same login, same data — built with Expo for store submission.</p>
+              <p className="text-sm font-black text-ink">{t("home.mobileApps")}</p>
+              <p className="text-sm font-semibold text-ink/65">{t("home.mobileAppsBody")}</p>
             </div>
           </div>
         </div>
@@ -133,14 +119,14 @@ export function ProductionLogin() {
               <LockKeyhole size={22} aria-hidden />
             </div>
             <div>
-              <h2 className="text-2xl font-black">Sign in</h2>
-              <p className="text-sm font-semibold text-ink/60">Owner or employee account</p>
+              <h2 className="text-2xl font-black">{t("auth.signIn")}</h2>
+              <p className="text-sm font-semibold text-ink/60">{t("auth.ownerEmployeeAccount")}</p>
             </div>
           </div>
 
           <div className="space-y-3">
             <label className="block">
-              <span className="text-sm font-black">Email</span>
+              <span className="text-sm font-black">{t("auth.email")}</span>
               <input
                 className="focus-ring mt-2 h-12 w-full rounded-lg border border-ink/15 px-4 font-bold"
                 value={email}
@@ -149,7 +135,7 @@ export function ProductionLogin() {
               />
             </label>
             <label className="block">
-              <span className="text-sm font-black">Password</span>
+              <span className="text-sm font-black">{t("nav.password")}</span>
               <div className="relative mt-2">
                 <input
                   className="focus-ring h-12 w-full rounded-lg border border-ink/15 px-4 pr-12 font-bold"
@@ -162,7 +148,7 @@ export function ProductionLogin() {
                 <button
                   type="button"
                   onClick={() => setShowPw((v) => !v)}
-                  aria-label={showPw ? "Hide password" : "Show password"}
+                  aria-label={showPw ? t("auth.hidePassword") : t("auth.showPassword")}
                   className="focus-ring absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-2 text-ink/55 hover:bg-smoke"
                 >
                   {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -173,7 +159,7 @@ export function ProductionLogin() {
 
           {expired ? (
             <p className="mt-3 rounded-lg border border-warning/30 bg-red-50 p-3 text-sm font-bold text-warning">
-              Your session expired. Please sign in again.
+              {t("auth.sessionExpired")}
             </p>
           ) : null}
           {message ? (
@@ -186,27 +172,27 @@ export function ProductionLogin() {
               onClick={login}
               disabled={loading}
             >
-              {loading ? "Signing in..." : "Sign in"}
+              {loading ? t("auth.signingIn") : t("auth.signIn")}
               {!loading ? <ArrowRight size={22} aria-hidden /> : null}
             </button>
             <Link
               className="focus-ring flex h-14 items-center justify-center gap-2 rounded-lg border-2 border-leaf bg-white text-lg font-black text-leaf hover:bg-leaf/5"
               href="/signup"
             >
-              Create account · 14-day free trial
+              {t("auth.createTrial")}
             </Link>
           </div>
 
           <div className="mt-4 flex items-center justify-between text-xs font-bold">
             <Link href="/forgot-password" className="text-ink/65 hover:text-ink underline">
-              Forgot password?
+              {t("auth.forgotPassword")}
             </Link>
             <span className="text-ink/55">
-              <Link href="/terms" className="underline">Terms</Link>
+              <Link href="/terms" className="underline">{t("legal.terms")}</Link>
               <span className="mx-1">·</span>
-              <Link href="/privacy" className="underline">Privacy</Link>
+              <Link href="/privacy" className="underline">{t("legal.privacy")}</Link>
               <span className="mx-1">·</span>
-              <Link href="/demo" className="underline">Demo</Link>
+              <Link href="/demo" className="underline">{t("nav.demo")}</Link>
             </span>
           </div>
         </div>

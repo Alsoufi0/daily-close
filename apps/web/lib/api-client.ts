@@ -18,6 +18,20 @@ export class ApiError extends Error {
   }
 }
 
+function extractApiErrorMessage(text: string, fallback: string): string {
+  if (!text) return fallback;
+  try {
+    const parsed = JSON.parse(text);
+    const message = parsed?.message;
+    if (Array.isArray(message)) return message.join(" ");
+    if (typeof message === "string" && message.trim()) return message;
+    if (typeof parsed?.error === "string" && parsed.error.trim()) return parsed.error;
+  } catch {
+    // Non-JSON API errors are still valid and should be shown as text.
+  }
+  return text || fallback;
+}
+
 async function apiFetch<T>(path: string, token?: string, init?: RequestInit): Promise<T> {
   if (!apiUrl) throw new ApiError(0, "API URL is not configured.");
   const response = await fetch(`${apiUrl}${path}`, {
@@ -32,7 +46,7 @@ async function apiFetch<T>(path: string, token?: string, init?: RequestInit): Pr
 
   if (!response.ok) {
     const text = await response.text();
-    throw new ApiError(response.status, text || response.statusText);
+    throw new ApiError(response.status, extractApiErrorMessage(text, response.statusText));
   }
   return response.json() as Promise<T>;
 }
@@ -379,7 +393,7 @@ export async function downloadReport(
   });
   if (!response.ok) {
     const text = await response.text();
-    throw new ApiError(response.status, text || response.statusText);
+    throw new ApiError(response.status, extractApiErrorMessage(text, response.statusText));
   }
   return response.blob();
 }

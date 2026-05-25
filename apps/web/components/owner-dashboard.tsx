@@ -25,15 +25,9 @@ import { HistoryPanel } from "./history-panel";
 import { ExportReportModal } from "./export-report-modal";
 import { useLanguage } from "./language-provider";
 
-const today = new Date().toLocaleDateString(undefined, {
-  weekday: "long",
-  month: "short",
-  day: "numeric"
-});
-
 export function OwnerDashboard() {
   const session = useSession();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [summary, setSummary] = useState<OwnerDashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +42,7 @@ export function OwnerDashboard() {
       const data = await getOwnerDashboard(session.token);
       setSummary(data);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not refresh");
+      setError(err instanceof ApiError ? err.message : t("dashboard.refreshFailed"));
     } finally {
       setRefreshing(false);
     }
@@ -80,7 +74,7 @@ export function OwnerDashboard() {
         if (!initial) setError(null);
       } catch (err) {
         if (cancelled) return;
-        setError(err instanceof ApiError ? err.message : "Could not load dashboard");
+        setError(err instanceof ApiError ? err.message : t("dashboard.loadFailed"));
       } finally {
         if (initial && !cancelled) setLoading(false);
       }
@@ -107,7 +101,7 @@ export function OwnerDashboard() {
       if (timer) clearInterval(timer);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [session.mode, session.token]);
+  }, [session.mode, session.token, t]);
 
   const allClosed = summary && summary.storesClosed === summary.totalStores;
   const shortageStore = summary?.stores.find((store) => store.difference < 0);
@@ -133,7 +127,7 @@ export function OwnerDashboard() {
           : prev
       );
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not dismiss alert");
+      setError(err instanceof ApiError ? err.message : t("dashboard.dismissFailed"));
     } finally {
       setDismissing(null);
     }
@@ -143,20 +137,25 @@ export function OwnerDashboard() {
   if (!summary) {
     return (
       <div className="rounded-xl border border-warning/30 bg-red-50 p-4 text-sm font-bold text-warning">
-        {error || "Could not load dashboard"}
+        {error || t("dashboard.loadFailed")}
       </div>
     );
   }
 
-  const ownerName = session.profile?.name ?? "there";
-  const modeLabel = session.mode === "production" ? "Production data" : "Demo data";
+  const ownerName = session.profile?.name ?? t("dashboard.fallbackName");
+  const modeLabel = session.mode === "production" ? t("dashboard.productionData") : t("dashboard.demoData");
+  const today = new Date().toLocaleDateString(lang, {
+    weekday: "long",
+    month: "short",
+    day: "numeric"
+  });
 
   return (
     <section className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-black uppercase tracking-wide text-leaf sm:text-sm">
-            <span>Welcome, {ownerName}</span>
+            <span>{t("dashboard.welcome")} {ownerName}</span>
             <span className="inline-flex h-1.5 w-1.5 rounded-full bg-leaf/40" aria-hidden />
             <span className="text-ink/55">{modeLabel}</span>
             {loading ? <Loader2 className="animate-spin text-ink/40" size={14} aria-hidden /> : null}
@@ -165,14 +164,14 @@ export function OwnerDashboard() {
             {t("dashboard.title")}
           </h1>
           <p className="mt-1 text-sm font-bold text-ink/65 sm:text-base">
-            {today} · updates every 15 seconds
+            {today} · {t("dashboard.updatesEvery15")}
           </p>
         </div>
         <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
           <button
             onClick={manualRefresh}
             disabled={refreshing}
-            aria-label="Refresh"
+            aria-label={t("common.refresh")}
             className="focus-ring inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-ink/15 bg-white px-3 font-bold text-ink hover:bg-smoke disabled:opacity-60"
           >
             <RefreshCcw
@@ -180,7 +179,7 @@ export function OwnerDashboard() {
               aria-hidden
               className={refreshing ? "animate-spin" : undefined}
             />
-            <span className="sm:hidden">Refresh</span>
+            <span className="sm:hidden">{t("common.refresh")}</span>
           </button>
           <button
             onClick={() => setExportOpen(true)}
@@ -222,12 +221,12 @@ export function OwnerDashboard() {
             <AlertTriangle size={26} aria-hidden className="mt-0.5" />
             <div className="flex-1 space-y-0.5">
               <p className="text-lg font-black leading-snug">{visibleAlerts[0].message}</p>
-              <p className="text-sm font-bold text-ink/65">Call the store or remind the employee.</p>
+              <p className="text-sm font-bold text-ink/65">{t("dashboard.callStore")}</p>
             </div>
             <button
               onClick={() => dismissAlert(visibleAlerts[0].id)}
               disabled={dismissing === visibleAlerts[0].id}
-              aria-label="Dismiss alert"
+              aria-label={t("dashboard.dismissAlert")}
               className="focus-ring flex h-8 w-8 items-center justify-center rounded-lg text-gold hover:bg-yellow-100 disabled:opacity-50"
             >
               {dismissing === visibleAlerts[0].id ? (
@@ -242,7 +241,7 @@ export function OwnerDashboard() {
             <CheckCircle2 size={26} aria-hidden className="mt-0.5" />
             <div className="space-y-0.5">
               <p className="text-lg font-black leading-snug">{t("dashboard.noMissedAlerts")}</p>
-              <p className="text-sm font-bold text-ink/65">Every assigned store has reported in.</p>
+              <p className="text-sm font-bold text-ink/65">{t("dashboard.everyStoreReported")}</p>
             </div>
           </div>
         )}
@@ -252,9 +251,9 @@ export function OwnerDashboard() {
             <XCircle size={26} aria-hidden className="mt-0.5" />
             <div className="space-y-0.5">
               <p className="text-lg font-black leading-snug">
-                {shortageStore.storeName} is short {formatMoney(shortageStore.difference)}
+                {shortageStore.storeName} {t("dashboard.isShort")} {formatMoney(shortageStore.difference)}
               </p>
-              <p className="text-sm font-bold text-ink/65">Cash counted is lower than expected.</p>
+              <p className="text-sm font-bold text-ink/65">{t("dashboard.cashLower")}</p>
             </div>
           </div>
         ) : (
@@ -262,7 +261,7 @@ export function OwnerDashboard() {
             <CheckCircle2 size={26} aria-hidden className="mt-0.5" />
             <div className="space-y-0.5">
               <p className="text-lg font-black leading-snug">{t("dashboard.noCashShortage")}</p>
-              <p className="text-sm font-bold text-ink/65">Counted cash matches expected for every store.</p>
+              <p className="text-sm font-bold text-ink/65">{t("dashboard.cashMatches")}</p>
             </div>
           </div>
         )}
@@ -272,17 +271,15 @@ export function OwnerDashboard() {
         <h2 className="mb-3 text-2xl font-black">{t("dashboard.storeComparison")}</h2>
         {summary.stores.length === 0 ? (
           <div className="rounded-xl border border-ink/10 bg-white p-8 text-center">
-            <p className="text-lg font-black">No stores yet.</p>
+            <p className="text-lg font-black">{t("admin.noStores")}</p>
             <p className="mt-1 text-sm font-bold text-ink/60">
-              Add your first store from the admin panel to start tracking closes.
+              {t("dashboard.noStoresBody")}
             </p>
           </div>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {summary.stores.map((store) => {
               const barWidth = store.closedToday ? Math.max(6, (store.totalSales / maxSales) * 100) : 0;
-              // Past-close is authoritative from the API using the store timezone.
-              // Never infer this from the owner's browser timezone.
               const pastClose = Boolean(store.pastCloseTime);
               const needsClosing = !store.closedToday && pastClose;
               const diffTone =
@@ -311,7 +308,7 @@ export function OwnerDashboard() {
                       </span>
                     ) : (
                       <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-smoke px-2 py-1 text-[11px] font-black text-ink/60 sm:text-xs">
-                        Open · closes {store.closeTime ?? "23:30"}
+                        {t("dashboard.open")} · {t("dashboard.closesAt")} {store.closeTime ?? "23:30"}
                       </span>
                     )}
                   </div>
@@ -326,11 +323,11 @@ export function OwnerDashboard() {
 
                   <div className="mt-4 grid grid-cols-2 gap-2">
                     <div className="rounded-lg bg-smoke p-3">
-                      <p className="text-xs font-black uppercase text-ink/55">Cash</p>
+                      <p className="text-xs font-black uppercase text-ink/55">{t("common.cash")}</p>
                       <p className="text-xl font-black">{store.closedToday ? formatMoney(store.cashSales) : "—"}</p>
                     </div>
                     <div className="rounded-lg bg-smoke p-3">
-                      <p className="text-xs font-black uppercase text-ink/55">Card</p>
+                      <p className="text-xs font-black uppercase text-ink/55">{t("common.card")}</p>
                       <p className="text-xl font-black">{store.closedToday ? formatMoney(store.cardSales) : "—"}</p>
                     </div>
                   </div>
@@ -348,10 +345,10 @@ export function OwnerDashboard() {
                   >
                     <p className="text-sm font-black">
                       {store.closedToday
-                        ? `Cash difference: ${formatMoney(store.difference)}`
+                        ? `${t("dashboard.cashDifference")}: ${formatMoney(store.difference)}`
                         : needsClosing
-                        ? "Today's close hasn't been submitted yet"
-                        : `Today's close due at ${store.closeTime ?? "23:30"}`}
+                        ? t("dashboard.closeNotSubmitted")
+                        : `${t("dashboard.closeDueAt")} ${store.closeTime ?? "23:30"}`}
                     </p>
                   </div>
                 </article>
@@ -365,12 +362,12 @@ export function OwnerDashboard() {
             className="focus-ring mt-3 flex items-center justify-between gap-3 rounded-xl border border-leaf/30 bg-leaf/5 p-4 text-leaf hover:bg-leaf/10"
           >
             <div>
-              <p className="text-base font-black">Run more than one store?</p>
+              <p className="text-base font-black">{t("dashboard.runMoreStores")}</p>
               <p className="text-sm font-bold text-ink/65">
-                Add your next store — multi-store totals, missed-close alerts, and one weekly summary email come included.
+                {t("dashboard.addNextStore")}
               </p>
             </div>
-            <span className="hidden sm:inline text-sm font-black">Add store →</span>
+            <span className="hidden sm:inline text-sm font-black">{t("dashboard.addStore")}</span>
           </a>
         ) : null}
       </div>
@@ -379,18 +376,6 @@ export function OwnerDashboard() {
       {exportOpen ? <ExportReportModal token={session.token} onClose={() => setExportOpen(false)} /> : null}
     </section>
   );
-}
-
-function isPastCloseTimeLocal(closeTime?: string): boolean {
-  if (!closeTime) return false;
-  const [hh, mm] = closeTime.split(":").map((x) => Number(x) || 0);
-  const raw = hh * 60 + mm;
-  // Stores closing 00:00–05:59 are conceptually end-of-day for the *previous*
-  // business day; shift past 24h so we don't false-positive all day long.
-  const closeMin = raw < 6 * 60 ? raw + 24 * 60 : raw;
-  const now = new Date();
-  const nowMin = now.getHours() * 60 + now.getMinutes();
-  return nowMin >= closeMin;
 }
 
 function DashboardSkeleton() {

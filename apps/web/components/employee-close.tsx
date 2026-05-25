@@ -24,12 +24,16 @@ import { useLanguage } from "./language-provider";
 
 type Step = "start" | "upload" | "sales" | "cash" | "expenses" | "finish" | "blocked";
 
-const STEPS: { key: Exclude<Step, "start" | "blocked">; label: string; short: string }[] = [
-  { key: "upload", label: "Upload POS Report", short: "Upload" },
-  { key: "sales", label: "Check Sales Numbers", short: "Sales" },
-  { key: "cash", label: "Count Cash", short: "Cash" },
-  { key: "expenses", label: "Add Expenses", short: "Expenses" },
-  { key: "finish", label: "Finish Closing", short: "Finish" }
+const STEPS: {
+  key: Exclude<Step, "start" | "blocked">;
+  labelKey: string;
+  shortKey: string;
+}[] = [
+  { key: "upload", labelKey: "closing.upload", shortKey: "closing.stepShortUpload" },
+  { key: "sales", labelKey: "closing.sales", shortKey: "closing.stepShortSales" },
+  { key: "cash", labelKey: "closing.cash", shortKey: "closing.stepShortCash" },
+  { key: "expenses", labelKey: "closing.expenses", shortKey: "closing.stepShortExpenses" },
+  { key: "finish", labelKey: "closing.finish", shortKey: "closing.stepShortFinish" }
 ];
 
 function stepIndex(step: Step) {
@@ -73,8 +77,8 @@ export function EmployeeClose() {
   const availableStores = session.stores.length > 0
     ? session.stores
     : session.profile?.storeId
-      ? [{ id: session.profile.storeId, storeName: "My Store" }]
-      : [{ id: "store-1", storeName: "Store #1" }];
+      ? [{ id: session.profile.storeId, storeName: t("closing.myStore") }]
+      : [{ id: "store-1", storeName: t("closing.defaultStore") }];
   const activeStore = availableStores[storeIdx] ?? availableStores[0];
   const employeeId = session.profile?.employeeId ?? "employee-maya";
 
@@ -90,7 +94,7 @@ export function EmployeeClose() {
       const file = await preprocessReceipt(rawFile);
       const upload = session.token
         ? {
-            base64Data: await fileToDataUrl(file),
+            base64Data: await fileToDataUrl(file, t("closing.fileReadFailed")),
             fileName: file.name,
             contentType: file.type || "image/jpeg"
           }
@@ -151,10 +155,10 @@ export function EmployeeClose() {
     <section className="space-y-5" dir={dir}>
       <div>
         <p className="text-sm font-black uppercase tracking-wide text-leaf">
-          {session.profile?.name ? `Hi ${session.profile.name}` : t("closing.employeeView")}
+          {session.profile?.name ? `${t("closing.hi")} ${session.profile.name}` : t("closing.employeeView")}
         </p>
         <h1 className="mt-1 text-3xl font-black tracking-tight text-ink sm:text-4xl">
-          {t("closing.finish")} {activeStore.storeName}
+          {t("closing.closeStore")} {activeStore.storeName}
         </h1>
         <p className="mt-1 text-base font-bold text-ink/65">{t("closing.followSteps")}</p>
 
@@ -188,7 +192,7 @@ export function EmployeeClose() {
                   const prev = STEPS[currentIndex - 1]?.key;
                   if (prev) setStep(prev);
                 }}
-                aria-label="Back to previous step"
+                aria-label={t("closing.backPreviousStep")}
                 className="focus-ring inline-flex h-10 w-10 items-center justify-center rounded-lg border border-ink/15 text-ink/70 hover:bg-smoke"
               >
                 <ArrowLeft size={18} aria-hidden />
@@ -199,12 +203,12 @@ export function EmployeeClose() {
                 ? t("closing.ready")
                 : step === "blocked"
                   ? t("closing.alreadyClosed")
-                  : STEPS[currentIndex]?.label}
+                  : t(STEPS[currentIndex]?.labelKey ?? "closing.start")}
             </h2>
           </div>
           {step !== "start" && step !== "blocked" ? (
             <p className="text-sm font-black text-ink/60">
-              Step {currentIndex + 1} of {STEPS.length}
+              {t("closing.step")} {currentIndex + 1} {t("closing.of")} {STEPS.length}
             </p>
           ) : null}
         </div>
@@ -281,7 +285,7 @@ export function EmployeeClose() {
             {previewUrl ? (
               <div className="rounded-xl border border-ink/10 bg-white p-3">
                 <p className="mb-2 text-xs font-black uppercase tracking-wide text-ink/55">{t("closing.preview")}</p>
-                <img src={previewUrl} alt="POS report preview" className="mx-auto max-h-64 rounded-lg" />
+                <img src={previewUrl} alt={t("closing.posPreviewAlt")} className="mx-auto max-h-64 rounded-lg" />
               </div>
             ) : null}
 
@@ -311,12 +315,12 @@ export function EmployeeClose() {
                 {ocrRawText ? (
                   <details className="mt-3 rounded-lg bg-white p-3 text-ink/75">
                     <summary className="cursor-pointer text-sm font-black text-ink/80">
-                      OCR read this — tap to see what we got from the photo
+                      {t("closing.ocrDetails")}
                     </summary>
                     <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap text-xs leading-5">
                       {ocrRawText.length > 0
                         ? ocrRawText
-                        : "(OCR returned no text — the photo may be too dark, blurry, or rotated. Try retaking under more light.)"}
+                        : t("closing.ocrEmpty")}
                     </pre>
                   </details>
                 ) : null}
@@ -412,7 +416,7 @@ export function EmployeeClose() {
             )}
             <h2 className="text-3xl font-black">
               {result.difference < 0
-                ? `Cash Shortage: ${formatMoney(result.difference)}`
+                ? `${t("closing.cashShortage")}: ${formatMoney(result.difference)}`
                 : t("closing.success")}
             </h2>
             <p className="text-base font-bold text-ink/65">{t("closing.ownerUpdated")}</p>
@@ -429,10 +433,10 @@ export function EmployeeClose() {
   );
 }
 
-function fileToDataUrl(file: File): Promise<string> {
+function fileToDataUrl(file: File, errorMessage: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onerror = () => reject(new Error("Could not read the photo. Please try again."));
+    reader.onerror = () => reject(new Error(errorMessage));
     reader.onload = () => resolve(String(reader.result || ""));
     reader.readAsDataURL(file);
   });
@@ -445,6 +449,7 @@ function StepProgress({
   current: number;
   onJump: (key: (typeof STEPS)[number]["key"]) => void;
 }) {
+  const { t } = useLanguage();
   const pct = ((current + 1) / STEPS.length) * 100;
   return (
     <div className="rounded-xl border border-ink/10 bg-white p-3 shadow-sm">
@@ -455,7 +460,7 @@ function StepProgress({
         {STEPS.map((s, i) => {
           const isDone = i < current;
           const isCurrent = i === current;
-          const canJump = isDone; // only allow going back to completed steps
+          const canJump = isDone;
           return (
             <li
               key={s.key}
@@ -468,7 +473,7 @@ function StepProgress({
                 type="button"
                 disabled={!canJump}
                 onClick={() => canJump && onJump(s.key)}
-                aria-label={`Go back to ${s.label}`}
+                aria-label={`${t("closing.goBackToStep")} ${t(s.labelKey)}`}
                 className={clsx(
                   "focus-ring flex items-center gap-1.5 rounded-md px-1 py-0.5 transition-colors",
                   canJump ? "cursor-pointer hover:bg-smoke" : "cursor-default"
@@ -486,7 +491,7 @@ function StepProgress({
                 >
                   {isDone ? "✓" : i + 1}
                 </span>
-                <span className="hidden sm:inline">{s.short}</span>
+                <span className="hidden sm:inline">{t(s.shortKey)}</span>
               </button>
             </li>
           );

@@ -440,6 +440,145 @@ export const translations: Record<Language, Dictionary> = {
   }
 };
 
+const productionTranslations: Record<Language, Dictionary> = {
+  en: {
+    "dashboard.refreshFailed": "Could not refresh. Please try again.",
+    "dashboard.loadFailed": "Could not load dashboard.",
+    "dashboard.dismissFailed": "Could not dismiss alert.",
+    "dashboard.fallbackName": "there",
+    "dashboard.productionData": "Production data",
+    "dashboard.demoData": "Demo data",
+    "dashboard.welcome": "Welcome,",
+    "dashboard.updatesEvery15": "updates every 15 seconds",
+    "dashboard.dismissAlert": "Dismiss alert",
+    "dashboard.cashLower": "Cash counted is lower than expected.",
+    "closing.stepShortUpload": "Upload",
+    "closing.stepShortSales": "Sales",
+    "closing.stepShortCash": "Cash",
+    "closing.stepShortExpenses": "Expenses",
+    "closing.stepShortFinish": "Finish",
+    "closing.step": "Step",
+    "closing.of": "of",
+    "closing.hi": "Hi",
+    "closing.closeStore": "Close",
+    "closing.myStore": "My Store",
+    "closing.defaultStore": "Store #1",
+    "closing.backPreviousStep": "Back to previous step",
+    "closing.posPreviewAlt": "POS report preview",
+    "closing.ocrDetails": "Photo read result - tap to see what we got from the report",
+    "closing.ocrEmpty": "No text was found. The photo may be dark, blurry, or rotated. Try retaking it with more light.",
+    "closing.cashShortage": "Cash Shortage",
+    "closing.fileReadFailed": "Could not read the photo. Please try again.",
+    "closing.goBackToStep": "Go back to",
+    "settings.whatsappPhoneRequired": "Enter a WhatsApp phone number before turning on WhatsApp messages.",
+    "settings.whatsappPhoneInvalid": "Enter the number with country code, like +15551234567.",
+    "settings.whatsappServerNotReady": "WhatsApp is not ready on the server yet.",
+    "settings.whatsappTestCheckSetup": "WhatsApp test did not send. Check the approved Meta template and recipient access."
+  },
+  ar: {
+    "dashboard.refreshFailed": "تعذر التحديث. حاول مرة أخرى.",
+    "dashboard.loadFailed": "تعذر تحميل لوحة المالك.",
+    "dashboard.dismissFailed": "تعذر إخفاء التنبيه.",
+    "dashboard.fallbackName": "بك",
+    "dashboard.productionData": "بيانات الإنتاج",
+    "dashboard.demoData": "بيانات التجربة",
+    "dashboard.welcome": "مرحباً،",
+    "dashboard.updatesEvery15": "يتحدث كل 15 ثانية",
+    "dashboard.dismissAlert": "إخفاء التنبيه",
+    "dashboard.cashLower": "النقد المعدود أقل من المتوقع.",
+    "closing.stepShortUpload": "رفع",
+    "closing.stepShortSales": "مبيعات",
+    "closing.stepShortCash": "نقد",
+    "closing.stepShortExpenses": "مصاريف",
+    "closing.stepShortFinish": "إنهاء",
+    "closing.step": "الخطوة",
+    "closing.of": "من",
+    "closing.hi": "مرحباً",
+    "closing.closeStore": "إغلاق",
+    "closing.myStore": "متجري",
+    "closing.defaultStore": "متجر 1",
+    "closing.backPreviousStep": "الرجوع للخطوة السابقة",
+    "closing.posPreviewAlt": "معاينة تقرير نقطة البيع",
+    "closing.ocrDetails": "نتيجة قراءة الصورة - اضغط لرؤية ما تم التقاطه من التقرير",
+    "closing.ocrEmpty": "لم يتم العثور على نص. قد تكون الصورة مظلمة أو غير واضحة أو مقلوبة. أعد التقاطها بإضاءة أفضل.",
+    "closing.cashShortage": "نقص نقدي",
+    "closing.fileReadFailed": "تعذرت قراءة الصورة. حاول مرة أخرى.",
+    "closing.goBackToStep": "الرجوع إلى",
+    "settings.whatsappPhoneRequired": "أدخل رقم واتساب قبل تشغيل رسائل واتساب.",
+    "settings.whatsappPhoneInvalid": "أدخل الرقم مع رمز الدولة مثل +15551234567.",
+    "settings.whatsappServerNotReady": "واتساب غير جاهز على الخادم بعد.",
+    "settings.whatsappTestCheckSetup": "لم يتم إرسال اختبار واتساب. تحقق من قالب Meta المعتمد ووصول المستلم."
+  },
+  es: {
+    "dashboard.refreshFailed": "No se pudo actualizar. Inténtalo de nuevo.",
+    "dashboard.loadFailed": "No se pudo cargar el panel.",
+    "dashboard.dismissFailed": "No se pudo cerrar la alerta.",
+    "dashboard.fallbackName": "ahí",
+    "dashboard.productionData": "Datos de producción",
+    "dashboard.demoData": "Datos de demo",
+    "dashboard.welcome": "Bienvenido,",
+    "dashboard.updatesEvery15": "se actualiza cada 15 segundos",
+    "dashboard.dismissAlert": "Cerrar alerta",
+    "dashboard.cashLower": "El efectivo contado es menor que lo esperado.",
+    "closing.stepShortUpload": "Subir",
+    "closing.stepShortSales": "Ventas",
+    "closing.stepShortCash": "Efectivo",
+    "closing.stepShortExpenses": "Gastos",
+    "closing.stepShortFinish": "Final",
+    "closing.step": "Paso",
+    "closing.of": "de",
+    "closing.hi": "Hola",
+    "closing.closeStore": "Cerrar",
+    "closing.myStore": "Mi tienda",
+    "closing.defaultStore": "Tienda #1",
+    "closing.backPreviousStep": "Volver al paso anterior",
+    "closing.posPreviewAlt": "Vista previa del reporte POS",
+    "closing.ocrDetails": "Resultado de la foto - toca para ver lo leído del reporte",
+    "closing.ocrEmpty": "No se encontró texto. La foto puede estar oscura, borrosa o girada. Tómala otra vez con más luz.",
+    "closing.cashShortage": "Faltante de efectivo",
+    "closing.fileReadFailed": "No se pudo leer la foto. Inténtalo de nuevo.",
+    "closing.goBackToStep": "Volver a",
+    "settings.whatsappPhoneRequired": "Ingresa un número de WhatsApp antes de activar mensajes.",
+    "settings.whatsappPhoneInvalid": "Ingresa el número con código de país, como +15551234567.",
+    "settings.whatsappServerNotReady": "WhatsApp todavía no está listo en el servidor.",
+    "settings.whatsappTestCheckSetup": "La prueba de WhatsApp no se envió. Revisa la plantilla aprobada de Meta y el acceso del destinatario."
+  },
+  hi: {
+    "dashboard.refreshFailed": "रिफ्रेश नहीं हुआ. फिर कोशिश करें.",
+    "dashboard.loadFailed": "डैशबोर्ड लोड नहीं हुआ.",
+    "dashboard.dismissFailed": "अलर्ट बंद नहीं हुआ.",
+    "dashboard.fallbackName": "वहाँ",
+    "dashboard.productionData": "प्रोडक्शन डेटा",
+    "dashboard.demoData": "डेमो डेटा",
+    "dashboard.welcome": "स्वागत है,",
+    "dashboard.updatesEvery15": "हर 15 सेकंड में अपडेट",
+    "dashboard.dismissAlert": "अलर्ट बंद करें",
+    "dashboard.cashLower": "गिना हुआ नकद अपेक्षित से कम है.",
+    "closing.stepShortUpload": "अपलोड",
+    "closing.stepShortSales": "बिक्री",
+    "closing.stepShortCash": "नकद",
+    "closing.stepShortExpenses": "खर्च",
+    "closing.stepShortFinish": "पूरा",
+    "closing.step": "कदम",
+    "closing.of": "में से",
+    "closing.hi": "नमस्ते",
+    "closing.closeStore": "बंद करें",
+    "closing.myStore": "मेरा स्टोर",
+    "closing.defaultStore": "स्टोर #1",
+    "closing.backPreviousStep": "पिछले कदम पर वापस",
+    "closing.posPreviewAlt": "POS रिपोर्ट प्रीव्यू",
+    "closing.ocrDetails": "फोटो से पढ़ा गया परिणाम - रिपोर्ट से क्या मिला देखने के लिए टैप करें",
+    "closing.ocrEmpty": "कोई टेक्स्ट नहीं मिला. फोटो अंधेरी, धुंधली या घुमी हुई हो सकती है. ज्यादा रोशनी में फिर लें.",
+    "closing.cashShortage": "नकद कमी",
+    "closing.fileReadFailed": "फोटो पढ़ी नहीं गई. फिर कोशिश करें.",
+    "closing.goBackToStep": "वापस जाएं",
+    "settings.whatsappPhoneRequired": "WhatsApp संदेश चालू करने से पहले WhatsApp नंबर दर्ज करें.",
+    "settings.whatsappPhoneInvalid": "देश कोड के साथ नंबर दर्ज करें, जैसे +15551234567.",
+    "settings.whatsappServerNotReady": "WhatsApp अभी सर्वर पर तैयार नहीं है.",
+    "settings.whatsappTestCheckSetup": "WhatsApp टेस्ट नहीं भेजा गया. Meta template approval और recipient access जांचें."
+  }
+};
+
 const supplementalTranslations: Record<Language, Dictionary> = {
   en: {
     "common.back": "Back",
@@ -877,5 +1016,13 @@ export function languageDir(lang: Language): "ltr" | "rtl" {
 }
 
 export function translate(lang: Language, key: string): string {
-  return supplementalTranslations[lang]?.[key] ?? translations[lang]?.[key] ?? supplementalTranslations.en[key] ?? translations.en[key] ?? key;
+  return (
+    productionTranslations[lang]?.[key] ??
+    supplementalTranslations[lang]?.[key] ??
+    translations[lang]?.[key] ??
+    productionTranslations.en[key] ??
+    supplementalTranslations.en[key] ??
+    translations.en[key] ??
+    key
+  );
 }
