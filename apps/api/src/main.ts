@@ -16,7 +16,10 @@ if (process.env.ALLOW_DEMO_AUTH !== undefined && process.env.ALLOW_DEMO_AUTH !==
   process.exit(1);
 }
 
-// Initialise Sentry as early as possible, but only when a DSN is configured.
+// Sentry is mandatory in production (audit fix #10). Running a SaaS blind to
+// errors is an operational anti-pattern; if the DSN is missing in prod we
+// refuse to boot rather than silently swallow exceptions. In dev/test/staging
+// Sentry is optional — initialised when a DSN is present, skipped otherwise.
 if (process.env.SENTRY_DSN) {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const Sentry = require("@sentry/node");
@@ -25,6 +28,12 @@ if (process.env.SENTRY_DSN) {
     environment: process.env.NODE_ENV || "development",
     tracesSampleRate: Number(process.env.SENTRY_TRACES_SAMPLE_RATE ?? 0.1)
   });
+} else if (process.env.NODE_ENV === "production") {
+  // eslint-disable-next-line no-console
+  console.error(
+    "[FATAL] SENTRY_DSN is required in production. Configure it in the Render dashboard and redeploy."
+  );
+  process.exit(1);
 }
 
 function securityHeaders(_req: unknown, res: { setHeader: (name: string, value: string) => void }, next: () => void) {

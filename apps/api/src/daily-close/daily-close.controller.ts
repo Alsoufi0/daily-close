@@ -4,10 +4,17 @@ import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { RequestUser } from "../auth/request-user";
 import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
+import { SubscriptionGuard } from "../subscriptions/subscription.guard";
 import { DailyCloseService } from "./daily-close.service";
 import { CreateDailyCloseDto } from "./dto/create-daily-close.dto";
 import { ScanReportDto } from "./dto/scan-report.dto";
 import { UploadReportDto } from "./dto/upload-report.dto";
+
+// Audit fix #8: every write endpoint here is gated by both SupabaseAuthGuard
+// (authn) and SubscriptionGuard (paywall enforcement). SubscriptionGuard is
+// a no-op for employees and only blocks owners whose trial/subscription has
+// lapsed — so employees never lose the ability to close their store, but a
+// trial-expired owner can't keep using the product without paying.
 
 @ApiTags("Daily Close")
 @ApiBearerAuth()
@@ -29,13 +36,13 @@ export class DailyCloseController {
   }
 
   @Post("upload-report")
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(SupabaseAuthGuard, SubscriptionGuard)
   uploadReport(@Body() input: UploadReportDto, @CurrentUser() user: RequestUser) {
     return this.dailyCloseService.uploadReport(input, user);
   }
 
   @Post("finish")
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(SupabaseAuthGuard, SubscriptionGuard)
   finishClosing(
     @Body() input: CreateDailyCloseDto,
     @CurrentUser() user: RequestUser,
@@ -45,7 +52,7 @@ export class DailyCloseController {
   }
 
   @Patch(":id")
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(SupabaseAuthGuard, SubscriptionGuard)
   editClosing(
     @Param("id") id: string,
     @Body() input: EditDailyCloseDto,
@@ -55,7 +62,7 @@ export class DailyCloseController {
   }
 
   @Delete(":id")
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(SupabaseAuthGuard, SubscriptionGuard)
   deleteClosing(@Param("id") id: string, @CurrentUser() user: RequestUser) {
     return this.dailyCloseService.deleteClosing(id, user);
   }

@@ -65,8 +65,20 @@ services:
         value: weekly_summary
       - key: WHATSAPP_TEMPLATE_MONTHLY
         value: monthly_summary
-      # Shared secret for cron endpoints
+      # Shared secret for cron endpoints. REQUIRED in production — the
+      # /notifications/* cron endpoints refuse when this is unset and
+      # NODE_ENV=production.
       - key: CRON_SECRET
+        sync: false
+      # Sentry: REQUIRED in production — API refuses to boot if unset.
+      - key: SENTRY_DSN
+        sync: false
+      # Optional dead-man heartbeats; cron pings these URLs on success.
+      - key: HEALTHCHECKS_MISSED_CLOSE_PING_URL
+        sync: false
+      - key: HEALTHCHECKS_WEEKLY_SUMMARY_PING_URL
+        sync: false
+      - key: HEALTHCHECKS_MONTHLY_SUMMARY_PING_URL
         sync: false
 
   # Daily 23:45 sweep — creates missed-close alerts for stores that didn't submit

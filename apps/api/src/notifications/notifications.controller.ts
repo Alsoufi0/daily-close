@@ -99,33 +99,64 @@ export class NotificationsController {
     };
   }
 
-  // Hit by the Render cron - secured by a shared CRON_SECRET header.
-  // When CRON_SECRET is unset, the route is open (dev convenience).
+  // Cron endpoints (audit fixes #4.2, #10):
+  //
+  //   1. assertCronSecret: in production we refuse when CRON_SECRET is unset
+  //      — the old `if (expected && ...)` short-circuit meant a misconfigured
+  //      prod accepted anonymous POSTs. In dev we still allow missing secrets
+  //      so local invocation is friction-free.
+  //
+  //   2. pingHealthcheck: optional heartbeat to an external dead-man monitor
+  //      (healthchecks.io / Better Stack / Uptime Kuma). Fires AFTER the cron
+  //      payload completes, so a silent cron failure (Render misfires, throws,
+  //      timeouts) makes the heartbeat stop arriving and the monitor pages.
+  //      Configure via HEALTHCHECKS_*_PING_URL env vars. Fire-and-forget.
+
   @Post("check-missed-close")
-  checkMissedClose(@Headers("x-cron-secret") provided: string | undefined) {
-    const expected = process.env.CRON_SECRET;
-    if (expected && provided !== expected) {
-      throw new ForbiddenException("Bad cron secret.");
-    }
-    return this.missedClose.checkStores();
+  async checkMissedClose(@Headers("x-cron-secret") provided: string | undefined) {
+    NotificationsController.assertCronSecret(provided);
+    const result = await this.missedClose.checkStores();
+    NotificationsController.pingHealthcheck(process.env.HEALTHCHECKS_MISSED_CLOSE_PING_URL);
+    return result;
   }
 
-  // Hit by the weekly cron (Monday 13:00 UTC by default). Same shared secret.
   @Post("weekly-summary")
-  weeklySummary(@Headers("x-cron-secret") provided: string | undefined) {
-    const expected = process.env.CRON_SECRET;
-    if (expected && provided !== expected) {
-      throw new ForbiddenException("Bad cron secret.");
-    }
-    return this.weekly.sendForAllOwners();
+  async weeklySummary(@Headers("x-cron-secret") provided: string | undefined) {
+    NotificationsController.assertCronSecret(provided);
+    const result = await this.weekly.sendForAllOwners();
+    NotificationsController.pingHealthcheck(process.env.HEALTHCHECKS_WEEKLY_SUMMARY_PING_URL);
+    return result;
   }
 
   @Post("monthly-summary")
-  monthlySummary(@Headers("x-cron-secret") provided: string | undefined) {
+  async monthlySummary(@Headers("x-cron-secret") provided: string | undefined) {
+    NotificationsController.assertCronSecret(provided);
+    const result = await this.weekly.sendMonthlyForAllOwners();
+    NotificationsController.pingHealthcheck(process.env.HEALTHCHECKS_MONTHLY_SUMMARY_PING_URL);
+    return result;
+  }
+
+  private static assertCronSecret(provided: string | undefined) {
     const expected = process.env.CRON_SECRET;
-    if (expected && provided !== expected) {
+    if (!expected) {
+      if (process.env.NODE_ENV === "production") {
+        throw new ForbiddenException("CRON_SECRET is not configured.");
+      }
+      return; // dev convenience: allow when unset locally
+    }
+    if (provided !== expected) {
       throw new ForbiddenException("Bad cron secret.");
     }
-    return this.weekly.sendMonthlyForAllOwners();
+  }
+
+  private static pingHealthcheck(url: string | undefined) {
+    if (!url) return;
+    // Fire-and-forget. We never want the heartbeat to fail the cron payload.
+    // Catch and swallow so a healthcheck outage doesn't make Render mark the
+    // cron job as failed.
+    fetch(url, { method: "POST" }).catch(() => {
+      // eslint-disable-next-line no-console
+      console.warn(`[cron] healthcheck heartbeat to ${url} failed; cron itself succeeded.`);
+    });
   }
 }
