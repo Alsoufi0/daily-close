@@ -12,6 +12,7 @@ function makeService(overrides: Partial<{
   const repository = {
     findByStoreAndDate: jest.fn().mockResolvedValue(overrides.existing ?? null),
     findByStoreAndRange: jest.fn().mockResolvedValue(overrides.existing ?? null),
+    findByIdempotencyKey: jest.fn().mockResolvedValue(null),
     create: jest.fn().mockResolvedValue(
       overrides.createReturn ?? { id: "close-1", createdAt: new Date("2026-05-22T20:00:00Z") }
     ),
@@ -168,6 +169,57 @@ describe("DailyCloseService.finishClosing", () => {
     expect(repository.createExpenseAndAudit).toHaveBeenCalledWith(
       expect.objectContaining({ expenses: 25, storeId: "store-1", userId: "user-employee" })
     );
+  });
+
+  it("returns the prior close (no side effects) when the same idempotency key is re-submitted", async () => {
+    const priorClose = {
+      id: "close-prior",
+      expectedCash: 940,
+      countedCash: 940,
+      difference: 0,
+      status: "CLOSED" as const,
+      createdAt: new Date("2026-05-22T20:00:00Z")
+    };
+    const { service, repository, whatsapp } = makeService();
+    repository.findByIdempotencyKey.mockResolvedValueOnce(priorClose);
+
+    const result = await service.finishClosing(baseInput, employeeUser, "client-uuid-abc");
+
+    expect(repository.findByIdempotencyKey).toHaveBeenCalledWith("client-uuid-abc");
+    expect(result.id).toBe("close-prior");
+    expect(result.status).toBe("CLOSED");
+    // Critical: no new close was created, no audit/expense, no WhatsApp.
+    expect(repository.create).not.toHaveBeenCalled();
+    expect(repository.createExpenseAndAudit).not.toHaveBeenCalled();
+    expect(whatsapp.sendCloseCompletedTemplate).not.toHaveBeenCalled();
+  });
+
+  it("threads the idempotency key into create() on a fresh submission", async () => {
+    const { service, repository } = makeService();
+    await service.finishClosing(baseInput, employeeUser, "client-uuid-new");
+    expect(repository.findByIdempotencyKey).toHaveBeenCalledWith("client-uuid-new");
+    expect(repository.create).toHaveBeenCalledWith(
+      expect.objectContaining({ idempotencyKey: "client-uuid-new" })
+    );
+  });
+
+  it("falls through and still creates the close if the idempotency_key column is missing (pre-005 migration)", async () => {
+    const { service, repository } = makeService();
+    const columnMissing: any = new Error(
+      "column daily_close.idempotency_key does not exist"
+    );
+    repository.findByIdempotencyKey.mockRejectedValueOnce(columnMissing);
+    const result = await service.finishClosing(baseInput, employeeUser, "client-uuid-pre-migration");
+    expect(result.status).toBe("CLOSED");
+    expect(repository.create).toHaveBeenCalled();
+  });
+
+  it("re-throws unexpected errors from the idempotency check (does not swallow)", async () => {
+    const { service, repository } = makeService();
+    repository.findByIdempotencyKey.mockRejectedValueOnce(new Error("connection refused"));
+    await expect(
+      service.finishClosing(baseInput, employeeUser, "client-uuid-db-down")
+    ).rejects.toThrow("connection refused");
   });
 
   it("sends an owner WhatsApp alert when close-completed alerts are enabled", async () => {

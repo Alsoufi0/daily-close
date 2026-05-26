@@ -86,9 +86,25 @@ export async function uploadReport(): Promise<ParsedPOSReport> {
   });
 }
 
-export async function finishClose(input: DailyCloseInput) {
+/**
+ * Generate a client-side idempotency key. Used to dedupe `/daily-close/finish`
+ * submissions across network retries, offline-queue replays, and accidental
+ * double-taps. The caller is responsible for re-using the same key when
+ * retrying the SAME logical submission — generating a fresh key on every
+ * call defeats the purpose. See finishClose's `idempotencyKey` parameter.
+ */
+export function generateIdempotencyKey(): string {
+  const g: any = globalThis as any;
+  if (g.crypto?.randomUUID) return g.crypto.randomUUID();
+  // Fallback for runtimes without crypto.randomUUID (older Hermes, etc.).
+  return `dc-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
+export async function finishClose(input: DailyCloseInput, idempotencyKey?: string) {
+  const key = idempotencyKey || generateIdempotencyKey();
   return apiFetch("/daily-close/finish", {
     method: "POST",
+    headers: { "Idempotency-Key": key },
     body: JSON.stringify(input)
   });
 }

@@ -287,9 +287,26 @@ export async function uploadReport(
   );
 }
 
-export async function finishDailyClose(token: string | undefined, input: DailyCloseInput) {
+/**
+ * Generate a client-side idempotency key for /daily-close/finish. The caller
+ * should re-use the same key when retrying the SAME logical submission so
+ * the server can dedupe — generating a fresh key per attempt defeats the
+ * purpose. See `finishDailyClose`'s optional `idempotencyKey` parameter.
+ */
+export function generateIdempotencyKey(): string {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
+  return `dc-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
+export async function finishDailyClose(
+  token: string | undefined,
+  input: DailyCloseInput,
+  idempotencyKey?: string
+) {
+  const key = idempotencyKey || generateIdempotencyKey();
   return apiFetch("/daily-close/finish", requireToken(token), {
     method: "POST",
+    headers: { "Idempotency-Key": key },
     body: JSON.stringify(input)
   });
 }

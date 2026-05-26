@@ -89,7 +89,46 @@ export class DailyCloseService {
     return { ...parsed, imageUrl } as ParsedPOSReport & { imageUrl: string };
   }
 
-  async finishClosing(input: CreateDailyCloseDto, user?: RequestUser): Promise<DailyCloseResult> {
+  async finishClosing(
+    input: CreateDailyCloseDto,
+    user?: RequestUser,
+    idempotencyKey?: string
+  ): Promise<DailyCloseResult> {
+    // Idempotency check (audit fix #3). When the client provides an
+    // Idempotency-Key header and we have already persisted a close with that
+    // key, return the original result and skip all side effects (no second
+    // expense row, no second audit log, no second WhatsApp). Wrapped in a
+    // defensive try/catch so the API still works if the 005 migration that
+    // adds the `idempotency_key` column has not yet been applied — in that
+    // case we log a warning and fall through to non-idempotent behaviour.
+    if (idempotencyKey) {
+      try {
+        const prior = await this.repository.findByIdempotencyKey(idempotencyKey);
+        if (prior) {
+          return {
+            id: prior.id,
+            expectedCash: Number(prior.expectedCash),
+            countedCash: Number(prior.countedCash),
+            difference: Number(prior.difference),
+            status: prior.status,
+            createdAt: prior.createdAt.toISOString()
+          };
+        }
+      } catch (err: any) {
+        const msg = String(err?.message || err);
+        // Only swallow the specific "column does not exist" error that the
+        // pre-005 schema produces. Anything else (connection error, etc.)
+        // we want to re-throw.
+        if (/idempotency_key/.test(msg) && /(does not exist|undefined column)/i.test(msg)) {
+          this.logger.warn(
+            "Idempotency check skipped: migration 005_daily_close_idempotency.sql has not been applied yet. Apply it and redeploy."
+          );
+        } else {
+          throw err;
+        }
+      }
+    }
+
     let resolvedEmployeeId = input.employeeId;
     if (user) {
       resolvedEmployeeId = await this.assertCanCloseStore(user, input.storeId);
@@ -120,7 +159,8 @@ export class DailyCloseService {
       date: eventDate,
       expectedCash,
       difference,
-      status
+      status,
+      idempotencyKey
     });
 
     if (user) {

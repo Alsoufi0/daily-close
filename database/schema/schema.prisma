@@ -107,6 +107,7 @@ model Store {
 
 model DailyClose {
   id             String          @id @default(cuid())
+  idempotencyKey String?         @unique @map("idempotency_key")
   storeId        String          @map("store_id")
   employeeId     String          @map("employee_id")
   date           DateTime

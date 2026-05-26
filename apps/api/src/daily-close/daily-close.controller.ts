@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Headers, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { EditDailyCloseDto } from "./dto/edit-daily-close.dto";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
@@ -36,8 +36,12 @@ export class DailyCloseController {
 
   @Post("finish")
   @UseGuards(SupabaseAuthGuard)
-  finishClosing(@Body() input: CreateDailyCloseDto, @CurrentUser() user: RequestUser) {
-    return this.dailyCloseService.finishClosing(input, user);
+  finishClosing(
+    @Body() input: CreateDailyCloseDto,
+    @CurrentUser() user: RequestUser,
+    @Headers("idempotency-key") idempotencyKey?: string
+  ) {
+    return this.dailyCloseService.finishClosing(input, user, idempotencyKey);
   }
 
   @Patch(":id")

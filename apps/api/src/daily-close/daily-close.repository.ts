@@ -18,6 +18,7 @@ export interface CreateDailyCloseRecord {
   expenses: number;
   notes?: string;
   status: "PENDING" | "CLOSED" | "SHORT" | "OVER";
+  idempotencyKey?: string;
 }
 
 @Injectable()
@@ -28,8 +29,15 @@ export class DailyCloseRepository {
     return this.prisma.dailyClose.create({
       data: {
         ...data,
-        lottery: data.lottery ?? null
+        lottery: data.lottery ?? null,
+        idempotencyKey: data.idempotencyKey ?? null
       }
+    });
+  }
+
+  findByIdempotencyKey(key: string) {
+    return this.prisma.dailyClose.findFirst({
+      where: { idempotencyKey: key }
     });
   }
 
