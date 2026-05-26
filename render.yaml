@@ -14,8 +14,8 @@ services:
         value: 4000
       - key: ENABLE_SWAGGER
         value: "false"
-      - key: ALLOW_DEMO_AUTH
-        value: "false"
+      # ALLOW_DEMO_AUTH was removed. The API refuses to boot if it is set —
+      # see apps/api/src/main.ts.
       - key: ALLOWED_ORIGINS
         value: https://daily-close-mvp.vercel.app
       # Secrets — set these in the Render dashboard after first deploy

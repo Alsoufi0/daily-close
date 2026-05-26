@@ -12,12 +12,6 @@ export class SupabaseAuthGuard implements CanActivate {
       user?: RequestUser;
     }>();
 
-    const demoRole = request.headers["x-demo-role"];
-    if (process.env.ALLOW_DEMO_AUTH === "true" && (demoRole === "owner" || demoRole === "employee")) {
-      request.user = await this.auth.getDemoUser(demoRole);
-      return true;
-    }
-
     const authorization = request.headers.authorization;
     const token = authorization?.startsWith("Bearer ") ? authorization.slice(7) : undefined;
     if (!token) throw new UnauthorizedException("Missing bearer token.");

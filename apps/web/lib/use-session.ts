@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import type { SessionProfile } from "@smokeshop/shared/types";
 import { ApiError, bootstrapOwner, getProfile, listStores, StoreRecord } from "./api-client";
 import { createBrowserSupabase } from "./supabase-browser";
-import { demoOwner } from "./mock-data";
 
 const TOKEN_KEY = "dailyclose-token";
 
@@ -38,14 +37,6 @@ async function readVerifiedBrowserToken(): Promise<string | undefined> {
   return undefined;
 }
 
-const demoProfile: SessionProfile = {
-  id: demoOwner.id,
-  name: demoOwner.name,
-  email: demoOwner.email,
-  role: "STORE_OWNER",
-  ownerId: demoOwner.id
-};
-
 export function useSession(): Session {
   const [mode, setMode] = useState<SessionMode>("loading");
   const [token, setToken] = useState<string | undefined>();
@@ -64,9 +55,11 @@ export function useSession(): Session {
       const stored = await readVerifiedBrowserToken();
       if (cancelled) return;
       if (!stored) {
+        // No session: render unauthenticated state so RequireAuth-style guards
+        // bounce to the landing page. We never fabricate a demo profile here.
         setToken(undefined);
+        setProfile(undefined);
         setMode("demo");
-        setProfile(demoProfile);
         return;
       }
 
@@ -102,12 +95,12 @@ export function useSession(): Session {
         if (isAuthReject) {
           window.localStorage.removeItem(TOKEN_KEY);
           setToken(undefined);
-          if (typeof window !== "undefined" && window.location.pathname !== "/" && !window.location.pathname.startsWith("/demo")) {
+          setProfile(undefined);
+          setMode("demo");
+          if (typeof window !== "undefined" && window.location.pathname !== "/") {
             window.location.replace("/?expired=1");
             return;
           }
-          setProfile(demoProfile);
-          setMode("demo");
         } else {
           // Keep the token, render production shell, show the error to the user.
           setMode("production");

@@ -112,9 +112,14 @@ export function LoginScreen({ onOpen }: { onOpen: (s: "owner" | "employee") => v
       <View style={{ gap: spacing.md, marginTop: spacing.lg }}>
         {supabase ? (
           <Button title="Sign in" onPress={() => setMode("signin")} />
-        ) : null}
-        <Button title="Open Owner View (demo)" variant={supabase ? "secondary" : "primary"} onPress={() => onOpen("owner")} />
-        <Button title="Open Employee View (demo)" variant="secondary" onPress={() => onOpen("employee")} />
+        ) : (
+          <View style={s.errorBox}>
+            <Text style={s.errorText}>
+              This build is missing its API and Supabase configuration. Reinstall
+              the official release or contact your administrator.
+            </Text>
+          </View>
+        )}
       </View>
 
       <Text style={s.legal}>By continuing you agree to the Terms and Privacy Policy.</Text>
