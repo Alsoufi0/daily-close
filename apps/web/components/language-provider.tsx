@@ -165,7 +165,22 @@ const phraseKeys: Record<string, string> = {
   "Run more than one store?": "dashboard.runMoreStores",
   "Add your next store — multi-store totals, missed-close alerts, and one weekly summary email come included.": "dashboard.addNextStore",
   "Add store →": "dashboard.addStore",
-  "Today's close hasn't been submitted yet": "dashboard.closeNotSubmitted"
+  "Today's close hasn't been submitted yet": "dashboard.closeNotSubmitted",
+  // === added 2026-05-27: hardcoded-string sweep ===
+  "Invite the people who close your stores at night.": "admin.inviteEmployees",
+  "Admin access": "admin.adminAccess",
+  "First-run setup": "admin.firstRunSetup",
+  "Change password": "auth.changePassword",
+  "Use at least 8 characters.": "auth.atLeast8Chars",
+  "At least 8 characters.": "auth.atLeast8CharsShort",
+  "Something broke": "common.somethingBroke",
+  "Sales": "common.sales",
+  "Status": "common.status",
+  "Subscription expired": "billing.expired",
+  "Free trial": "billing.freeTrial",
+  "Active": "billing.active",
+  "Edit close": "history.editClose",
+  "Delete close": "history.deleteClose"
 };
 
 const dynamicPhraseRules: Array<{

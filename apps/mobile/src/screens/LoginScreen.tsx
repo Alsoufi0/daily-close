@@ -4,11 +4,14 @@ import { Button, Pill } from "../ui";
 import { colors, font, radius, spacing } from "../theme";
 import { supabase } from "../supabase";
 import { saveToken } from "../api";
+import { t } from "../i18n";
 
-const FEATURES = [
-  { icon: "⏱", title: "Close in 2 minutes", body: "Upload, count, submit — from your phone." },
-  { icon: "📊", title: "Owner sees everything", body: "Sales, closed stores, missing cash in one look." },
-  { icon: "🛡", title: "Built for pilots", body: "Secure auth, audit trail, CSV export." }
+// FEATURES hold translation KEYS, not English strings. We resolve via t() at
+// render time so changing language re-renders without touching this array.
+const FEATURES: Array<{ icon: string; titleKey: string; bodyKey: string }> = [
+  { icon: "⏱", titleKey: "mobile.feature1Title", bodyKey: "mobile.feature1Body" },
+  { icon: "📊", titleKey: "mobile.feature2Title", bodyKey: "mobile.feature2Body" },
+  { icon: "🛡", titleKey: "mobile.feature3Title", bodyKey: "mobile.feature3Body" }
 ];
 
 export function LoginScreen({ onOpen }: { onOpen: (s: "owner" | "employee") => void }) {
@@ -20,7 +23,7 @@ export function LoginScreen({ onOpen }: { onOpen: (s: "owner" | "employee") => v
 
   async function signIn() {
     if (!supabase) {
-      setError("Sign in is not available in demo mode.");
+      setError(t("auth.demoFallback"));
       return;
     }
     setSubmitting(true);
@@ -28,7 +31,7 @@ export function LoginScreen({ onOpen }: { onOpen: (s: "owner" | "employee") => v
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     setSubmitting(false);
     if (error || !data.session) {
-      setError(error?.message || "Could not sign in.");
+      setError(error?.message || t("auth.couldNotSignIn"));
       return;
     }
     await saveToken(data.session.access_token);
@@ -39,13 +42,13 @@ export function LoginScreen({ onOpen }: { onOpen: (s: "owner" | "employee") => v
   if (mode === "signin") {
     return (
       <ScrollView contentContainerStyle={s.container} keyboardShouldPersistTaps="handled">
-        <Pill label="SIGN IN" tone="good" />
-        <Text style={s.hero}>Welcome back.</Text>
-        <Text style={s.copy}>Use the same email and password as the web app.</Text>
+        <Pill label={t("auth.signInPill")} tone="good" />
+        <Text style={s.hero}>{t("auth.welcomeBack")}</Text>
+        <Text style={s.copy}>{t("auth.useSamePassword")}</Text>
 
         <View style={{ gap: spacing.md, marginTop: spacing.lg }}>
           <View>
-            <Text style={s.label}>Email</Text>
+            <Text style={s.label}>{t("auth.email")}</Text>
             <TextInput
               style={s.input}
               autoCapitalize="none"
@@ -58,7 +61,7 @@ export function LoginScreen({ onOpen }: { onOpen: (s: "owner" | "employee") => v
             />
           </View>
           <View>
-            <Text style={s.label}>Password</Text>
+            <Text style={s.label}>{t("auth.password")}</Text>
             <TextInput
               style={s.input}
               secureTextEntry
@@ -77,11 +80,11 @@ export function LoginScreen({ onOpen }: { onOpen: (s: "owner" | "employee") => v
           ) : null}
 
           <Button
-            title={submitting ? "Signing in…" : "Sign in"}
+            title={submitting ? t("auth.signingIn") : t("auth.signIn")}
             onPress={signIn}
             disabled={submitting}
           />
-          <Button title="Back" variant="secondary" onPress={() => setMode("intro")} />
+          <Button title={t("common.back")} variant="secondary" onPress={() => setMode("intro")} />
         </View>
       </ScrollView>
     );
@@ -89,21 +92,19 @@ export function LoginScreen({ onOpen }: { onOpen: (s: "owner" | "employee") => v
 
   return (
     <ScrollView contentContainerStyle={s.container} keyboardShouldPersistTaps="handled">
-      <Pill label="MOBILE PILOT" tone="good" />
+      <Pill label={t("mobile.pilotPill")} tone="good" />
       <Text style={s.hero}>
-        Close the store <Text style={{ color: colors.leaf }}>from your phone.</Text>
+        {t("mobile.hero")} <Text style={{ color: colors.leaf }}>{t("mobile.heroAccent")}</Text>
       </Text>
-      <Text style={s.copy}>
-        Owners see sales, closed stores, and missing cash. Employees follow one simple step at a time.
-      </Text>
+      <Text style={s.copy}>{t("mobile.copy")}</Text>
 
       <View style={s.features}>
         {FEATURES.map((f) => (
-          <View key={f.title} style={s.feature}>
+          <View key={f.titleKey} style={s.feature}>
             <Text style={s.featureIcon}>{f.icon}</Text>
             <View style={{ flex: 1 }}>
-              <Text style={s.featureTitle}>{f.title}</Text>
-              <Text style={s.featureBody}>{f.body}</Text>
+              <Text style={s.featureTitle}>{t(f.titleKey)}</Text>
+              <Text style={s.featureBody}>{t(f.bodyKey)}</Text>
             </View>
           </View>
         ))}
@@ -111,18 +112,15 @@ export function LoginScreen({ onOpen }: { onOpen: (s: "owner" | "employee") => v
 
       <View style={{ gap: spacing.md, marginTop: spacing.lg }}>
         {supabase ? (
-          <Button title="Sign in" onPress={() => setMode("signin")} />
+          <Button title={t("auth.signIn")} onPress={() => setMode("signin")} />
         ) : (
           <View style={s.errorBox}>
-            <Text style={s.errorText}>
-              This build is missing its API and Supabase configuration. Reinstall
-              the official release or contact your administrator.
-            </Text>
+            <Text style={s.errorText}>{t("auth.buildMisconfigured")}</Text>
           </View>
         )}
       </View>
 
-      <Text style={s.legal}>By continuing you agree to the Terms and Privacy Policy.</Text>
+      <Text style={s.legal}>{t("auth.termsAcceptance")}</Text>
       {submitting ? <ActivityIndicator style={{ marginTop: 12 }} /> : null}
     </ScrollView>
   );

@@ -60,24 +60,26 @@ export function OwnerScreen({ onBack }: { onBack: () => void }) {
 
   return (
     <View style={{ flex: 1 }}>
-      <Header title="Today's Store Close" subtitle={today} onBack={onBack} />
+      <Header title={t("dashboard.title")} subtitle={today} onBack={onBack} />
       <ScrollView contentContainerStyle={s.content}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <Pill label="LIVE" tone="good" />
+          <Pill label={t("dashboard.livePill")} tone="good" />
           <Text style={s.subhead}>
-            {session.profile?.name ? `Welcome, ${session.profile.name}` : "Welcome back"}
+            {session.profile?.name
+              ? `${t("dashboard.welcome")} ${session.profile.name}`
+              : `${t("dashboard.welcome")} ${t("dashboard.fallbackName")}`}
           </Text>
         </View>
 
         {loading ? (
           <View style={{ paddingVertical: spacing.lg, alignItems: "center" }}>
             <ActivityIndicator />
-            <Text style={[s.subhead, { marginTop: spacing.sm }]}>Loading today's data…</Text>
+            <Text style={[s.subhead, { marginTop: spacing.sm }]}>{t("dashboard.loadingToday")}</Text>
           </View>
         ) : null}
 
         {error ? (
-          <Banner tone="bad" title="Could not load dashboard" body={error} />
+          <Banner tone="bad" title={t("dashboard.loadFailed")} body={error} />
         ) : null}
 
         <View style={s.metricGrid}>
@@ -100,19 +102,19 @@ export function OwnerScreen({ onBack }: { onBack: () => void }) {
         </View>
 
         {summary.alerts.length > 0 ? (
-          <Banner tone="warn" title={summary.alerts[0].message} body="Call the store or remind the employee." />
+          <Banner tone="warn" title={summary.alerts[0].message} body={t("dashboard.callStore")} />
         ) : (
-          <Banner tone="good" title={t("dashboard.noMissedAlerts")} body="Every assigned store has reported in." />
+          <Banner tone="good" title={t("dashboard.noMissedAlerts")} body={t("dashboard.everyStoreReported")} />
         )}
 
         {shortage ? (
           <Banner
             tone="bad"
-            title={`${shortage.storeName} is short ${formatMoney(shortage.difference)}`}
-            body="Cash counted is lower than expected."
+            title={`${shortage.storeName} ${t("dashboard.isShort")} ${formatMoney(shortage.difference)}`}
+            body={t("dashboard.cashLower")}
           />
         ) : (
-          <Banner tone="good" title={t("dashboard.noCashShortage")} body="Counted cash matches expected for every store." />
+          <Banner tone="good" title={t("dashboard.noCashShortage")} body={t("dashboard.cashMatches")} />
         )}
 
         <Text style={s.sectionTitle}>{t("dashboard.storeComparison")}</Text>
