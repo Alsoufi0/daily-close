@@ -292,24 +292,4 @@ export class SupabaseAuthService {
 
     return { email, name, ownerId: user.owner!.id };
   }
-
-  async getDemoUser(role: "owner" | "employee" = "owner"): Promise<RequestUser> {
-    const user = await this.prisma.user.findFirst({
-      where: { email: role === "owner" ? "owner@demo.com" : "maya@demo.com" },
-      include: { owner: true, employee: { include: { store: true } } }
-    });
-
-    if (!user) throw new UnauthorizedException("Demo user has not been seeded.");
-
-    return {
-      id: user.id,
-      authUserId: user.authUserId,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      ownerId: user.owner?.id || user.employee?.store?.ownerId,
-      employeeId: user.employee?.id,
-      storeId: user.employee?.storeId
-    };
-  }
 }

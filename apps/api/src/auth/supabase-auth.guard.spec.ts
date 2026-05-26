@@ -10,28 +10,16 @@ function ctx(headers: Record<string, string | undefined>) {
 }
 
 describe("SupabaseAuthGuard", () => {
-  const originalEnv = process.env.ALLOW_DEMO_AUTH;
-
-  afterEach(() => {
-    process.env.ALLOW_DEMO_AUTH = originalEnv;
-  });
-
   it("throws Unauthorized when no bearer token is present", async () => {
-    delete process.env.ALLOW_DEMO_AUTH;
-    const authService = {
-      getUserFromToken: jest.fn(),
-      getDemoUser: jest.fn()
-    };
+    const authService = { getUserFromToken: jest.fn() };
     const guard = new SupabaseAuthGuard(authService as any);
     await expect(guard.canActivate(ctx({}) as any)).rejects.toThrow(UnauthorizedException);
   });
 
   it("calls auth.getUserFromToken when a bearer token is present", async () => {
-    delete process.env.ALLOW_DEMO_AUTH;
     const fakeUser = { id: "u-1", role: "STORE_OWNER" };
     const authService = {
-      getUserFromToken: jest.fn().mockResolvedValue(fakeUser),
-      getDemoUser: jest.fn()
+      getUserFromToken: jest.fn().mockResolvedValue(fakeUser)
     };
     const guard = new SupabaseAuthGuard(authService as any);
     const c = ctx({ authorization: "Bearer abc.def.ghi" }) as any;
@@ -40,30 +28,22 @@ describe("SupabaseAuthGuard", () => {
     expect(c.request.user).toBe(fakeUser);
   });
 
-  it("blocks demo-role header when ALLOW_DEMO_AUTH is not 'true'", async () => {
-    process.env.ALLOW_DEMO_AUTH = "false";
-    const authService = {
-      getUserFromToken: jest.fn(),
-      getDemoUser: jest.fn().mockResolvedValue({ id: "demo" })
-    };
+  it("ignores x-demo-role header entirely (demo backdoor was removed for security)", async () => {
+    const authService = { getUserFromToken: jest.fn() };
     const guard = new SupabaseAuthGuard(authService as any);
-    await expect(
-      guard.canActivate(ctx({ "x-demo-role": "owner" }) as any)
-    ).rejects.toThrow(UnauthorizedException);
-    expect(authService.getDemoUser).not.toHaveBeenCalled();
-  });
-
-  it("accepts demo-role header only when ALLOW_DEMO_AUTH is 'true'", async () => {
+    // Both with and without ALLOW_DEMO_AUTH set — should fail identically because
+    // the guard no longer reads that env var.
     process.env.ALLOW_DEMO_AUTH = "true";
-    const demoUser = { id: "demo-owner", role: "STORE_OWNER" };
-    const authService = {
-      getUserFromToken: jest.fn(),
-      getDemoUser: jest.fn().mockResolvedValue(demoUser)
-    };
-    const guard = new SupabaseAuthGuard(authService as any);
-    const c = ctx({ "x-demo-role": "owner" }) as any;
-    await expect(guard.canActivate(c)).resolves.toBe(true);
-    expect(authService.getDemoUser).toHaveBeenCalledWith("owner");
-    expect(c.request.user).toBe(demoUser);
+    try {
+      await expect(
+        guard.canActivate(ctx({ "x-demo-role": "owner" }) as any)
+      ).rejects.toThrow(UnauthorizedException);
+      await expect(
+        guard.canActivate(ctx({ "x-demo-role": "employee" }) as any)
+      ).rejects.toThrow(UnauthorizedException);
+    } finally {
+      delete process.env.ALLOW_DEMO_AUTH;
+    }
+    expect(authService.getUserFromToken).not.toHaveBeenCalled();
   });
 });

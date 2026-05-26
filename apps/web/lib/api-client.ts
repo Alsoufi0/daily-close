@@ -4,12 +4,18 @@ import type {
   ParsedPOSReport,
   SessionProfile
 } from "@smokeshop/shared/types";
-import { missedCloseAlert, scannedReport, stores } from "./mock-data";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
-export function hasProductionApi(): boolean {
-  return Boolean(apiUrl);
+if (!apiUrl && typeof window !== "undefined") {
+  // Fail closed in the browser if the API URL was not baked into the build.
+  // The old behaviour silently returned mock data here, which meant a broken
+  // env-var in a Vercel deploy showed fake numbers indistinguishable from
+  // real ones. Surfacing it as a hard runtime error is preferable.
+  // eslint-disable-next-line no-console
+  console.error(
+    "[FATAL] NEXT_PUBLIC_API_URL is not set. Configure it in Vercel before deploying."
+  );
 }
 
 export class ApiError extends Error {
@@ -49,28 +55,6 @@ async function apiFetch<T>(path: string, token?: string, init?: RequestInit): Pr
     throw new ApiError(response.status, extractApiErrorMessage(text, response.statusText));
   }
   return response.json() as Promise<T>;
-}
-
-export function getDemoDashboard(): OwnerDashboardSummary {
-  const missingCash = stores.reduce((sum, store) => sum + Math.min(store.difference, 0), 0);
-  return {
-    date: new Date().toISOString().slice(0, 10),
-    storesClosed: stores.filter((store) => store.closedToday).length,
-    totalStores: stores.length,
-    totalSales: stores.reduce((sum, store) => sum + store.totalSales, 0),
-    missingCash,
-    needsAttention: stores.filter((store) => !store.closedToday || store.difference < 0).length,
-    stores,
-    alerts: [
-      {
-        id: "demo-missed-close",
-        storeId: missedCloseAlert.storeId,
-        message: missedCloseAlert.message,
-        status: "PENDING",
-        createdAt: new Date().toISOString()
-      }
-    ]
-  };
 }
 
 export async function getProfile(token: string): Promise<SessionProfile> {
@@ -269,32 +253,17 @@ export interface HistoryRow {
   status: "CLOSED" | "SHORT" | "OVER" | "PENDING";
 }
 
-export async function getOwnerHistory(token: string | undefined, days = 7): Promise<HistoryRow[]> {
-  if (apiUrl && !token) throw new ApiError(401, "Please sign in to view history.");
-  if (!apiUrl) {
-    // Demo: synthesize 3 days of fake history
-    const today = new Date();
-    return [0, 1, 2].flatMap((offset) =>
-      ["Store #1", "Store #3"].map((name, i) => ({
-        id: `demo-${offset}-${i}`,
-        date: new Date(today.getTime() - offset * 86400000).toISOString().slice(0, 10),
-        storeId: `demo-${i}`,
-        storeName: name,
-        totalSales: 4500 - offset * 200 + i * 100,
-        cashSales: 1800 - offset * 80,
-        cardSales: 2700 - offset * 120,
-        difference: offset === 0 && i === 1 ? -40 : 0,
-        status: offset === 0 && i === 1 ? "SHORT" : "CLOSED"
-      }))
-    );
-  }
-  return apiFetch<HistoryRow[]>(`/dashboard/me/history?days=${days}`, token);
+function requireToken(token: string | undefined): string {
+  if (!token) throw new ApiError(401, "Please sign in.");
+  return token;
 }
 
-export async function getOwnerDashboard(token?: string): Promise<OwnerDashboardSummary> {
-  if (apiUrl && !token) throw new ApiError(401, "Please sign in to view the dashboard.");
-  if (!apiUrl) return getDemoDashboard();
-  return apiFetch<OwnerDashboardSummary>("/dashboard/me/today", token);
+export async function getOwnerHistory(token: string | undefined, days = 7): Promise<HistoryRow[]> {
+  return apiFetch<HistoryRow[]>(`/dashboard/me/history?days=${days}`, requireToken(token));
+}
+
+export async function getOwnerDashboard(token: string | undefined): Promise<OwnerDashboardSummary> {
+  return apiFetch<OwnerDashboardSummary>("/dashboard/me/today", requireToken(token));
 }
 
 export async function uploadReport(
@@ -302,68 +271,38 @@ export async function uploadReport(
   storeId: string,
   upload?: { imageUrl?: string; base64Data?: string; fileName: string; contentType: string }
 ): Promise<ParsedPOSReport & { imageUrl: string; rawText?: string }> {
-  if (apiUrl && !token) throw new ApiError(401, "Please sign in before uploading a report.");
-  if (!apiUrl || !token) return { ...scannedReport, imageUrl: upload?.imageUrl || "demo-report.jpg" };
-  return apiFetch<ParsedPOSReport & { imageUrl: string; rawText?: string }>("/daily-close/upload-report", token, {
-    method: "POST",
-    body: JSON.stringify({
-      storeId,
-      fileName: upload?.fileName || "pos-report.jpg",
-      contentType: upload?.contentType || "image/jpeg",
-      base64Data: upload?.base64Data,
-      imageUrl: upload?.imageUrl || "https://example.com/pos-report-demo.jpg"
-    })
-  });
+  return apiFetch<ParsedPOSReport & { imageUrl: string; rawText?: string }>(
+    "/daily-close/upload-report",
+    requireToken(token),
+    {
+      method: "POST",
+      body: JSON.stringify({
+        storeId,
+        fileName: upload?.fileName || "pos-report.jpg",
+        contentType: upload?.contentType || "image/jpeg",
+        base64Data: upload?.base64Data,
+        imageUrl: upload?.imageUrl || "https://example.com/pos-report-demo.jpg"
+      })
+    }
+  );
 }
 
 export async function finishDailyClose(token: string | undefined, input: DailyCloseInput) {
-  if (!apiUrl || !token) {
-    const expectedCash = input.cashSales - input.refunds - input.expenses;
-    const difference = input.countedCash + input.safeDropAmount - expectedCash;
-    return {
-      id: "demo-close",
-      expectedCash,
-      countedCash: input.countedCash,
-      difference,
-      status: difference < 0 ? "SHORT" : difference > 0 ? "OVER" : "CLOSED",
-      createdAt: new Date().toISOString()
-    };
-  }
-
-  return apiFetch("/daily-close/finish", token, {
+  return apiFetch("/daily-close/finish", requireToken(token), {
     method: "POST",
     body: JSON.stringify(input)
   });
 }
 
 export async function markNotificationRead(token: string, id: string): Promise<void> {
-  if (!apiUrl) return;
   await apiFetch(`/notifications/${id}/read`, token, { method: "PATCH" });
 }
 
 export async function downloadTodayCsv(token: string | undefined): Promise<Blob> {
-  if (apiUrl && !token) throw new ApiError(401, "Please sign in before exporting reports.");
-  if (!apiUrl) {
-    const summary = getDemoDashboard();
-    const date = summary.date;
-    const rows = summary.stores
-      .map((s) =>
-        [
-          date,
-          s.storeName,
-          s.closedToday ? "Closed" : "Pending",
-          s.totalSales.toFixed(2),
-          s.cashSales.toFixed(2),
-          s.cardSales.toFixed(2),
-          s.difference.toFixed(2)
-        ].join(",")
-      )
-      .join("\n");
-    const csv = `Date,Store,Status,Total Sales,Cash,Card,Cash Difference\n${rows}\n`;
-    return new Blob([csv], { type: "text/csv" });
-  }
+  requireToken(token);
+  if (!apiUrl) throw new ApiError(0, "API URL is not configured.");
   const response = await fetch(`${apiUrl}/reports/today.csv`, {
-    headers: { Authorization: `Bearer ${token}` }
+    headers: { Authorization: `Bearer ${token!}` }
   });
   if (!response.ok) throw new ApiError(response.status, response.statusText);
   return response.blob();
@@ -383,13 +322,14 @@ export async function downloadReport(
   type: "csv" | "pdf",
   filters: ReportExportFilters
 ): Promise<Blob> {
-  if (!apiUrl || !token) throw new ApiError(401, "Please sign in before exporting reports.");
+  requireToken(token);
+  if (!apiUrl) throw new ApiError(0, "API URL is not configured.");
   const params = new URLSearchParams();
   Object.entries(filters).forEach(([key, value]) => {
     if (value) params.set(key, value);
   });
   const response = await fetch(`${apiUrl}/reports/export.${type}?${params.toString()}`, {
-    headers: { Authorization: `Bearer ${token}` }
+    headers: { Authorization: `Bearer ${token!}` }
   });
   if (!response.ok) {
     const text = await response.text();

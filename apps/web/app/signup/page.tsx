@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Loader2, Sparkles, UserPlus } from "lucide-react";
 import { createBrowserSupabase } from "../../lib/supabase-browser";
-import { ApiError, bootstrapOwner, hasProductionApi, signupOwner } from "../../lib/api-client";
+import { ApiError, bootstrapOwner, signupOwner } from "../../lib/api-client";
 
 type Status = "idle" | "loading" | "needs_confirm" | "done" | "error";
 
@@ -35,28 +35,19 @@ export default function SignupPage() {
 
     let data;
     let error;
-    if (hasProductionApi()) {
-      try {
-        await signupOwner({ name, email, password });
-        const signIn = await supabase.auth.signInWithPassword({ email, password });
-        data = signIn.data;
-        error = signIn.error;
-      } catch (err) {
-        setStatus("error");
-        setMessage(err instanceof ApiError ? err.message : "Could not create your account.");
-        return;
-      }
-    } else {
-      const result = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { name, role: "STORE_OWNER" },
-          emailRedirectTo: `${window.location.origin}/setup`
-        }
-      });
-      data = result.data;
-      error = result.error;
+    try {
+      // Always provision through the server. The previous code branched on
+      // hasProductionApi() and fell through to a direct Supabase signup when
+      // the API URL was missing — which silently shipped an alternate auth
+      // path in any misconfigured build. There is now only one path.
+      await signupOwner({ name, email, password });
+      const signIn = await supabase.auth.signInWithPassword({ email, password });
+      data = signIn.data;
+      error = signIn.error;
+    } catch (err) {
+      setStatus("error");
+      setMessage(err instanceof ApiError ? err.message : "Could not create your account.");
+      return;
     }
 
     if (error) {

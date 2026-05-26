@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
 import { formatMoney } from "@smokeshop/shared/utils/money";
 import type { OwnerDashboardSummary } from "@smokeshop/shared/types";
-import { demoDashboard, getOwnerDashboard } from "../api";
+import { getOwnerDashboard } from "../api";
 import { useSession } from "../use-session";
 import { Banner, Card, Header, MetricCard, Pill } from "../ui";
 import { colors, font, radius, spacing } from "../theme";
@@ -14,20 +14,41 @@ const today = new Date().toLocaleDateString(undefined, {
   day: "numeric"
 });
 
+const EMPTY_SUMMARY: OwnerDashboardSummary = {
+  date: new Date().toISOString().slice(0, 10),
+  storesClosed: 0,
+  totalStores: 0,
+  totalSales: 0,
+  missingCash: 0,
+  needsAttention: 0,
+  stores: [],
+  alerts: []
+};
+
 export function OwnerScreen({ onBack }: { onBack: () => void }) {
   const session = useSession();
-  const [summary, setSummary] = useState<OwnerDashboardSummary>(demoDashboard());
-  const [mode, setMode] = useState<"Demo data" | "Production data">("Demo data");
+  const [summary, setSummary] = useState<OwnerDashboardSummary>(EMPTY_SUMMARY);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     getOwnerDashboard()
       .then((data) => {
+        if (cancelled) return;
         setSummary(data);
-        setMode(process.env.EXPO_PUBLIC_API_URL ? "Production data" : "Demo data");
+        setError(null);
       })
-      .catch(() => {
-        if (!process.env.EXPO_PUBLIC_API_URL) setSummary(demoDashboard());
+      .catch((err) => {
+        if (cancelled) return;
+        setError(err?.message || "Could not load dashboard.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
       });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const allClosed = summary.storesClosed === summary.totalStores;
@@ -42,11 +63,22 @@ export function OwnerScreen({ onBack }: { onBack: () => void }) {
       <Header title="Today's Store Close" subtitle={today} onBack={onBack} />
       <ScrollView contentContainerStyle={s.content}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <Pill label={mode.toUpperCase()} tone={mode === "Production data" ? "good" : "warn"} />
+          <Pill label="LIVE" tone="good" />
           <Text style={s.subhead}>
             {session.profile?.name ? `Welcome, ${session.profile.name}` : "Welcome back"}
           </Text>
         </View>
+
+        {loading ? (
+          <View style={{ paddingVertical: spacing.lg, alignItems: "center" }}>
+            <ActivityIndicator />
+            <Text style={[s.subhead, { marginTop: spacing.sm }]}>Loading today's data…</Text>
+          </View>
+        ) : null}
+
+        {error ? (
+          <Banner tone="bad" title="Could not load dashboard" body={error} />
+        ) : null}
 
         <View style={s.metricGrid}>
           <MetricCard label={t("dashboard.salesToday")} value={formatMoney(summary.totalSales)} />

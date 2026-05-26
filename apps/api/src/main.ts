@@ -3,6 +3,19 @@ import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { AppModule } from "./app.module";
 
+// Refuse to boot if the legacy ALLOW_DEMO_AUTH flag is set to anything. The
+// header-based demo backdoor it once enabled was removed because a single
+// env-var typo in any environment turned the entire API into an auth-free
+// surface. Failing closed at startup makes the regression impossible.
+if (process.env.ALLOW_DEMO_AUTH !== undefined && process.env.ALLOW_DEMO_AUTH !== "") {
+  // eslint-disable-next-line no-console
+  console.error(
+    "[FATAL] ALLOW_DEMO_AUTH is set. The demo-auth backdoor was removed for security. " +
+      "Unset this environment variable in every deployment and redeploy."
+  );
+  process.exit(1);
+}
+
 // Initialise Sentry as early as possible, but only when a DSN is configured.
 if (process.env.SENTRY_DSN) {
   // eslint-disable-next-line @typescript-eslint/no-var-requires

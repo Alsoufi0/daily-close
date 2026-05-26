@@ -10,6 +10,17 @@ import * as SecureStore from "expo-secure-store";
 const apiUrl = process.env.EXPO_PUBLIC_API_URL;
 const tokenKey = "dailyclose-token";
 
+if (!apiUrl) {
+  // Fail closed at module load — a build without EXPO_PUBLIC_API_URL used to
+  // silently fall through to hardcoded demo data, which let bad/missing env
+  // vars ship a fake-but-convincing UI to real users. We'd rather crash on the
+  // import than show fabricated numbers.
+  // eslint-disable-next-line no-console
+  console.error(
+    "[FATAL] EXPO_PUBLIC_API_URL is not set. Configure it in your EAS profile / Expo env before building."
+  );
+}
+
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
     super(message);
@@ -29,8 +40,8 @@ export async function clearToken() {
 }
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const token = await getToken();
   if (!apiUrl) throw new ApiError(0, "API URL is not configured.");
+  const token = await getToken();
   const response = await fetch(`${apiUrl}${path}`, {
     ...init,
     headers: {
@@ -51,67 +62,19 @@ export interface StoreRecord {
   storeName: string;
 }
 
-export async function getProfile(): Promise<SessionProfile | null> {
-  if (!apiUrl) return null;
-  try {
-    return await apiFetch<SessionProfile>("/auth/profile");
-  } catch {
-    return null;
-  }
+export async function getProfile(): Promise<SessionProfile> {
+  return apiFetch<SessionProfile>("/auth/profile");
 }
 
 export async function listStores(): Promise<StoreRecord[]> {
-  if (!apiUrl) return [];
-  try {
-    return await apiFetch<StoreRecord[]>("/stores");
-  } catch {
-    return [];
-  }
-}
-
-export function demoDashboard(): OwnerDashboardSummary {
-  return {
-    date: new Date().toISOString().slice(0, 10),
-    storesClosed: 2,
-    totalStores: 3,
-    totalSales: 8400,
-    missingCash: -40,
-    needsAttention: 2,
-    stores: [
-      { id: "store-1", storeName: "Store #1", closedToday: true, totalSales: 4500, cashSales: 1800, cardSales: 2700, difference: 5, timezone: "America/New_York", closeTime: "23:30", pastCloseTime: false },
-      { id: "store-2", storeName: "Store #2", closedToday: false, totalSales: 0, cashSales: 0, cardSales: 0, difference: 0, timezone: "America/New_York", closeTime: "22:00", pastCloseTime: true },
-      { id: "store-3", storeName: "Store #3", closedToday: true, totalSales: 3900, cashSales: 1500, cardSales: 2400, difference: -40, timezone: "America/Chicago", closeTime: "23:30", pastCloseTime: false }
-    ],
-    alerts: [
-      {
-        id: "alert-1",
-        storeId: "store-2",
-        message: "Store #2 has not completed closing yet.",
-        status: "PENDING",
-        createdAt: new Date().toISOString()
-      }
-    ]
-  };
+  return apiFetch<StoreRecord[]>("/stores");
 }
 
 export async function getOwnerDashboard(): Promise<OwnerDashboardSummary> {
-  if (!apiUrl) throw new ApiError(0, "API URL is not configured.");
   return apiFetch<OwnerDashboardSummary>("/dashboard/me/today");
 }
 
 export async function uploadReport(): Promise<ParsedPOSReport> {
-  if (!apiUrl) {
-    return {
-      parserType: "CLOVER",
-      cashSales: 2430,
-      cardSales: 3120,
-      totalSales: 5550,
-      tax: 412,
-      refunds: 0,
-      discounts: 35,
-      confidence: 0.97
-    };
-  }
   return apiFetch<ParsedPOSReport>("/daily-close/upload-report", {
     method: "POST",
     body: JSON.stringify({
@@ -124,7 +87,6 @@ export async function uploadReport(): Promise<ParsedPOSReport> {
 }
 
 export async function finishClose(input: DailyCloseInput) {
-  if (!apiUrl) return { ok: true };
   return apiFetch("/daily-close/finish", {
     method: "POST",
     body: JSON.stringify(input)
@@ -132,6 +94,5 @@ export async function finishClose(input: DailyCloseInput) {
 }
 
 export async function markNotificationRead(id: string) {
-  if (!apiUrl) return;
   return apiFetch(`/notifications/${id}/read`, { method: "PATCH" });
 }
