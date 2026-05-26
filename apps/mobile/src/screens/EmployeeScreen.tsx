@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -13,7 +13,7 @@ import {
 import * as ImagePicker from "expo-image-picker";
 import { formatMoney } from "@smokeshop/shared/utils/money";
 import type { ParsedPOSReport } from "@smokeshop/shared/types";
-import { ApiError, finishClose, uploadReport } from "../api";
+import { ApiError, finishClose, generateIdempotencyKey, uploadReport } from "../api";
 import { uploadMobilePosReport } from "../upload-pos-report";
 import { useSession } from "../use-session";
 import { Banner, Button, Card, Header, MetricCard, MoneyInput, StepProgress } from "../ui";
@@ -64,6 +64,13 @@ export function EmployeeScreen({ onBack }: { onBack: () => void }) {
   const [safeDrop, setSafeDrop] = useState("0");
   const [expenses, setExpenses] = useState("0");
   const [notes, setNotes] = useState("");
+
+  // One idempotency key per CLOSE ATTEMPT, not per submit call. Persists
+  // across re-renders, network retries, and the user tapping Submit again
+  // after a timeout — so the server can dedupe via the unique constraint on
+  // `daily_close.idempotency_key`. Reset in `reset()` when the user starts
+  // a fresh close.
+  const idempotencyKey = useRef(generateIdempotencyKey());
 
   const result = useMemo(() => {
     const expectedCash = report.cashSales - report.refunds - Number(expenses || 0);
@@ -130,21 +137,24 @@ export function EmployeeScreen({ onBack }: { onBack: () => void }) {
   async function submit() {
     setSubmitting(true);
     try {
-      await finishClose({
-        storeId: activeStore.id,
-        employeeId,
-        date: new Date().toISOString(),
-        cashSales: report.cashSales,
-        cardSales: report.cardSales,
-        totalSales: report.totalSales,
-        tax: report.tax,
-        refunds: report.refunds,
-        discounts: report.discounts,
-        countedCash: Number(cashCounted || 0),
-        safeDropAmount: Number(safeDrop || 0),
-        expenses: Number(expenses || 0),
-        notes
-      });
+      await finishClose(
+        {
+          storeId: activeStore.id,
+          employeeId,
+          date: new Date().toISOString(),
+          cashSales: report.cashSales,
+          cardSales: report.cardSales,
+          totalSales: report.totalSales,
+          tax: report.tax,
+          refunds: report.refunds,
+          discounts: report.discounts,
+          countedCash: Number(cashCounted || 0),
+          safeDropAmount: Number(safeDrop || 0),
+          expenses: Number(expenses || 0),
+          notes
+        },
+        idempotencyKey.current
+      );
       setStep("done");
     } catch (error: any) {
       if (error instanceof ApiError && error.status === 400 && /already.*closed/i.test(error.message)) {
@@ -160,6 +170,9 @@ export function EmployeeScreen({ onBack }: { onBack: () => void }) {
   function reset() {
     setStep("start");
     setReport(initialReport);
+    // Fresh key for the next close attempt — otherwise the server would
+    // return the previous close on the first submit of the new one.
+    idempotencyKey.current = generateIdempotencyKey();
   }
 
   return (

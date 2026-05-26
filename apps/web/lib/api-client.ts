@@ -52,7 +52,24 @@ async function apiFetch<T>(path: string, token?: string, init?: RequestInit): Pr
 
   if (!response.ok) {
     const text = await response.text();
-    throw new ApiError(response.status, extractApiErrorMessage(text, response.statusText));
+    const message = extractApiErrorMessage(text, response.statusText);
+
+    // 402 Payment Required → SubscriptionGuard rejected the call (audit fix
+    // #8). Redirect to /billing instead of showing a toast that the user has
+    // no obvious action to take from. Guarded so we don't loop while already
+    // on /billing, and so SSR/test environments still get a normal error.
+    if (
+      response.status === 402 &&
+      typeof window !== "undefined" &&
+      !window.location.pathname.startsWith("/billing")
+    ) {
+      window.location.replace("/billing?expired=1");
+      // The page is tearing down — return a never-resolving promise so the
+      // calling component doesn't briefly flash an error UI before nav.
+      return new Promise<T>(() => {});
+    }
+
+    throw new ApiError(response.status, message);
   }
   return response.json() as Promise<T>;
 }
