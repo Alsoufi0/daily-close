@@ -1,0 +1,43 @@
+name: test
+
+on:
+  push:
+    branches: [main, staging]
+  pull_request:
+    branches: [main, staging]
+
+# Cancel superseded runs on the same ref so a fast follow-up push doesn't
+# leave a stale run blocking merges.
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typecheck-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      # Prisma's generated client provides the strict types the API depends on.
+      # Without this, `npm run typecheck` for apps/api fails with TS7006 noise
+      # in repository / service files (parameters falling back to `any`).
+      - name: Generate Prisma client
+        run: npm run prisma:generate
+
+      - name: Typecheck (web + api + mobile)
+        run: npm run typecheck
+
+      - name: Test (API)
+        run: npm test --workspace apps/api
