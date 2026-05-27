@@ -31,6 +31,8 @@ operational tracker.
 | `3a8d7f7` | observability | `AllExceptionsFilter` — every 500 logs full stack to stdout so Render's log tail surfaces the actual cause. Optional Sentry capture. |
 | `47a7f98` (partner) | post-PDF | Moved `regenerator-runtime` to root dependency so Docker runtime stage carries it. |
 | `ac88a32` (partner) | upload 500 | OCR.space log sanitised — no longer dumps the entire base64 image to stdout (which was crashing the container). |
+| `a203301` | docs | This file (AUDIT_BACKLOG.md) created so audit progress isn't trapped in chat history. |
+| `e4922a1` (partner) | upload 500 round 2 | Owner-as-employee row now relinks instead of creating a duplicate. Was blocking uploads for any owner that had previously closed a different store (Employee.userId is UNIQUE, so the second create() crashed with 500). See "Known structural debt" section below for the long-term shape. |
 
 ---
 
@@ -70,6 +72,31 @@ operational tracker.
 ---
 
 ## ⚠️ Pending tactical / polish items
+
+### Owner-as-employee data model (newly discovered structural debt)
+- `daily_close.employee_id` is a NOT NULL foreign key to `employees`, so
+  when an OWNER closes a store (not an employee), the code synthesises a
+  fake employee row linking `user.id → store.id`.
+- `employee.user_id` is `UNIQUE`, so any given owner can have at most ONE
+  employee row at any time. Commit `e4922a1` works around this by
+  *relinking* the existing row's storeId when an owner closes a different
+  store than last time.
+- **What this papers over:**
+  - Race conditions when an owner closes two stores in parallel (two
+    relink updates collide)
+  - Audit trail oddities — historical daily_close rows still reference
+    the same employee.id, but if you query "what store is this employee
+    currently at?" you get the most recently closed one, not the historic
+    truth.
+  - Doesn't scale to franchise / district manager / multi-owner stores.
+- **The proper fix** lives inside audit item #9 (Organization layer)
+  below. Two clean options:
+  - Drop `UNIQUE` on `employee.user_id`. Allows multi-store employees.
+    Cheap migration today, structurally correct.
+  - Make `daily_close.employee_id` nullable + add `submitted_by_user_id`
+    so closes are owned by USERS, not by synthesised employee rows.
+    Cleaner conceptually, slightly bigger migration.
+- **Worth doing within a few weeks** — pairs naturally with #9.
 
 ### Architectural i18n rewrite
 - The `MutationObserver` + `phraseKeys` approach in `apps/web/components/language-provider.tsx` is fragile (audit #7.1). Every new string requires manual addition; whack-a-mole patches have happened twice already.
