@@ -14,7 +14,7 @@ import {
   Upload
 } from "lucide-react";
 import { clsx } from "clsx";
-import { formatMoney } from "@smokeshop/shared/utils/money";
+import { formatMoney, formatMoneyExact, toMoney } from "@smokeshop/shared/utils/money";
 import { scannedReport } from "../lib/mock-data";
 import { ApiError, finishDailyClose, uploadReport } from "../lib/api-client";
 import { preprocessReceipt } from "../lib/preprocess-image";
@@ -68,8 +68,12 @@ export function EmployeeClose() {
   const libraryInputRef = useRef<HTMLInputElement>(null);
 
   const result = useMemo(() => {
-    const expectedCash = Number(cashSales || 0) - Number(refunds || 0) - Number(expenses || 0);
-    const countedTotal = Number(cashCounted || 0) + Number(safeDrop || 0);
+    // toMoney parses strings like "1,169.27" / "$1169" / "1 169" safely.
+    // Pre-fix this used bare Number() which returns NaN on commas → falls
+    // through `|| 0` and silently zeros the field, producing a fake
+    // -$1,169 shortage when the register actually matched.
+    const expectedCash = toMoney(cashSales) - toMoney(refunds) - toMoney(expenses);
+    const countedTotal = toMoney(cashCounted) + toMoney(safeDrop);
     return { expectedCash, difference: countedTotal - expectedCash };
   }, [cashCounted, cashSales, expenses, refunds, safeDrop]);
 
@@ -122,15 +126,15 @@ export function EmployeeClose() {
         storeId: activeStore.id,
         employeeId,
         date: new Date().toISOString(),
-        cashSales: Number(cashSales || 0),
-        cardSales: Number(cardSales || 0),
-        totalSales: Number(totalSales || 0),
-        tax: Number(tax || 0),
-        refunds: Number(refunds || 0),
+        cashSales: toMoney(cashSales),
+        cardSales: toMoney(cardSales),
+        totalSales: toMoney(totalSales),
+        tax: toMoney(tax),
+        refunds: toMoney(refunds),
         discounts: scannedReport.discounts,
-        countedCash: Number(cashCounted || 0),
-        safeDropAmount: Number(safeDrop || 0),
-        expenses: Number(expenses || 0),
+        countedCash: toMoney(cashCounted),
+        safeDropAmount: toMoney(safeDrop),
+        expenses: toMoney(expenses),
         notes
       });
       setStep("finish");
@@ -362,10 +366,11 @@ export function EmployeeClose() {
               <MoneyInput label={t("closing.safeDrop")} value={safeDrop} onChange={setSafeDrop} />
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <MetricCard label={t("closing.expectedCash")} value={formatMoney(result.expectedCash)} />
+              {/* Cents always shown — see formatMoneyExact docstring. */}
+              <MetricCard label={t("closing.expectedCash")} value={formatMoneyExact(result.expectedCash)} />
               <MetricCard
                 label={t("closing.difference")}
-                value={formatMoney(result.difference)}
+                value={formatMoneyExact(result.difference)}
                 tone={result.difference < 0 ? "bad" : "good"}
               />
             </div>
@@ -416,7 +421,7 @@ export function EmployeeClose() {
             )}
             <h2 className="text-3xl font-black">
               {result.difference < 0
-                ? `${t("closing.cashShortage")}: ${formatMoney(result.difference)}`
+                ? `${t("closing.cashShortage")}: ${formatMoneyExact(result.difference)}`
                 : t("closing.success")}
             </h2>
             <p className="text-base font-bold text-ink/65">{t("closing.ownerUpdated")}</p>

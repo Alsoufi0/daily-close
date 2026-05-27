@@ -11,7 +11,7 @@ import {
   View
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import { formatMoney } from "@smokeshop/shared/utils/money";
+import { formatMoney, formatMoneyExact, toMoney } from "@smokeshop/shared/utils/money";
 import type { ParsedPOSReport } from "@smokeshop/shared/types";
 import { ApiError, finishClose, generateIdempotencyKey, uploadReport } from "../api";
 import { QueuedForRetryError } from "../outbox";
@@ -87,8 +87,14 @@ export function EmployeeScreen({ onBack }: { onBack: () => void }) {
   const [wasQueued, setWasQueued] = useState(false);
 
   const result = useMemo(() => {
-    const expectedCash = report.cashSales - report.refunds - Number(expenses || 0);
-    const difference = Number(cashCounted || 0) + Number(safeDrop || 0) - expectedCash;
+    // Robust parsing — see toMoney() docstring. Strips commas, currency
+    // symbols, NBSP, etc. before Number() so a paste of "1,169.27" or a
+    // value from an Android keyboard with a thousands separator doesn't
+    // silently collapse to 0 and turn a matched close into a massive
+    // fake shortage (the bug behind the "Difference -$1,169 when counted
+    // = 1169" report).
+    const expectedCash = report.cashSales - report.refunds - toMoney(expenses);
+    const difference = toMoney(cashCounted) + toMoney(safeDrop) - expectedCash;
     return { expectedCash, difference };
   }, [cashCounted, expenses, report.cashSales, report.refunds, safeDrop]);
 
@@ -209,9 +215,9 @@ export function EmployeeScreen({ onBack }: { onBack: () => void }) {
           tax: report.tax,
           refunds: report.refunds,
           discounts: report.discounts,
-          countedCash: Number(cashCounted || 0),
-          safeDropAmount: Number(safeDrop || 0),
-          expenses: Number(expenses || 0),
+          countedCash: toMoney(cashCounted),
+          safeDropAmount: toMoney(safeDrop),
+          expenses: toMoney(expenses),
           notes
         },
         idempotencyKey.current
@@ -356,10 +362,13 @@ export function EmployeeScreen({ onBack }: { onBack: () => void }) {
             <>
               <MoneyInput label={t("closing.cashCounted")} value={cashCounted} onChange={setCashCounted} />
               <MoneyInput label={t("closing.safeDrop")} value={safeDrop} onChange={setSafeDrop} />
-              <MetricCard label={t("closing.expectedCash")} value={formatMoney(result.expectedCash)} />
+              {/* Always show cents on Expected + Difference. formatMoney rounds
+                  to whole dollars which makes a -$0.27 shortage display as
+                  "-$0" and look benign; formatMoneyExact keeps the truth visible. */}
+              <MetricCard label={t("closing.expectedCash")} value={formatMoneyExact(result.expectedCash)} />
               <MetricCard
                 label={t("closing.difference")}
-                value={formatMoney(result.difference)}
+                value={formatMoneyExact(result.difference)}
                 tone={result.difference < 0 ? "bad" : "good"}
               />
               <Button title={t("closing.expenses")} onPress={() => setStep("expenses")} />
@@ -391,7 +400,7 @@ export function EmployeeScreen({ onBack }: { onBack: () => void }) {
                 {wasQueued
                   ? t("closing.queuedTitle")
                   : result.difference < 0
-                    ? `${t("closing.cashShortage")}: ${formatMoney(result.difference)}`
+                    ? `${t("closing.cashShortage")}: ${formatMoneyExact(result.difference)}`
                     : t("closing.success")}
               </Text>
               <Text style={s.helper}>

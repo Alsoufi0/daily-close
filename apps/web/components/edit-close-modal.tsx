@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Loader2, X } from "lucide-react";
-import { formatMoney } from "@smokeshop/shared/utils/money";
+import { formatMoneyExact } from "@smokeshop/shared/utils/money";
 import { ApiError, editDailyClose, HistoryRow } from "../lib/api-client";
 
 export function EditCloseModal({
@@ -72,7 +72,7 @@ export function EditCloseModal({
             <p className="text-xs font-black uppercase tracking-wide text-leaf">Edit close</p>
             <h2 className="text-xl font-black">{row.storeName} · {row.date}</h2>
             <p className="mt-1 text-xs font-bold text-ink/55">
-              Original difference: {formatMoney(row.difference)}
+              Original difference: {formatMoneyExact(row.difference)}
             </p>
           </div>
           <button

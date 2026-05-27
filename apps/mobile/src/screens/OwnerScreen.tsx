@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
-import { formatMoney } from "@smokeshop/shared/utils/money";
+import { formatMoney, formatMoneyExact } from "@smokeshop/shared/utils/money";
 import type { OwnerDashboardSummary } from "@smokeshop/shared/types";
 import { getOwnerDashboard } from "../api";
 import { useSession } from "../use-session";
@@ -91,7 +91,7 @@ export function OwnerScreen({ onBack }: { onBack: () => void }) {
           />
           <MetricCard
             label={t("dashboard.missingCash")}
-            value={formatMoney(summary.missingCash)}
+            value={formatMoneyExact(summary.missingCash)}
             tone={summary.missingCash < 0 ? "bad" : "good"}
           />
           <MetricCard
@@ -110,7 +110,7 @@ export function OwnerScreen({ onBack }: { onBack: () => void }) {
         {shortage ? (
           <Banner
             tone="bad"
-            title={`${shortage.storeName} ${t("dashboard.isShort")} ${formatMoney(shortage.difference)}`}
+            title={`${shortage.storeName} ${t("dashboard.isShort")} ${formatMoneyExact(shortage.difference)}`}
             body={t("dashboard.cashLower")}
           />
         ) : (
@@ -156,7 +156,7 @@ export function OwnerScreen({ onBack }: { onBack: () => void }) {
                 tone={diffTone}
                 title={
                   store.closedToday
-                    ? `Cash difference: ${formatMoney(store.difference)}`
+                    ? `Cash difference: ${formatMoneyExact(store.difference)}`
                     : needsClosing
                       ? "Closing needed"
                       : `Open - closes ${store.closeTime ?? "23:30"}`

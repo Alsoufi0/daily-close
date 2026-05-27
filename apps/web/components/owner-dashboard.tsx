@@ -10,7 +10,7 @@ import {
   X,
   XCircle
 } from "lucide-react";
-import { formatMoney } from "@smokeshop/shared/utils/money";
+import { formatMoney, formatMoneyExact } from "@smokeshop/shared/utils/money";
 import type { OwnerDashboardSummary } from "@smokeshop/shared/types";
 import {
   ApiError,
@@ -208,7 +208,7 @@ export function OwnerDashboard() {
         />
         <MetricCard
           label={t("dashboard.missingCash")}
-          value={formatMoney(summary.missingCash)}
+          value={formatMoneyExact(summary.missingCash)}
           tone={summary.missingCash < 0 ? "bad" : "good"}
         />
         <MetricCard
@@ -254,7 +254,7 @@ export function OwnerDashboard() {
             <XCircle size={26} aria-hidden className="mt-0.5" />
             <div className="space-y-0.5">
               <p className="text-lg font-black leading-snug">
-                {shortageStore.storeName} {t("dashboard.isShort")} {formatMoney(shortageStore.difference)}
+                {shortageStore.storeName} {t("dashboard.isShort")} {formatMoneyExact(shortageStore.difference)}
               </p>
               <p className="text-sm font-bold text-ink/65">{t("dashboard.cashLower")}</p>
             </div>
@@ -348,7 +348,7 @@ export function OwnerDashboard() {
                   >
                     <p className="text-sm font-black">
                       {store.closedToday
-                        ? `${t("dashboard.cashDifference")}: ${formatMoney(store.difference)}`
+                        ? `${t("dashboard.cashDifference")}: ${formatMoneyExact(store.difference)}`
                         : needsClosing
                         ? t("dashboard.closeNotSubmitted")
                         : `${t("dashboard.closeDueAt")} ${store.closeTime ?? "23:30"}`}

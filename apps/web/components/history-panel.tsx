@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { CalendarDays, Loader2, Pencil, Trash2, X } from "lucide-react";
 import { clsx } from "clsx";
-import { formatMoney } from "@smokeshop/shared/utils/money";
+import { formatMoney, formatMoneyExact } from "@smokeshop/shared/utils/money";
 import { deleteDailyClose, getOwnerHistory, HistoryRow } from "../lib/api-client";
 import { EditCloseModal } from "./edit-close-modal";
 
@@ -134,7 +134,7 @@ export function HistoryPanel({ token }: { token?: string }) {
                         r.difference < 0 ? "text-warning" : r.difference > 0 ? "text-leaf" : "text-ink/55"
                       )}
                     >
-                      {formatMoney(r.difference)}
+                      {formatMoneyExact(r.difference)}
                     </td>
                     <td className="px-4 py-2.5">
                       <StatusPill status={r.status} />
@@ -187,7 +187,7 @@ export function HistoryPanel({ token }: { token?: string }) {
                         r.difference < 0 ? "text-warning" : r.difference > 0 ? "text-leaf" : "text-ink/55"
                       )}
                     >
-                      {formatMoney(r.difference)}
+                      {formatMoneyExact(r.difference)}
                     </p>
                   </div>
                 </div>
