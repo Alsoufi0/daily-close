@@ -1,5 +1,7 @@
 import { ForbiddenException, Injectable } from "@nestjs/common";
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { PDFDocument, rgb } from "pdf-lib";
+import fontkit from "@pdf-lib/fontkit";
+import { loadFontsForLang } from "./pdf-fonts";
 import { RequestUser } from "../auth/request-user";
 import { DashboardService } from "../dashboard/dashboard.service";
 import { PrismaService } from "../prisma/prisma.service";
@@ -294,16 +296,22 @@ export class ReportsService {
   }
 
   private pdfText(value: string) {
-    // Standard PDF fonts are Latin-only. Keep PDF generation from failing for
-    // stores/notes in unsupported scripts while CSV preserves full UTF-8.
-    return value.replace(/[^\x20-\x7EÀ-ÿ]/g, "?");
+    // Pre-fix this stripped every non-Latin codepoint to "?" because the
+    // PDF was rendered with Helvetica (Latin-only). Now that we embed
+    // locale-aware Noto fonts via pdf-fonts.ts, the full Unicode payload
+    // can be drawn directly. This pass-through stays as a defensive
+    // helper in case a string ever needs sanitising (e.g. control chars).
+    return value;
   }
 
   async buildPdf(user: RequestUser, query: ReportQueryDto): Promise<Uint8Array> {
     const { rows, range, lang } = await this.buildRows(user, query);
     const pdf = await PDFDocument.create();
-    const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
-    const regular = await pdf.embedFont(StandardFonts.Helvetica);
+    // Register fontkit so pdf-lib accepts TTF buffers (Noto Sans variants).
+    // Without this, embedFont(buffer) would throw — pdf-lib's built-in
+    // embedding only supports the 14 standard PDF fonts.
+    pdf.registerFontkit(fontkit);
+    const { regular, bold } = await loadFontsForLang(pdf, lang);
     const margin = 42;
     const pageWidth = 612;
     const pageHeight = 792;

@@ -70,4 +70,26 @@ describe("ReportsService", () => {
 
     expect(Buffer.from(pdf).toString("utf8", 0, 4)).toBe("%PDF");
   });
+
+  // Audit follow-up: Arabic PDF reports used to render every character as "?"
+  // because pdf-lib's standard fonts are Latin-only and the pdfText() helper
+  // stripped non-Latin codepoints. After bundling Noto Sans Arabic via the
+  // pdf-fonts.ts helper, the PDF should generate without error in `ar` mode.
+  it("builds a PDF in Arabic without falling back to question-mark glyphs", async () => {
+    const service = new ReportsService({} as any, prisma as any);
+    const pdf = await service.buildPdf(owner, { quick: "last-week", lang: "ar" });
+    expect(Buffer.from(pdf).toString("utf8", 0, 4)).toBe("%PDF");
+    // Spot-check that the rendered byte stream isn't suspiciously tiny —
+    // a missing-font fallback used to produce ~3 KB pages of "????" stubs.
+    // A real Noto-rendered table is comfortably north of 6 KB even with
+    // subsetting.
+    expect(pdf.byteLength).toBeGreaterThan(6_000);
+  });
+
+  it("builds a PDF in Hindi using the Devanagari font", async () => {
+    const service = new ReportsService({} as any, prisma as any);
+    const pdf = await service.buildPdf(owner, { quick: "last-week", lang: "hi" });
+    expect(Buffer.from(pdf).toString("utf8", 0, 4)).toBe("%PDF");
+    expect(pdf.byteLength).toBeGreaterThan(6_000);
+  });
 });

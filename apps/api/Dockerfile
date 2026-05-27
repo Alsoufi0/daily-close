@@ -31,6 +31,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-cert
 COPY --from=build /repo/node_modules /app/node_modules
 COPY --from=build /repo/apps/api/dist /app/dist
 COPY --from=build /repo/apps/api/package.json /app/package.json
+COPY --from=build /repo/apps/api/assets /app/assets
 COPY --from=build /repo/shared /app/shared
 COPY --from=build /repo/database /app/database
 
