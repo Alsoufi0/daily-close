@@ -180,7 +180,35 @@ const phraseKeys: Record<string, string> = {
   "Free trial": "billing.freeTrial",
   "Active": "billing.active",
   "Edit close": "history.editClose",
-  "Delete close": "history.deleteClose"
+  "Delete close": "history.deleteClose",
+
+  // === added 2026-05-27 (second sweep — /setup + /billing pages) ===
+  "Done": "common.done",
+  "Language": "common.language",
+  // setup
+  "Two quick steps to get your first store closing tonight.": "setup.subtitle",
+  "Create your first store": "setup.createFirstStore",
+  "Used to send a missed-close alert if no one submits by this time.": "setup.closeTimeHelp",
+  "Creating…": "setup.creating",
+  "Invite your first employee": "setup.inviteFirstEmployee",
+  "They'll get an email with a sign-in link. You can do this later from the Employees page.": "setup.inviteHelp",
+  "Skip for now": "setup.skipForNow",
+  "Sending…": "setup.sending",
+  "Send invite": "setup.sendInvite",
+  "You're set up.": "setup.setupDone",
+  "Open the owner dashboard to see tonight's close as it happens.": "setup.dashHelp",
+  "Go to dashboard": "setup.goToDashboard",
+  // billing
+  "Your subscription": "billing.yourSubscription",
+  "$29 per store, per month. Billed monthly. Cancel anytime.": "billing.tagline",
+  "Trial ends today.": "billing.trialEndsToday",
+  "Standard plan": "billing.standardPlan",
+  "Employees finish closing from their phone.": "billing.featureCloseBody",
+  "See sales, missing cash, alerts — all in one screen.": "billing.featureMultiBody",
+  "Export every close for your accountant.": "billing.featureCsvBody",
+  "Starting…": "billing.starting",
+  "Manage billing": "billing.managePortal",
+  "Could not start checkout.": "billing.checkoutFailed"
 };
 
 const dynamicPhraseRules: Array<{
@@ -202,6 +230,23 @@ const dynamicPhraseRules: Array<{
   {
     match: /^(.+)\s+is short\s+(.+)$/i,
     render: (match, lang) => `${match[1]} ${translate(lang, "dashboard.isShort")} ${match[2]}`
+  },
+  // /setup hero: "Welcome." or "Welcome, {name}."
+  {
+    match: /^Welcome(?:,\s*(.+?))?\.$/,
+    render: (match, lang) =>
+      match[1]
+        ? `${translate(lang, "setup.welcome")}, ${match[1]}.`
+        : `${translate(lang, "setup.welcome")}.`
+  },
+  // /billing trial countdown: "1 day left in trial." / "12 days left in trial."
+  {
+    match: /^(\d+)\s+day\s+left\s+in\s+trial\.$/i,
+    render: (match, lang) => `${match[1]} ${translate(lang, "billing.dayLeftInTrial")}`
+  },
+  {
+    match: /^(\d+)\s+days\s+left\s+in\s+trial\.$/i,
+    render: (match, lang) => `${match[1]} ${translate(lang, "billing.daysLeftInTrial")}`
   }
 ];
 
