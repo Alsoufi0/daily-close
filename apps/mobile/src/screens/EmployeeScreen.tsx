@@ -14,6 +14,7 @@ import * as ImagePicker from "expo-image-picker";
 import { formatMoney } from "@smokeshop/shared/utils/money";
 import type { ParsedPOSReport } from "@smokeshop/shared/types";
 import { ApiError, finishClose, generateIdempotencyKey, uploadReport } from "../api";
+import { QueuedForRetryError } from "../outbox";
 import { clearDraft, loadDraft, saveDraft } from "../persistence";
 import { uploadMobilePosReport } from "../upload-pos-report";
 import { useSession } from "../use-session";
@@ -78,6 +79,11 @@ export function EmployeeScreen({ onBack }: { onBack: () => void }) {
   // tap doesn't lose the employee's work. Restored on cold start.
   const [restored, setRestored] = useState(false);
   const skipNextPersistRef = useRef(true); // skip the very first effect-driven persist (avoids clobbering before restore)
+
+  // Phase 2: if submit hit a network failure and got queued for retry,
+  // the "done" screen messaging changes — the close is committed locally
+  // but not yet acknowledged by the server.
+  const [wasQueued, setWasQueued] = useState(false);
 
   const result = useMemo(() => {
     const expectedCash = report.cashSales - report.refunds - Number(expenses || 0);
@@ -213,9 +219,19 @@ export function EmployeeScreen({ onBack }: { onBack: () => void }) {
       // doesn't restore the just-submitted close.
       await clearDraft();
       setRestored(false);
+      setWasQueued(false);
       setStep("done");
     } catch (error: any) {
-      if (error instanceof ApiError && error.status === 400 && /already.*closed/i.test(error.message)) {
+      if (error instanceof QueuedForRetryError) {
+        // Network failure — the close is safely persisted in the outbox
+        // (see api.ts:finishClose). It will replay automatically the next
+        // time the app opens online. Treat as a soft success: the
+        // employee's work isn't lost and they don't need to do anything.
+        await clearDraft();
+        setRestored(false);
+        setWasQueued(true);
+        setStep("done");
+      } else if (error instanceof ApiError && error.status === 400 && /already.*closed/i.test(error.message)) {
         setStep("blocked");
       } else {
         Alert.alert(t("closing.submitFailed"), error?.message || t("closing.submitFailedBody"));
@@ -366,13 +382,19 @@ export function EmployeeScreen({ onBack }: { onBack: () => void }) {
 
           {step === "done" ? (
             <View style={{ alignItems: "center", gap: spacing.md, paddingVertical: spacing.lg }}>
-              <Text style={s.doneIcon}>{result.difference < 0 ? "💵" : "✅"}</Text>
-              <Text style={s.doneTitle}>
-                {result.difference < 0
-                  ? `${t("closing.cashShortage")}: ${formatMoney(result.difference)}`
-                  : t("closing.success")}
+              <Text style={s.doneIcon}>
+                {wasQueued ? "📨" : result.difference < 0 ? "💵" : "✅"}
               </Text>
-              <Text style={s.helper}>{t("closing.ownerUpdated")}</Text>
+              <Text style={s.doneTitle}>
+                {wasQueued
+                  ? t("closing.queuedTitle")
+                  : result.difference < 0
+                    ? `${t("closing.cashShortage")}: ${formatMoney(result.difference)}`
+                    : t("closing.success")}
+              </Text>
+              <Text style={s.helper}>
+                {wasQueued ? t("closing.queuedBody") : t("closing.ownerUpdated")}
+              </Text>
               <Button title={t("closing.startOver")} onPress={reset} />
             </View>
           ) : null}

@@ -42,14 +42,22 @@ export async function clearToken() {
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   if (!apiUrl) throw new ApiError(0, "API URL is not configured.");
   const token = await getToken();
-  const response = await fetch(`${apiUrl}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...init?.headers
-    }
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${apiUrl}${path}`, {
+      ...init,
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...init?.headers
+      }
+    });
+  } catch (err: any) {
+    // fetch() itself rejected — network down, DNS failed, cert error, etc.
+    // Coerce to ApiError(0) so callers (and the outbox queue) can detect
+    // "this was an offline failure, queue it" vs. "real server response."
+    throw new ApiError(0, err?.message || "Network request failed.");
+  }
   if (!response.ok) {
     const text = await response.text();
     throw new ApiError(response.status, text || response.statusText);
@@ -100,12 +108,64 @@ export function generateIdempotencyKey(): string {
   return `dc-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
 }
 
+/**
+ * Heuristic: was this an offline / network-class failure (worth queueing)
+ * vs. a real server rejection (worth surfacing)?
+ *
+ * status 0 = `fetch` itself failed (TypeError "Network request failed").
+ * status 408 / 429 / 502 / 503 / 504 = retry-class server responses.
+ * Anything else (400, 401, 403, 422, 500-with-body) = real error, do not
+ * queue — the user needs to fix the input or sign in again.
+ */
+function isQueueableFailure(err: unknown): boolean {
+  if (!(err instanceof ApiError)) return false;
+  if (err.status === 0) return true;
+  return [408, 429, 502, 503, 504].includes(err.status);
+}
+
 export async function finishClose(input: DailyCloseInput, idempotencyKey?: string) {
   const key = idempotencyKey || generateIdempotencyKey();
-  return apiFetch("/daily-close/finish", {
-    method: "POST",
-    headers: { "Idempotency-Key": key },
-    body: JSON.stringify(input)
+  // Import lazily to avoid a circular dep with outbox.ts (outbox imports
+  // generateIdempotencyKey from this module).
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { enqueue, QueuedForRetryError } = require("./outbox") as typeof import("./outbox");
+  try {
+    return await apiFetch("/daily-close/finish", {
+      method: "POST",
+      headers: { "Idempotency-Key": key },
+      body: JSON.stringify(input)
+    });
+  } catch (err) {
+    if (isQueueableFailure(err)) {
+      // Offline / transient — persist for retry. The handler registered
+      // in registerOutboxHandlers() below will replay with the same key
+      // so the server dedupes.
+      const op = await enqueue({
+        type: "finishClose",
+        payload: { input, idempotencyKey: key }
+      });
+      throw new QueuedForRetryError(op.id);
+    }
+    throw err;
+  }
+}
+
+/**
+ * Wire the outbox queue's "finishClose" handler. Must be called once on app
+ * start (App.tsx does this) before the queue can drain. Kept here so the
+ * actual network call lives next to the rest of the API surface.
+ */
+export function registerOutboxHandlers() {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { registerHandler } = require("./outbox") as typeof import("./outbox");
+  registerHandler("finishClose", async (payload) => {
+    const typed = payload as { input: DailyCloseInput; idempotencyKey: string };
+    // No try/catch — let errors bubble up so the queue can retry.
+    await apiFetch("/daily-close/finish", {
+      method: "POST",
+      headers: { "Idempotency-Key": typed.idempotencyKey },
+      body: JSON.stringify(typed.input)
+    });
   });
 }
 
