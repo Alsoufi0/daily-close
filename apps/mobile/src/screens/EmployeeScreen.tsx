@@ -16,6 +16,7 @@ import type { ParsedPOSReport } from "@smokeshop/shared/types";
 import { ApiError, finishClose, generateIdempotencyKey, uploadReport } from "../api";
 import { QueuedForRetryError } from "../outbox";
 import { clearDraft, loadDraft, saveDraft } from "../persistence";
+import { OfflineBanner } from "../components/OfflineBanner";
 import { uploadMobilePosReport } from "../upload-pos-report";
 import { useSession } from "../use-session";
 import { Banner, Button, Card, Header, MetricCard, MoneyInput, StepProgress } from "../ui";
@@ -263,6 +264,7 @@ export function EmployeeScreen({ onBack }: { onBack: () => void }) {
         onBack={onBack}
       />
       <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
+        <OfflineBanner />
         {restored ? (
           <Banner tone="warn" title={t("closing.resumedTitle")} body={t("closing.resumedBody")} />
         ) : null}
