@@ -2,6 +2,7 @@ import { Logger, ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { AppModule } from "./app.module";
+import { AllExceptionsFilter } from "./common/all-exceptions.filter";
 
 // Refuse to boot if the legacy ALLOW_DEMO_AUTH flag is set to a TRUTHY value.
 // The header-based demo backdoor it once enabled was removed because a single
@@ -101,6 +102,10 @@ async function bootstrap() {
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
   });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  // Global exception filter — guarantees every 500 lands in stdout with a
+  // full stack trace so Render's log tail surfaces the actual cause.
+  // See apps/api/src/common/all-exceptions.filter.ts for details.
+  app.useGlobalFilters(new AllExceptionsFilter());
   app.enableShutdownHooks();
 
   const enableSwagger = process.env.ENABLE_SWAGGER === "true" || process.env.NODE_ENV !== "production";
