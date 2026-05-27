@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -14,6 +14,7 @@ import * as ImagePicker from "expo-image-picker";
 import { formatMoney } from "@smokeshop/shared/utils/money";
 import type { ParsedPOSReport } from "@smokeshop/shared/types";
 import { ApiError, finishClose, generateIdempotencyKey, uploadReport } from "../api";
+import { clearDraft, loadDraft, saveDraft } from "../persistence";
 import { uploadMobilePosReport } from "../upload-pos-report";
 import { useSession } from "../use-session";
 import { Banner, Button, Card, Header, MetricCard, MoneyInput, StepProgress } from "../ui";
@@ -72,6 +73,12 @@ export function EmployeeScreen({ onBack }: { onBack: () => void }) {
   // a fresh close.
   const idempotencyKey = useRef(generateIdempotencyKey());
 
+  // Offline persistence (audit fix #5 phase 1). Mirror the in-progress
+  // close to AsyncStorage so a phone restart / app kill / accidental Home
+  // tap doesn't lose the employee's work. Restored on cold start.
+  const [restored, setRestored] = useState(false);
+  const skipNextPersistRef = useRef(true); // skip the very first effect-driven persist (avoids clobbering before restore)
+
   const result = useMemo(() => {
     const expectedCash = report.cashSales - report.refunds - Number(expenses || 0);
     const difference = Number(cashCounted || 0) + Number(safeDrop || 0) - expectedCash;
@@ -86,6 +93,53 @@ export function EmployeeScreen({ onBack }: { onBack: () => void }) {
     ? { id: session.profile.storeId, storeName: "My Store" }
     : { id: "store-1", storeName: "Store #1" });
   const employeeId = session.profile?.employeeId ?? "employee-maya";
+
+  // Restore in-progress close from AsyncStorage on cold start. Only restore
+  // drafts for the SAME store the employee is now assigned to (otherwise
+  // the saved cashSales / expenses would land in the wrong store).
+  useEffect(() => {
+    let cancelled = false;
+    loadDraft().then((draft) => {
+      if (cancelled || !draft) return;
+      if (draft.storeId !== activeStore.id) {
+        // Different store — discard (employee re-assigned, or test data).
+        clearDraft();
+        return;
+      }
+      setStep(draft.step);
+      setReport(draft.report);
+      setCashCounted(draft.cashCounted);
+      setSafeDrop(draft.safeDrop);
+      setExpenses(draft.expenses);
+      setNotes(draft.notes);
+      idempotencyKey.current = draft.idempotencyKey;
+      setRestored(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeStore.id]);
+
+  // Persist on every meaningful change. Skip the initial render so we don't
+  // overwrite the draft we're about to restore. Skip "start" and "done"
+  // states — nothing to resume from those.
+  useEffect(() => {
+    if (skipNextPersistRef.current) {
+      skipNextPersistRef.current = false;
+      return;
+    }
+    if (step === "start" || step === "done" || step === "blocked") return;
+    saveDraft({
+      step,
+      storeId: activeStore.id,
+      report,
+      cashCounted,
+      safeDrop,
+      expenses,
+      notes,
+      idempotencyKey: idempotencyKey.current
+    });
+  }, [step, activeStore.id, report, cashCounted, safeDrop, expenses, notes]);
 
   async function pickImage(source: "camera" | "library") {
     setLoading(true);
@@ -155,6 +209,10 @@ export function EmployeeScreen({ onBack }: { onBack: () => void }) {
         },
         idempotencyKey.current
       );
+      // Close succeeded — purge the persisted draft so a fresh app open
+      // doesn't restore the just-submitted close.
+      await clearDraft();
+      setRestored(false);
       setStep("done");
     } catch (error: any) {
       if (error instanceof ApiError && error.status === 400 && /already.*closed/i.test(error.message)) {
@@ -170,9 +228,15 @@ export function EmployeeScreen({ onBack }: { onBack: () => void }) {
   function reset() {
     setStep("start");
     setReport(initialReport);
+    setCashCounted("2390");
+    setSafeDrop("0");
+    setExpenses("0");
+    setNotes("");
     // Fresh key for the next close attempt — otherwise the server would
     // return the previous close on the first submit of the new one.
     idempotencyKey.current = generateIdempotencyKey();
+    setRestored(false);
+    clearDraft();
   }
 
   return (
@@ -183,6 +247,9 @@ export function EmployeeScreen({ onBack }: { onBack: () => void }) {
         onBack={onBack}
       />
       <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
+        {restored ? (
+          <Banner tone="warn" title={t("closing.resumedTitle")} body={t("closing.resumedBody")} />
+        ) : null}
         {step !== "start" && step !== "done" && step !== "blocked" ? (
           <StepProgress current={currentIndex} steps={STEPS.map((x) => t(x.labelKey))} />
         ) : null}

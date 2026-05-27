@@ -759,7 +759,9 @@ const supplementalTranslations: Record<Language, Dictionary> = {
     "billing.managePortal": "Manage billing",
     "billing.checkoutFailed": "Could not start checkout.",
     "common.close": "Close",
-    "common.cannotBeUndone": "This cannot be undone."
+    "common.cannotBeUndone": "This cannot be undone.",
+    "closing.resumedTitle": "Picked up where you left off",
+    "closing.resumedBody": "We saved your in-progress close. Review the numbers and finish when ready."
   },
   ar: {
     "common.back": "\u0631\u062c\u0648\u0639",
@@ -940,7 +942,9 @@ const supplementalTranslations: Record<Language, Dictionary> = {
     "billing.managePortal": "\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0641\u0648\u0627\u062a\u064a\u0631",
     "billing.checkoutFailed": "\u062a\u0639\u0630\u0631 \u0628\u062f\u0621 \u0627\u0644\u062f\u0641\u0639.",
     "common.close": "\u0625\u063a\u0644\u0627\u0642",
-    "common.cannotBeUndone": "\u0644\u0627 \u064a\u0645\u0643\u0646 \u0627\u0644\u062a\u0631\u0627\u062c\u0639 \u0639\u0646 \u0647\u0630\u0627."
+    "common.cannotBeUndone": "\u0644\u0627 \u064a\u0645\u0643\u0646 \u0627\u0644\u062a\u0631\u0627\u062c\u0639 \u0639\u0646 \u0647\u0630\u0627.",
+    "closing.resumedTitle": "\u062a\u0645 \u0627\u0633\u062a\u0626\u0646\u0627\u0641 \u0645\u0627 \u062a\u0648\u0642\u0641\u062a \u0639\u0646\u062f\u0647",
+    "closing.resumedBody": "\u062d\u0641\u0638\u0646\u0627 \u0627\u0644\u0625\u063a\u0644\u0627\u0642 \u0642\u064a\u062f \u0627\u0644\u062a\u0646\u0641\u064a\u0630. \u0631\u0627\u062c\u0639 \u0627\u0644\u0623\u0631\u0642\u0627\u0645 \u0648\u0623\u0646\u0647\u0650 \u0639\u0646\u062f \u0627\u0644\u062c\u0627\u0647\u0632\u064a\u0629."
   },
   es: {
     "common.back": "Atr\u00e1s",
@@ -1121,7 +1125,9 @@ const supplementalTranslations: Record<Language, Dictionary> = {
     "billing.managePortal": "Administrar facturación",
     "billing.checkoutFailed": "No se pudo iniciar el pago.",
     "common.close": "Cerrar",
-    "common.cannotBeUndone": "Esto no se puede deshacer."
+    "common.cannotBeUndone": "Esto no se puede deshacer.",
+    "closing.resumedTitle": "Continuamos donde lo dejaste",
+    "closing.resumedBody": "Guardamos tu cierre en progreso. Revisa los números y termina cuando estés listo."
   },
   hi: {
     "common.back": "\u0935\u093e\u092a\u0938",
@@ -1302,7 +1308,9 @@ const supplementalTranslations: Record<Language, Dictionary> = {
     "billing.managePortal": "\u092c\u093f\u0932\u093f\u0902\u0917 \u092a\u094d\u0930\u092c\u0902\u0927\u093f\u0924 \u0915\u0930\u0947\u0902",
     "billing.checkoutFailed": "\u091a\u0947\u0915\u0906\u0909\u091f \u0936\u0941\u0930\u0942 \u0928\u0939\u0940\u0902 \u0939\u0941\u0906.",
     "common.close": "\u092c\u0902\u0926 \u0915\u0930\u0947\u0902",
-    "common.cannotBeUndone": "\u0907\u0938\u0947 \u0935\u093e\u092a\u0938 \u0928\u0939\u0940\u0902 \u0915\u093f\u092f\u093e \u091c\u093e \u0938\u0915\u0924\u093e."
+    "common.cannotBeUndone": "\u0907\u0938\u0947 \u0935\u093e\u092a\u0938 \u0928\u0939\u0940\u0902 \u0915\u093f\u092f\u093e \u091c\u093e \u0938\u0915\u0924\u093e.",
+    "closing.resumedTitle": "\u0935\u0939\u0940\u0902 \u0938\u0947 \u091c\u093e\u0930\u0940 \u0930\u0916\u093e \u091c\u0939\u093e\u0902 \u091b\u094b\u0921\u093c\u093e \u0925\u093e",
+    "closing.resumedBody": "\u0939\u092e\u0928\u0947 \u0906\u092a\u0915\u093e \u0905\u0927\u0942\u0930\u093e \u0915\u094d\u0932\u094b\u091c \u0938\u0947\u0935 \u0915\u0930 \u0932\u093f\u092f\u093e \u0939\u0948. \u0928\u0902\u092c\u0930 \u0926\u0947\u0916\u0947\u0902 \u0914\u0930 \u091c\u092c \u0924\u0948\u092f\u093e\u0930 \u0939\u094b\u0902 \u0924\u092c \u092a\u0942\u0930\u093e \u0915\u0930\u0947\u0902."
   }
 };
 
