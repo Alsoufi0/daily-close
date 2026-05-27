@@ -3,17 +3,27 @@ import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { AppModule } from "./app.module";
 
-// Refuse to boot if the legacy ALLOW_DEMO_AUTH flag is set to anything. The
-// header-based demo backdoor it once enabled was removed because a single
+// Refuse to boot if the legacy ALLOW_DEMO_AUTH flag is set to a TRUTHY value.
+// The header-based demo backdoor it once enabled was removed because a single
 // env-var typo in any environment turned the entire API into an auth-free
 // surface. Failing closed at startup makes the regression impossible.
-if (process.env.ALLOW_DEMO_AUTH !== undefined && process.env.ALLOW_DEMO_AUTH !== "") {
-  // eslint-disable-next-line no-console
-  console.error(
-    "[FATAL] ALLOW_DEMO_AUTH is set. The demo-auth backdoor was removed for security. " +
-      "Unset this environment variable in every deployment and redeploy."
-  );
-  process.exit(1);
+//
+// Why only truthy (not "any value"): existing render.yaml setups predate the
+// removal and have ALLOW_DEMO_AUTH=false sitting in env-vars as documentation.
+// That's harmless — the actual backdoor code is gone — so we tolerate it.
+// Anything that would have flipped the bypass on (true / 1 / yes) still
+// crashes the boot loudly.
+{
+  const v = (process.env.ALLOW_DEMO_AUTH || "").toLowerCase().trim();
+  if (v === "true" || v === "1" || v === "yes" || v === "on") {
+    // eslint-disable-next-line no-console
+    console.error(
+      "[FATAL] ALLOW_DEMO_AUTH is set to a truthy value. The demo-auth " +
+        "backdoor was removed for security. Set the env var to 'false' " +
+        "or unset it entirely, then redeploy."
+    );
+    process.exit(1);
+  }
 }
 
 // Sentry is mandatory in production (audit fix #10). Running a SaaS blind to
