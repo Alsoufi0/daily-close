@@ -3,21 +3,25 @@
 import { useEffect } from "react";
 import { createBrowserSupabase } from "../lib/supabase-browser";
 
-const TOKEN_KEY = "dailyclose-token";
-
 /**
- * Mounted globally in the root layout. Does two things:
+ * Mounted globally in the root layout. Two jobs after the audit fix #2
+ * cookie migration:
  *
- * 1. Picks up the access_token from the URL hash after a Supabase email
- *    confirmation / magic-link redirect (Supabase sends ?#access_token=...
- *    on the redirect URL; the JS client's detectSessionInUrl reads it
- *    automatically the first time we call getSession()). Without this,
- *    a freshly-confirmed user lands on /setup with no token in localStorage
- *    and useSession bounces them to /?expired=1.
+ *   1. Picks up the access_token from the URL hash after a Supabase email
+ *      confirmation / magic-link redirect (Supabase sends ?#access_token=…
+ *      on the redirect URL; the JS client's detectSessionInUrl reads it
+ *      the first time we call getSession()). Without this, a freshly
+ *      confirmed user lands on /setup with no session and bounces to /.
  *
- * 2. Keeps localStorage["dailyclose-token"] in sync with the supabase
- *    session via onAuthStateChange so a fresh tab on the same browser
- *    works after token refresh.
+ *   2. Cleans the URL hash so the token isn't visible in the address bar
+ *      or copy-pasted into chat / bookmarks.
+ *
+ * What this NO LONGER does (vs. pre-#2):
+ *   - No more writing access_token to localStorage. Sessions live in
+ *     cookies now (managed by @supabase/ssr + the Next.js middleware in
+ *     apps/web/middleware.ts). The middleware silently refreshes them
+ *     on every request, so the in-tab onAuthStateChange listener that
+ *     used to mirror tokens into localStorage is gone.
  */
 export function AuthBootstrap() {
   useEffect(() => {
@@ -25,37 +29,22 @@ export function AuthBootstrap() {
     if (!supabase) return;
 
     let mounted = true;
-
     (async () => {
       try {
         const { data } = await supabase.auth.getSession();
         if (!mounted) return;
-        if (data.session?.access_token) {
-          window.localStorage.setItem(TOKEN_KEY, data.session.access_token);
-          // Clean #access_token=... off the URL so it isn't visible / shareable.
-          if (window.location.hash.includes("access_token")) {
-            const clean = window.location.pathname + window.location.search;
-            window.history.replaceState({}, "", clean);
-          }
+        // Strip #access_token=… from the URL after Supabase reads it.
+        if (data.session?.access_token && window.location.hash.includes("access_token")) {
+          const clean = window.location.pathname + window.location.search;
+          window.history.replaceState({}, "", clean);
         }
       } catch {
         /* ignore */
       }
     })();
 
-    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_OUT") {
-        window.localStorage.removeItem(TOKEN_KEY);
-        return;
-      }
-      if (session?.access_token) {
-        window.localStorage.setItem(TOKEN_KEY, session.access_token);
-      }
-    });
-
     return () => {
       mounted = false;
-      sub.subscription.unsubscribe();
     };
   }, []);
 

@@ -1,6 +1,7 @@
-import { Module } from "@nestjs/common";
+import { MiddlewareConsumer, Module, NestModule } from "@nestjs/common";
 import { APP_GUARD } from "@nestjs/core";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
+import { OriginCheckMiddleware } from "./common/origin-check.middleware";
 import { AuthModule } from "./auth/auth.module";
 import { DailyCloseModule } from "./daily-close/daily-close.module";
 import { DashboardModule } from "./dashboard/dashboard.module";
@@ -38,4 +39,11 @@ import { EmployeesModule } from "./employees/employees.module";
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }]
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    // Origin-check CSRF defense-in-depth on every route. The middleware
+    // itself skips safe methods, cron paths, and Stripe webhooks (which
+    // carry their own auth). See OriginCheckMiddleware for details.
+    consumer.apply(OriginCheckMiddleware).forRoutes("*");
+  }
+}

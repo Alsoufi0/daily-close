@@ -5,8 +5,6 @@ import type { SessionProfile } from "@smokeshop/shared/types";
 import { ApiError, bootstrapOwner, getProfile, listStores, StoreRecord } from "./api-client";
 import { createBrowserSupabase } from "./supabase-browser";
 
-const TOKEN_KEY = "dailyclose-token";
-
 export type SessionMode = "loading" | "production" | "demo";
 
 export interface Session {
@@ -18,23 +16,22 @@ export interface Session {
   signOut: () => Promise<void>;
 }
 
-function readToken(): string | undefined {
-  if (typeof window === "undefined") return undefined;
-  return window.localStorage.getItem(TOKEN_KEY) || undefined;
-}
-
-async function readVerifiedBrowserToken(): Promise<string | undefined> {
+/**
+ * Reads the current access_token from Supabase's session (audit fix #2).
+ *
+ * Pre-#2 this came from `localStorage["dailyclose-token"]`. That made the
+ * JWT readable by any XSS / browser extension / 3rd-party script. Now the
+ * source of truth is Supabase's cookie-backed session (refreshed by the
+ * Next.js middleware on every request, refresh-token stays httpOnly). We
+ * pull a fresh access_token in memory only when we need to make an API
+ * call.
+ */
+async function readSessionToken(): Promise<string | undefined> {
   if (typeof window === "undefined") return undefined;
   const supabase = createBrowserSupabase();
-  if (!supabase) return readToken();
+  if (!supabase) return undefined;
   const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token;
-  if (token) {
-    window.localStorage.setItem(TOKEN_KEY, token);
-    return token;
-  }
-  window.localStorage.removeItem(TOKEN_KEY);
-  return undefined;
+  return data.session?.access_token || undefined;
 }
 
 export function useSession(): Session {
@@ -52,11 +49,12 @@ export function useSession(): Session {
     }
 
     (async () => {
-      const stored = await readVerifiedBrowserToken();
+      const stored = await readSessionToken();
       if (cancelled) return;
       if (!stored) {
-        // No session: render unauthenticated state so RequireAuth-style guards
-        // bounce to the landing page. We never fabricate a demo profile here.
+        // No session: render unauthenticated state so RequireAuth-style
+        // guards bounce to the landing page. We never fabricate a demo
+        // profile here (the demo backdoor was removed in fix #2).
         setToken(undefined);
         setProfile(undefined);
         setMode("demo");
@@ -69,7 +67,7 @@ export function useSession(): Session {
         try {
           p = await getProfile(stored);
         } catch (err) {
-          // First-time Supabase user with no public.users row yet -> auto-bootstrap as owner
+          // First-time Supabase user with no public.users row yet → auto-bootstrap as owner
           if (err instanceof ApiError && err.status === 401 && /profile is not set up/i.test(err.message)) {
             p = await bootstrapOwner(stored);
           } else {
@@ -85,15 +83,18 @@ export function useSession(): Session {
         if (cancelled) return;
         // Only bounce on hard auth rejection (Supabase says token is bad / expired).
         // Transient failures (API cold start, network blip) keep the session and
-        // surface a banner instead — otherwise a slow Render dyno looks like an
-        // expired login to the user.
+        // surface a banner instead.
         const isApiErr = err instanceof ApiError;
         const isAuthReject =
           isApiErr &&
           err.status === 401 &&
           /(invalid session|invalid jwt|jwt expired|missing bearer)/i.test(err.message);
         if (isAuthReject) {
-          window.localStorage.removeItem(TOKEN_KEY);
+          // Cookie cleanup happens via Supabase signOut; just trigger it.
+          const supabase = createBrowserSupabase();
+          if (supabase) {
+            await supabase.auth.signOut().catch(() => {});
+          }
           setToken(undefined);
           setProfile(undefined);
           setMode("demo");
@@ -110,8 +111,9 @@ export function useSession(): Session {
     })();
 
     const onStoresChanged = () => {
-      const currentToken = readToken();
-      if (currentToken) reloadStores(currentToken);
+      readSessionToken().then((currentToken) => {
+        if (currentToken) reloadStores(currentToken);
+      });
     };
     window.addEventListener("dailyclose:stores-changed", onStoresChanged);
 
@@ -122,7 +124,6 @@ export function useSession(): Session {
   }, []);
 
   async function signOut() {
-    window.localStorage.removeItem(TOKEN_KEY);
     const supabase = createBrowserSupabase();
     if (supabase) {
       try {
