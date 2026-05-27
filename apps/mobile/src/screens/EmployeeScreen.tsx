@@ -213,16 +213,22 @@ export function EmployeeScreen({ onBack }: { onBack: () => void }) {
                   activeOpacity={0.85}
                   style={[s.uploadTile, { borderColor: colors.leaf, backgroundColor: colors.leafSoft }]}
                   onPress={() => pickImage("camera")}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("closing.takePhoto")}
+                  accessibilityHint={t("alerts.cameraNeededBody")}
                 >
-                  <Text style={[s.uploadIcon, { color: colors.leaf }]}>📷</Text>
+                  <Text style={[s.uploadIcon, { color: colors.leaf }]} accessible={false}>📷</Text>
                   <Text style={[s.uploadText, { color: colors.leaf }]}>{t("closing.takePhoto")}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   activeOpacity={0.85}
                   style={[s.uploadTile, { borderColor: colors.inputBorder, backgroundColor: colors.smoke }]}
                   onPress={() => pickImage("library")}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("closing.uploadReport")}
+                  accessibilityHint={t("alerts.photoNeededBody")}
                 >
-                  <Text style={[s.uploadIcon, { color: colors.ink }]}>📁</Text>
+                  <Text style={[s.uploadIcon, { color: colors.ink }]} accessible={false}>📁</Text>
                   <Text style={[s.uploadText, { color: colors.ink }]}>{t("closing.uploadReport")}</Text>
                 </TouchableOpacity>
               </View>

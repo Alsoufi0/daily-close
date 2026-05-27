@@ -208,7 +208,9 @@ const phraseKeys: Record<string, string> = {
   "Export every close for your accountant.": "billing.featureCsvBody",
   "Starting…": "billing.starting",
   "Manage billing": "billing.managePortal",
-  "Could not start checkout.": "billing.checkoutFailed"
+  "Could not start checkout.": "billing.checkoutFailed",
+  "Close": "common.close",
+  "This cannot be undone.": "common.cannotBeUndone"
 };
 
 const dynamicPhraseRules: Array<{

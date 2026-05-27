@@ -9,6 +9,7 @@ import {
   UnauthorizedException,
   UseGuards
 } from "@nestjs/common";
+import { Throttle } from "@nestjs/throttler";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import type { SessionProfile } from "@shared/types";
 import { CurrentUser } from "./current-user.decorator";
@@ -40,6 +41,7 @@ export class AuthController {
   // Creates public.users + owners rows if they don't exist yet.
   @Post("bootstrap-owner")
   @ApiBearerAuth()
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
   async bootstrapOwner(
     @Headers("authorization") authorization: string | undefined,
     @Body() body: { name?: string }
@@ -60,6 +62,9 @@ export class AuthController {
   }
 
   @Post("signup-owner")
+  // 5 signups per IP per minute — generous enough for a real user retrying
+  // a typo'd password, tight enough to block enumeration scripts.
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   async signupOwner(@Body() body: { email?: string; name?: string; password?: string }) {
     if (!body?.email) throw new BadRequestException("Email is required.");
     if (!body?.name) throw new BadRequestException("Name is required.");
@@ -83,6 +88,9 @@ export class AuthController {
    *     -d '{"email":"owner@example.com","name":"Alex","password":"optional"}'
    */
   @Post("admin-create-user")
+  // Even with the SETUP_ADMIN_KEY gate, a tight throttle keeps a leaked key
+  // from being weaponised for account spam.
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   async adminCreateUser(
     @Headers("x-setup-key") providedKey: string | undefined,
     @Body() body: { email?: string; name?: string; password?: string }

@@ -86,10 +86,13 @@ export function OwnerDashboard() {
       listStores(session.token).catch(() => {});
       listEmployees(session.token).catch(() => {});
     }
+    // Poll every 30s (was 15s — audit #9.1). The on-visible handler below
+    // gives an instant refresh when the user returns to the tab, so 30s
+    // doesn't make the dashboard feel stale; it just halves load on Render.
     timer = setInterval(() => {
       if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
       load(false);
-    }, 15_000);
+    }, 30_000);
 
     const onVisible = () => {
       if (typeof document !== "undefined" && document.visibilityState === "visible") load(false);

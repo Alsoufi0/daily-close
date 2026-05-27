@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { CalendarDays, Loader2, Pencil, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { CalendarDays, Loader2, Pencil, Trash2, X } from "lucide-react";
 import { clsx } from "clsx";
 import { formatMoney } from "@smokeshop/shared/utils/money";
 import { deleteDailyClose, getOwnerHistory, HistoryRow } from "../lib/api-client";
@@ -16,6 +16,9 @@ export function HistoryPanel({ token }: { token?: string }) {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<HistoryRow | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  // Audit fix #5: replaces window.confirm() with an accessible modal so
+  // mobile + keyboard users get a real dialog instead of a native prompt.
+  const [pendingDelete, setPendingDelete] = useState<HistoryRow | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -32,9 +35,16 @@ export function HistoryPanel({ token }: { token?: string }) {
   const totalSales = rows.reduce((sum, r) => sum + r.totalSales, 0);
   const totalShortage = rows.reduce((sum, r) => sum + Math.min(r.difference, 0), 0);
 
-  async function removeRow(row: HistoryRow) {
-    if (!token || !window.confirm(`Delete close for ${row.storeName} on ${row.date}?`)) return;
+  function requestDelete(row: HistoryRow) {
+    if (!token) return;
+    setPendingDelete(row);
+  }
+
+  async function confirmDelete() {
+    const row = pendingDelete;
+    if (!row || !token) return;
     setDeleting(row.id);
+    setPendingDelete(null);
     try {
       await deleteDailyClose(token, row.id);
       setRows((prev) => prev.filter((r) => r.id !== row.id));
@@ -138,7 +148,7 @@ export function HistoryPanel({ token }: { token?: string }) {
                         <Pencil size={14} />
                       </button>
                       <button
-                        onClick={() => removeRow(r)}
+                        onClick={() => requestDelete(r)}
                         disabled={deleting === r.id}
                         aria-label="Delete close"
                         className="focus-ring rounded-lg p-2 text-warning/70 hover:bg-red-50 hover:text-warning disabled:opacity-50"
@@ -185,7 +195,7 @@ export function HistoryPanel({ token }: { token?: string }) {
                   <button onClick={() => setEditing(r)} className="focus-ring flex-1 rounded-lg bg-ink px-3 py-2 text-sm font-black text-white">
                     Edit
                   </button>
-                  <button onClick={() => removeRow(r)} disabled={deleting === r.id} className="focus-ring flex-1 rounded-lg bg-red-50 px-3 py-2 text-sm font-black text-warning disabled:opacity-50">
+                  <button onClick={() => requestDelete(r)} disabled={deleting === r.id} className="focus-ring flex-1 rounded-lg bg-red-50 px-3 py-2 text-sm font-black text-warning disabled:opacity-50">
                     Delete
                   </button>
                 </div>
@@ -206,7 +216,84 @@ export function HistoryPanel({ token }: { token?: string }) {
           }
         />
       ) : null}
+
+      {pendingDelete ? (
+        <ConfirmDeleteModal
+          row={pendingDelete}
+          onCancel={() => setPendingDelete(null)}
+          onConfirm={confirmDelete}
+        />
+      ) : null}
     </section>
+  );
+}
+
+function ConfirmDeleteModal({
+  row,
+  onCancel,
+  onConfirm
+}: {
+  row: HistoryRow;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const confirmRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    confirmRef.current?.focus();
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onCancel();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onCancel]);
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="delete-confirm-title"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4"
+      onClick={onCancel}
+    >
+      <div
+        className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <h3 id="delete-confirm-title" className="text-lg font-black text-ink">
+            Delete close
+          </h3>
+          <button
+            type="button"
+            onClick={onCancel}
+            aria-label="Close"
+            className="focus-ring rounded-lg p-1 text-ink/40 hover:bg-smoke hover:text-ink"
+          >
+            <X size={18} />
+          </button>
+        </div>
+        <p className="mt-3 text-sm font-bold text-ink/65">
+          Delete the close for <strong className="text-ink">{row.storeName}</strong> on{" "}
+          <strong className="text-ink">{row.date}</strong>? This cannot be undone.
+        </p>
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="focus-ring h-10 rounded-lg border border-ink/15 bg-white px-4 text-sm font-black text-ink hover:bg-smoke"
+          >
+            Cancel
+          </button>
+          <button
+            ref={confirmRef}
+            type="button"
+            onClick={onConfirm}
+            className="focus-ring h-10 rounded-lg bg-warning px-4 text-sm font-black text-white hover:bg-warning/90"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

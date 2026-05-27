@@ -1,4 +1,6 @@
 import { Module } from "@nestjs/common";
+import { APP_GUARD } from "@nestjs/core";
+import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { AuthModule } from "./auth/auth.module";
 import { DailyCloseModule } from "./daily-close/daily-close.module";
 import { DashboardModule } from "./dashboard/dashboard.module";
@@ -15,6 +17,11 @@ import { EmployeesModule } from "./employees/employees.module";
 
 @Module({
   imports: [
+    // Global rate-limit baseline (audit fix #5 / quick-wins bundle). A
+    // permissive default — 120 requests per IP per minute — protects against
+    // accidental loops and casual abuse without breaking normal dashboard
+    // polling. Auth endpoints layer a tighter per-route @Throttle() on top.
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
     PrismaModule,
     AuthModule,
     OcrModule,
@@ -28,6 +35,7 @@ import { EmployeesModule } from "./employees/employees.module";
     HealthModule,
     SubscriptionsModule,
     EmployeesModule
-  ]
+  ],
+  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }]
 })
 export class AppModule {}
