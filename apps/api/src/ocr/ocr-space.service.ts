@@ -78,9 +78,22 @@ export class OcrSpaceOCRService implements OCRService {
     }
 
     this.logger.log(
-      `OCR.space extracted ${bestText.length} chars from ${fileUrl} with score ${bestScore}`
+      `OCR.space extracted ${bestText.length} chars from ${this.describeImageSource(fileUrl)} with score ${bestScore}`
     );
     return bestText;
+  }
+
+  private describeImageSource(fileUrl: string): string {
+    if (fileUrl.startsWith("data:")) {
+      const mediaType = fileUrl.slice(5, fileUrl.indexOf(";") > 0 ? fileUrl.indexOf(";") : 40);
+      return `${mediaType || "data-url"} data URL (${fileUrl.length} chars)`;
+    }
+    try {
+      const url = new URL(fileUrl);
+      return `${url.protocol}//${url.host}${url.pathname}`;
+    } catch {
+      return fileUrl.length > 120 ? `${fileUrl.slice(0, 117)}...` : fileUrl;
+    }
   }
 
   private detectFileType(fileUrl: string): string {
