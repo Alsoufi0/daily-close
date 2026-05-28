@@ -246,7 +246,7 @@ describe("SmokeShop Daily Close system workflow", () => {
       {
         storeId: created.id,
         employeeId: employeeUser.employeeId!,
-        date: "2026-05-24T04:00:00.000Z",
+        date: "2026-05-24T17:00:00.000Z",
         cashSales: parsed.cashSales,
         cardSales: parsed.cardSales,
         totalSales: parsed.totalSales,
@@ -267,7 +267,7 @@ describe("SmokeShop Daily Close system workflow", () => {
         {
           storeId: created.id,
           employeeId: employeeUser.employeeId!,
-          date: "2026-05-24T04:30:00.000Z",
+          date: "2026-05-24T17:30:00.000Z",
           cashSales: 1,
           cardSales: 1,
           totalSales: 2,

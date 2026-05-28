@@ -266,6 +266,7 @@ export interface HistoryRow {
   totalSales: number;
   cashSales: number;
   cardSales: number;
+  countedCash: number;
   difference: number;
   status: "CLOSED" | "SHORT" | "OVER" | "PENDING";
 }

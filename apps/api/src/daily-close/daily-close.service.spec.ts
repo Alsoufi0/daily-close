@@ -299,7 +299,9 @@ describe("DailyCloseService.editClosing", () => {
     refunds: 50,
     discounts: 0,
     lottery: null,
+    expectedCash: 940,
     countedCash: 940,
+    difference: 0,
     expenses: 10,
     notes: "old"
   };
@@ -340,6 +342,30 @@ describe("DailyCloseService.editClosing", () => {
         userId: "user-owner",
         storeId: "store-1"
       })
+    );
+  });
+
+  it("preserves the original safe-drop amount when editing a close", async () => {
+    const targetWithSafeDrop = {
+      ...target,
+      expectedCash: 1000,
+      countedCash: 800,
+      difference: 0
+    };
+    const { service, repository } = makeService({ editTarget: targetWithSafeDrop });
+    const result = await service.editClosing(
+      "close-1",
+      { cashSales: 1100, countedCash: 900 },
+      ownerUser
+    );
+
+    // Existing safe drop = difference + expected - counted = 200.
+    // New expected = 1100 - 50 - 10 = 1040; 900 + 200 - 1040 = +60.
+    expect(result.difference).toBe(60);
+    expect(result.status).toBe("OVER");
+    expect(repository.updateClose).toHaveBeenCalledWith(
+      "close-1",
+      expect.objectContaining({ countedCash: 900, difference: 60, status: "OVER" })
     );
   });
 });

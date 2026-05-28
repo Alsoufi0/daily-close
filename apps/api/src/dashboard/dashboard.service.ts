@@ -47,7 +47,13 @@ export class DashboardService {
     const rawCloseMin = DashboardService.parseCloseTime(closeTime);
     const nowMin = DashboardService.minutesNowInTimezone(timezone, now);
 
-    return nowMin >= rawCloseMin;
+    // For late-night stores, the "close due" period continues just after
+    // midnight. A 23:30 close at 01:07 is still overdue for yesterday's
+    // business day, while 14:00 should not be considered overdue yet.
+    if (rawCloseMin >= 6 * 60) return nowMin >= rawCloseMin || nowMin < 6 * 60;
+    // Early-morning close times (00:00-05:59) belong to the previous business
+    // day only during the overnight period, not all afternoon.
+    return nowMin >= rawCloseMin && nowMin < 6 * 60;
   }
 
   // Returns the UTC instants spanning a store's *local* calendar day for `now`.
@@ -86,6 +92,22 @@ export class DashboardService {
     const startDayOffset = nowMin >= closeMin ? 0 : -1;
     const start = DashboardService.localDateTimeToUtc(timezone, parts, closeMin, startDayOffset);
     return { start, end: new Date(start.getTime() + 86_400_000 - 1) };
+  }
+
+  static storeBusinessDayRange(timezone: string, closeTime: string, now = new Date()): { start: Date; end: Date } {
+    const closeMin = DashboardService.parseCloseTime(closeTime);
+    const nowMin = DashboardService.minutesNowInTimezone(timezone, now);
+    const parts = DashboardService.localDateParts(timezone, now);
+    const overnight = nowMin < 6 * 60;
+    const belongsToPreviousDay =
+      overnight && (closeMin >= 6 * 60 || nowMin >= closeMin);
+    const localNoon = DashboardService.localDateTimeToUtc(
+      timezone,
+      parts,
+      12 * 60,
+      belongsToPreviousDay ? -1 : 0
+    );
+    return DashboardService.storeLocalDayRange(timezone, localNoon);
   }
 
   // Minutes the given zone is ahead of UTC (positive east of UTC). Computed
@@ -146,12 +168,10 @@ export class DashboardService {
     return stores.map((store) => {
       const tz = (store as any).timezone || "America/New_York";
       const closeTime = (store as any).closeTime || "23:30";
-      const closeWindow = DashboardService.storeCloseWindowRange(tz, closeTime, date);
-      const localDay = DashboardService.storeLocalDayRange(tz, date);
+      const businessDay = DashboardService.storeBusinessDayRange(tz, closeTime, date);
       const close = store.dailyCloses.find(
         (c: any) =>
-          (c.date >= closeWindow.start && c.date <= closeWindow.end) ||
-          (c.date >= localDay.start && c.date <= localDay.end)
+          c.date >= businessDay.start && c.date <= businessDay.end
       );
       return {
         id: store.id,
@@ -193,6 +213,7 @@ export class DashboardService {
       totalSales: Number(c.totalSales),
       cashSales: Number(c.cashSales),
       cardSales: Number(c.cardSales),
+      countedCash: Number(c.countedCash),
       difference: Number(c.difference),
       status: c.status
     }));

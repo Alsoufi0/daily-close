@@ -197,6 +197,9 @@ export class DailyCloseService {
     const existing = await this.repository.findByIdForOwner(id, user.ownerId);
     if (!existing) throw new NotFoundException("Close not found.");
 
+    const existingExpectedCash = Number(existing.expectedCash ?? (Number(existing.cashSales) - Number(existing.refunds) - Number(existing.expenses)));
+    const existingSafeDropAmount = Number(existing.difference ?? 0) + existingExpectedCash - Number(existing.countedCash);
+
     const merged = {
       cashSales: Number(patch.cashSales ?? existing.cashSales),
       cardSales: Number(patch.cardSales ?? existing.cardSales),
@@ -206,7 +209,7 @@ export class DailyCloseService {
       discounts: Number(patch.discounts ?? existing.discounts),
       lottery: patch.lottery !== undefined ? Number(patch.lottery) : existing.lottery ? Number(existing.lottery) : null,
       countedCash: Number(patch.countedCash ?? existing.countedCash),
-      safeDropAmount: Number(patch.safeDropAmount ?? 0),
+      safeDropAmount: Number(patch.safeDropAmount ?? existingSafeDropAmount),
       expenses: Number(patch.expenses ?? existing.expenses),
       notes: (patch.notes as string | undefined) ?? existing.notes ?? undefined
     };

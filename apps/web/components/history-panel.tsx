@@ -6,11 +6,13 @@ import { clsx } from "clsx";
 import { formatMoney, formatMoneyExact } from "@smokeshop/shared/utils/money";
 import { deleteDailyClose, getOwnerHistory, HistoryRow } from "../lib/api-client";
 import { EditCloseModal } from "./edit-close-modal";
+import { useLanguage } from "./language-provider";
 
 const ranges = [7, 14, 30] as const;
 type Range = typeof ranges[number];
 
 export function HistoryPanel({ token }: { token?: string }) {
+  const { t } = useLanguage();
   const [days, setDays] = useState<Range>(7);
   const [rows, setRows] = useState<HistoryRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,11 +81,11 @@ export function HistoryPanel({ token }: { token?: string }) {
       <div className="rounded-xl border border-ink/10 bg-white shadow-sm">
         <div className="grid grid-cols-2 gap-px overflow-hidden rounded-t-xl bg-ink/10 sm:grid-cols-3">
           <div className="bg-white p-4">
-            <p className="text-xs font-black uppercase tracking-wide text-ink/55">Total Sales</p>
+            <p className="text-xs font-black uppercase tracking-wide text-ink/55">{t("dashboard.totalSales")}</p>
             <p className="mt-1 text-2xl font-black">{formatMoney(totalSales)}</p>
           </div>
           <div className="bg-white p-4">
-            <p className="text-xs font-black uppercase tracking-wide text-ink/55">Shortages</p>
+            <p className="text-xs font-black uppercase tracking-wide text-ink/55">{t("dashboard.shortages")}</p>
             <p
               className={clsx(
                 "mt-1 text-2xl font-black",
@@ -94,7 +96,7 @@ export function HistoryPanel({ token }: { token?: string }) {
             </p>
           </div>
           <div className="bg-white p-4">
-            <p className="text-xs font-black uppercase tracking-wide text-ink/55">Closes</p>
+            <p className="text-xs font-black uppercase tracking-wide text-ink/55">{t("dashboard.closes")}</p>
             <p className="mt-1 text-2xl font-black">{rows.length}</p>
           </div>
         </div>
@@ -102,11 +104,11 @@ export function HistoryPanel({ token }: { token?: string }) {
         {loading ? (
           <div className="flex items-center justify-center gap-2 p-8 text-ink/55">
             <Loader2 className="animate-spin" size={18} aria-hidden />
-            <span className="text-sm font-bold">Loading history…</span>
+            <span className="text-sm font-bold">{t("history.loading")}</span>
           </div>
         ) : rows.length === 0 ? (
           <div className="p-8 text-center text-sm font-bold text-ink/55">
-            No closes recorded in this range yet.
+            {t("history.empty")}
           </div>
         ) : (
           <>
@@ -114,11 +116,11 @@ export function HistoryPanel({ token }: { token?: string }) {
             <table className="w-full text-left">
               <thead className="border-y border-ink/5 bg-smoke text-xs font-black uppercase tracking-wide text-ink/55">
                 <tr>
-                  <th className="px-4 py-2.5">Date</th>
-                  <th className="px-4 py-2.5">Store</th>
-                  <th className="px-4 py-2.5 text-right">Sales</th>
-                  <th className="px-4 py-2.5 text-right">Diff</th>
-                  <th className="px-4 py-2.5">Status</th>
+                  <th className="px-4 py-2.5">{t("reports.closeDate")}</th>
+                  <th className="px-4 py-2.5">{t("common.store")}</th>
+                  <th className="px-4 py-2.5 text-right">{t("common.sales")}</th>
+                  <th className="px-4 py-2.5 text-right">{t("closing.difference")}</th>
+                  <th className="px-4 py-2.5">{t("common.status")}</th>
                   <th className="px-2 py-2.5" />
                 </tr>
               </thead>
@@ -142,7 +144,7 @@ export function HistoryPanel({ token }: { token?: string }) {
                     <td className="px-2 py-2.5 text-right">
                       <button
                         onClick={() => setEditing(r)}
-                        aria-label="Edit close"
+                        aria-label={t("history.editClose")}
                         className="focus-ring rounded-lg p-2 text-ink/60 hover:bg-smoke hover:text-ink"
                       >
                         <Pencil size={14} />
@@ -150,7 +152,7 @@ export function HistoryPanel({ token }: { token?: string }) {
                       <button
                         onClick={() => requestDelete(r)}
                         disabled={deleting === r.id}
-                        aria-label="Delete close"
+                        aria-label={t("history.deleteClose")}
                         className="focus-ring rounded-lg p-2 text-warning/70 hover:bg-red-50 hover:text-warning disabled:opacity-50"
                       >
                         {deleting === r.id ? <Loader2 className="animate-spin" size={14} /> : <Trash2 size={14} />}
@@ -176,11 +178,11 @@ export function HistoryPanel({ token }: { token?: string }) {
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
                   <div className="rounded-lg bg-smoke p-3">
-                    <p className="text-xs font-black uppercase text-ink/55">Sales</p>
+                    <p className="text-xs font-black uppercase text-ink/55">{t("common.sales")}</p>
                     <p className="text-lg font-black">{formatMoney(r.totalSales)}</p>
                   </div>
                   <div className="rounded-lg bg-smoke p-3">
-                    <p className="text-xs font-black uppercase text-ink/55">Diff</p>
+                    <p className="text-xs font-black uppercase text-ink/55">{t("closing.difference")}</p>
                     <p
                       className={clsx(
                         "text-lg font-black",
@@ -237,6 +239,7 @@ function ConfirmDeleteModal({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const { t } = useLanguage();
   const confirmRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     confirmRef.current?.focus();
@@ -260,20 +263,21 @@ function ConfirmDeleteModal({
       >
         <div className="flex items-start justify-between gap-3">
           <h3 id="delete-confirm-title" className="text-lg font-black text-ink">
-            Delete close
+            {t("history.deleteClose")}
           </h3>
           <button
             type="button"
             onClick={onCancel}
-            aria-label="Close"
+            aria-label={t("common.close")}
             className="focus-ring rounded-lg p-1 text-ink/40 hover:bg-smoke hover:text-ink"
           >
             <X size={18} />
           </button>
         </div>
         <p className="mt-3 text-sm font-bold text-ink/65">
-          Delete the close for <strong className="text-ink">{row.storeName}</strong> on{" "}
-          <strong className="text-ink">{row.date}</strong>? This cannot be undone.
+          {t("history.deleteConfirm")
+            .replace("{store}", row.storeName)
+            .replace("{date}", row.date)}
         </p>
         <div className="mt-5 flex justify-end gap-2">
           <button
@@ -281,7 +285,7 @@ function ConfirmDeleteModal({
             onClick={onCancel}
             className="focus-ring h-10 rounded-lg border border-ink/15 bg-white px-4 text-sm font-black text-ink hover:bg-smoke"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             ref={confirmRef}
@@ -289,7 +293,7 @@ function ConfirmDeleteModal({
             onClick={onConfirm}
             className="focus-ring h-10 rounded-lg bg-warning px-4 text-sm font-black text-white hover:bg-warning/90"
           >
-            Delete
+            {t("common.delete")}
           </button>
         </div>
       </div>
@@ -298,11 +302,12 @@ function ConfirmDeleteModal({
 }
 
 function StatusPill({ status }: { status: HistoryRow["status"] }) {
+  const { t } = useLanguage();
   const map: Record<HistoryRow["status"], { label: string; cls: string }> = {
-    CLOSED: { label: "Closed", cls: "bg-leaf/10 text-leaf" },
-    SHORT: { label: "Short", cls: "bg-red-50 text-warning" },
-    OVER: { label: "Over", cls: "bg-yellow-50 text-gold" },
-    PENDING: { label: "Pending", cls: "bg-smoke text-ink/60" }
+    CLOSED: { label: t("dashboard.closed"), cls: "bg-leaf/10 text-leaf" },
+    SHORT: { label: t("dashboard.short"), cls: "bg-red-50 text-warning" },
+    OVER: { label: t("dashboard.over"), cls: "bg-yellow-50 text-gold" },
+    PENDING: { label: t("dashboard.pending"), cls: "bg-smoke text-ink/60" }
   };
   const { label, cls } = map[status];
   return <span className={clsx("rounded-full px-2 py-0.5 text-xs font-black", cls)}>{label}</span>;

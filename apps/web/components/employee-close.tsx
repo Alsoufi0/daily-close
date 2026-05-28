@@ -64,6 +64,8 @@ export function EmployeeClose() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [ocrRawText, setOcrRawText] = useState<string | null>(null);
+  const [confirmingBusinessDate, setConfirmingBusinessDate] = useState(false);
+  const [businessDate, setBusinessDate] = useState("");
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const libraryInputRef = useRef<HTMLInputElement>(null);
 
@@ -118,14 +120,25 @@ export function EmployeeClose() {
     }
   }
 
-  async function submitClose() {
+  async function requestSubmitClose() {
+    const suggested = suggestBusinessDate(activeStore);
+    const needsConfirm = shouldConfirmBusinessDate(activeStore, suggested);
+    if (needsConfirm && !confirmingBusinessDate) {
+      setBusinessDate(suggested);
+      setConfirmingBusinessDate(true);
+      return;
+    }
+    await submitClose(businessDate || suggested);
+  }
+
+  async function submitClose(closeDate: string) {
     setSubmitting(true);
     setSubmitError(null);
     try {
       await finishDailyClose(session.token, {
         storeId: activeStore.id,
         employeeId,
-        date: new Date().toISOString(),
+        date: storeLocalDateToUtcNoon(closeDate, activeStore.timezone),
         cashSales: toMoney(cashSales),
         cardSales: toMoney(cardSales),
         totalSales: toMoney(totalSales),
@@ -138,6 +151,7 @@ export function EmployeeClose() {
         notes
       });
       setStep("finish");
+      setConfirmingBusinessDate(false);
     } catch (err) {
       if (err instanceof ApiError && err.status === 400 && /already.*closed/i.test(err.message)) {
         setStep("blocked");
@@ -401,9 +415,26 @@ export function EmployeeClose() {
                 {submitError}
               </div>
             ) : null}
+            {confirmingBusinessDate ? (
+              <div className="rounded-xl border border-gold/30 bg-yellow-50 p-4 text-ink">
+                <p className="text-lg font-black">{t("closing.confirmBusinessDate")}</p>
+                <p className="mt-1 text-sm font-bold text-ink/65">
+                  {t("closing.confirmBusinessDateBody")}
+                </p>
+                <label className="mt-3 block">
+                  <span className="text-sm font-black">{t("closing.closingDate")}</span>
+                  <input
+                    type="date"
+                    className="focus-ring mt-2 h-12 w-full rounded-lg border border-ink/15 px-4 text-lg font-black"
+                    value={businessDate}
+                    onChange={(event) => setBusinessDate(event.target.value)}
+                  />
+                </label>
+              </div>
+            ) : null}
             <button
               className="focus-ring flex h-14 w-full items-center justify-center gap-2 rounded-lg bg-ink px-5 text-lg font-black text-white disabled:opacity-60"
-              onClick={submitClose}
+              onClick={requestSubmitClose}
               disabled={submitting}
             >
               {submitting ? <Loader2 className="animate-spin" size={22} aria-hidden /> : <CheckCircle2 size={22} aria-hidden />}
@@ -445,6 +476,75 @@ function fileToDataUrl(file: File, errorMessage: string): Promise<string> {
     reader.onload = () => resolve(String(reader.result || ""));
     reader.readAsDataURL(file);
   });
+}
+
+function parseCloseTime(closeTime?: string) {
+  const [hh, mm] = (closeTime || "23:30").split(":").map((part) => Number(part) || 0);
+  return hh * 60 + mm;
+}
+
+function localParts(timezone?: string, date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone || "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).formatToParts(date);
+  const get = (type: string) => Number(parts.find((part) => part.type === type)?.value || 0);
+  return {
+    year: get("year"),
+    month: get("month"),
+    day: get("day"),
+    minutes: get("hour") * 60 + get("minute")
+  };
+}
+
+function toLocalDateString(parts: { year: number; month: number; day: number }, dayOffset = 0) {
+  const d = new Date(Date.UTC(parts.year, parts.month - 1, parts.day + dayOffset, 12, 0, 0));
+  return d.toISOString().slice(0, 10);
+}
+
+function suggestBusinessDate(store: { timezone?: string; closeTime?: string }) {
+  const parts = localParts(store.timezone);
+  const closeMin = parseCloseTime(store.closeTime);
+  const overnight = parts.minutes < 6 * 60;
+  const previousBusinessDay = overnight && (closeMin >= 6 * 60 || parts.minutes >= closeMin);
+  return toLocalDateString(parts, previousBusinessDay ? -1 : 0);
+}
+
+function shouldConfirmBusinessDate(store: { timezone?: string; closeTime?: string }, suggestedDate: string) {
+  const parts = localParts(store.timezone);
+  const closeMin = parseCloseTime(store.closeTime);
+  const today = toLocalDateString(parts);
+  const earlyBeforeClose = parts.minutes < closeMin && !(closeMin < 6 * 60 && parts.minutes < 6 * 60);
+  return earlyBeforeClose || suggestedDate !== today;
+}
+
+function timezoneOffsetMinutes(timezone: string, date: Date) {
+  const dtf = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit"
+  });
+  const parts = dtf.formatToParts(date);
+  const get = (type: string) => Number(parts.find((part) => part.type === type)?.value || 0);
+  const asUtc = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"), get("second"));
+  return Math.round((asUtc - date.getTime()) / 60000);
+}
+
+function storeLocalDateToUtcNoon(date: string, timezone = "America/New_York") {
+  const [year, month, day] = date.split("-").map((part) => Number(part));
+  const guess = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+  const offset = timezoneOffsetMinutes(timezone, guess);
+  return new Date(guess.getTime() - offset * 60_000).toISOString();
 }
 
 function StepProgress({

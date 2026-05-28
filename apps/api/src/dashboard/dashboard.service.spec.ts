@@ -39,7 +39,7 @@ describe("DashboardService", () => {
     ).toBe(true);
     expect(
       DashboardService.isPastCloseTime("UTC", "02:00", new Date("2026-05-23T14:00:00.000Z"))
-    ).toBe(true);
+    ).toBe(false);
     expect(
       DashboardService.isPastCloseTime("UTC", "02:00", new Date("2026-05-23T01:00:00.000Z"))
     ).toBe(false);
@@ -93,9 +93,9 @@ describe("DashboardService", () => {
     expect(summary.needsAttention).toBe(0);
   });
 
-  it("counts a close submitted after midnight in the active close window", async () => {
+  it("counts a close submitted for the previous business day after midnight", async () => {
     const now = new Date("2026-05-24T05:07:00.000Z"); // 01:07 in New York
-    const closeDate = new Date("2026-05-24T04:45:00.000Z"); // after 23:30 local close
+    const closeDate = new Date("2026-05-23T16:00:00.000Z"); // 2026-05-23 business day at local noon
     const prisma = makePrisma([
       {
         id: "s1",
@@ -116,7 +116,7 @@ describe("DashboardService", () => {
 
   it("counts a close submitted before the store close time on the same local day", async () => {
     const now = new Date("2026-05-24T23:27:00.000Z"); // 19:27 in New York, before 23:30 close time
-    const closeDate = new Date("2026-05-24T23:20:00.000Z"); // early close on the current store-local day
+    const closeDate = new Date("2026-05-24T16:00:00.000Z"); // 2026-05-24 business day at local noon
     const prisma = makePrisma([
       {
         id: "s1",
@@ -158,6 +158,7 @@ describe("DashboardService", () => {
         totalSales: 4500,
         cashSales: 1800,
         cardSales: 2700,
+        countedCash: 1805,
         difference: 5,
         status: "CLOSED"
       },
