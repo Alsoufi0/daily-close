@@ -126,10 +126,11 @@ operational tracker.
 
 | | |
 |---|---|
-| Render API | `daily-close-api-staging.onrender.com` — current SHA: `ac88a32` |
+| Render API | `daily-close-api-staging.onrender.com` — current SHA: `360624d` |
 | Vercel web (stable branch alias) | `daily-close-git-staging-alsoufi0s-projects.vercel.app` |
 | Supabase project ref | `gvlycdpjaxewlwgspiqz` |
 | Migration 005 (idempotency_key column) | ✅ applied to staging Supabase |
+| Migration 006 (store assignments) | ✅ applied to staging Supabase — ran statement-by-statement (Prisma `$executeRawUnsafe` 42601 on the multi-statement file is expected). Verified: role col, composite unique, submitted_by_user_id, 4 OWNER backfill assignments. Fresh-account upload smoke test passed end-to-end. |
 | `ALLOW_DEMO_AUTH` env var on Render | ✅ removed |
 | `NODE_ENV` on Render staging | `staging` (temporary — Sentry-required-in-prod gate is disabled until SENTRY_DSN is set) |
 | `SENTRY_DSN` on Render staging | ❌ not set — see "Pending dashboard work" below |
