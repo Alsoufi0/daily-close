@@ -33,7 +33,8 @@ function makeService(overrides: Partial<{
     },
     employee: {
       findFirst: jest.fn().mockResolvedValue({ id: "employee-1" }),
-      create: jest.fn().mockResolvedValue({ id: "employee-new" })
+      create: jest.fn().mockResolvedValue({ id: "employee-new" }),
+      update: jest.fn().mockResolvedValue({ id: "employee-existing", storeId: "store-1", deletedAt: null })
     }
   };
   const notifications = {
@@ -248,6 +249,14 @@ describe("DailyCloseService.finishClosing", () => {
 });
 
 describe("DailyCloseService.uploadReport", () => {
+  const ownerUser: RequestUser = {
+    id: "user-owner",
+    name: "Owner",
+    email: "owner@demo.com",
+    role: "STORE_OWNER",
+    ownerId: "owner-1"
+  };
+
   it("scans the submitted base64 image directly after storing it", async () => {
     const { service, storage, ocr, posParser } = makeService();
     storage.uploadBase64.mockResolvedValue("https://storage.example/report.jpg");
@@ -277,6 +286,44 @@ describe("DailyCloseService.uploadReport", () => {
     expect(ocr.extractText).toHaveBeenCalledWith("data:image/jpeg;base64,abc123");
     expect(result.imageUrl).toBe("https://storage.example/report.jpg");
     expect(result.totalSales).toBe(3704.91);
+  });
+
+  it("reuses an existing owner employee row when uploading for a different store", async () => {
+    const { service, storage, ocr, posParser, prisma } = makeService();
+    prisma.employee.findFirst.mockResolvedValueOnce({
+      id: "employee-existing",
+      userId: "user-owner",
+      storeId: "old-store",
+      deletedAt: null
+    });
+    storage.uploadBase64.mockResolvedValue("https://storage.example/report.jpg");
+    ocr.extractText.mockResolvedValue("Gross Sales $3,704.91 Cash $1,169.27 Credit/Debit $2,535.64");
+    posParser.parse.mockReturnValue({
+      parserType: "TERMINAL_REPORT",
+      cashSales: 1169.27,
+      cardSales: 2535.64,
+      totalSales: 3704.91,
+      tax: 0,
+      refunds: 0,
+      discounts: 0,
+      confidence: 1
+    });
+
+    await service.uploadReport(
+      {
+        storeId: "store-1",
+        fileName: "report.jpg",
+        contentType: "image/jpeg",
+        base64Data: "data:image/jpeg;base64,abc123"
+      },
+      ownerUser
+    );
+
+    expect(prisma.employee.create).not.toHaveBeenCalled();
+    expect(prisma.employee.update).toHaveBeenCalledWith({
+      where: { id: "employee-existing" },
+      data: { storeId: "store-1", deletedAt: null }
+    });
   });
 });
 

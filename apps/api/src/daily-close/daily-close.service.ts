@@ -319,13 +319,21 @@ export class DailyCloseService {
         select: { id: true }
       });
       if (!store) throw new ForbiddenException("This store is not yours.");
-      // Get-or-create an owner-as-employee row so we satisfy the FK.
+      // Get-or-create an owner-as-employee row so we satisfy the FK. Older
+      // owner accounts may already have a single employee row linked to a
+      // previous store; Employee.userId is unique, so creating a second row
+      // would 500. Reuse that row and point it at the store being closed.
       let employee = await this.prisma.employee.findFirst({
-        where: { userId: user.id, storeId, deletedAt: null }
+        where: { userId: user.id }
       });
       if (!employee) {
         employee = await this.prisma.employee.create({
           data: { userId: user.id, storeId }
+        });
+      } else if (employee.storeId !== storeId || employee.deletedAt) {
+        employee = await this.prisma.employee.update({
+          where: { id: employee.id },
+          data: { storeId, deletedAt: null }
         });
       }
       return employee.id;
