@@ -51,16 +51,29 @@ export class StoresService {
     if (user.role !== "STORE_OWNER" || !user.ownerId) {
       throw new ForbiddenException("Only owners can create stores.");
     }
-    return this.prisma.store.create({
-      data: {
-        ownerId: user.ownerId,
-        storeName: input.storeName,
-        address: input.address,
-        phone: input.phone,
-        timezone: this.validTimezone(input.timezone),
-        closeTime: this.validCloseTime(input.closeTime)
-      }
+    // Create the store AND the owner's OWNER-role assignment row in one
+    // transaction. Post migration 006 the assignment row is what
+    // assertCanCloseStore looks for to authorise owner closes; creating
+    // it lazily on first close (which would still work) would leave a
+    // window where listing assignments for the owner misses the new
+    // store. Atomic create avoids that.
+    const store = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.store.create({
+        data: {
+          ownerId: user.ownerId!,
+          storeName: input.storeName,
+          address: input.address,
+          phone: input.phone,
+          timezone: this.validTimezone(input.timezone),
+          closeTime: this.validCloseTime(input.closeTime)
+        }
+      });
+      await tx.employee.create({
+        data: { userId: user.id, storeId: created.id, role: "OWNER" }
+      });
+      return created;
     });
+    return store;
   }
 
   async updateForOwner(user: RequestUser, storeId: string, input: UpdateStoreDto) {

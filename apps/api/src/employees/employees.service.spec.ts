@@ -36,7 +36,9 @@ function build(prismaOverrides: Record<string, any> = {}) {
         id: "user-new",
         email: "new@demo.com",
         name: "New",
-        employee: { id: "emp-new" }
+        // Post migration 006: relation is `employees` (plural) — a list
+        // of per-store assignment rows. New invites get one entry.
+        employees: [{ id: "emp-new" }]
       }),
       ...(prismaOverrides.user || {})
     }
@@ -93,7 +95,7 @@ describe("EmployeesService", () => {
         data: expect.objectContaining({
           email: "new@demo.com",
           role: "EMPLOYEE",
-          employee: { create: { storeId: "s-1" } }
+          employees: { create: { storeId: "s-1", role: "EMPLOYEE" } }
         })
       })
     );

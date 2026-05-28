@@ -19,7 +19,7 @@ const employee: RequestUser = {
 };
 
 function makePrisma(extra: any = {}) {
-  return {
+  const prisma: any = {
     store: {
       findMany: jest.fn().mockResolvedValue([]),
       create: jest.fn().mockResolvedValue({ id: "store-new", storeName: "New" }),
@@ -27,8 +27,18 @@ function makePrisma(extra: any = {}) {
       update: jest.fn().mockResolvedValue({ id: "s-1", storeName: "Renamed" }),
       ...extra
     },
+    employee: {
+      // createForOwner now atomically creates the OWNER-role assignment
+      // row alongside the store inside a $transaction; mock the call.
+      create: jest.fn().mockResolvedValue({ id: "emp-owner-new" }),
+      updateMany: jest.fn().mockResolvedValue({ count: 0 })
+    },
     auditLog: { create: jest.fn().mockResolvedValue(undefined) }
-  } as any;
+  };
+  // Minimal $transaction shim: forwards the callback against the same
+  // mock prisma so the code under test runs unchanged.
+  prisma.$transaction = jest.fn(async (fn: (tx: any) => Promise<any>) => fn(prisma));
+  return prisma;
 }
 
 describe("StoresService", () => {

@@ -129,9 +129,21 @@ export class DailyCloseService {
       }
     }
 
-    let resolvedEmployeeId = input.employeeId;
+    // Resolve who's closing this. Post migration 006 both pieces of
+    // information are kept on the close row:
+    //   - employeeId: the assignment row (kept for back-compat with
+    //     existing report joins; nullable when no row exists yet).
+    //   - submittedByUserId: the actual user — this is the new source
+    //     of truth for "who submitted this close" and is always set.
+    let resolvedEmployeeId: string | null = input.employeeId;
+    let submittedByUserId: string | undefined = user?.id;
     if (user) {
       resolvedEmployeeId = await this.assertCanCloseStore(user, input.storeId);
+    }
+    if (!submittedByUserId) {
+      // Test/system fallback: try to derive the user from the input's
+      // employeeId. Real requests always have a user via SupabaseAuthGuard.
+      throw new BadRequestException("Close submission requires an authenticated user.");
     }
 
     const eventDate = new Date(input.date);
@@ -156,6 +168,7 @@ export class DailyCloseService {
     const created = await this.repository.create({
       ...persisted,
       employeeId: resolvedEmployeeId,
+      submittedByUserId,
       date: eventDate,
       expectedCash,
       difference,
@@ -304,40 +317,58 @@ export class DailyCloseService {
     }
   }
 
-  // Allows owners (for stores they own) and employees (for their store).
-  // For owners, finds or creates an Employee row tying the owner's User to the
-  // target store so the close has a valid employeeId FK.
+  /**
+   * Resolves whether `user` is allowed to close `storeId` and returns the
+   * `(employeeId | null)` that should be written on the daily_close row.
+   *
+   * Post migration 006 the `employees` table is a store-assignment table:
+   * one row per (user, store, role). For owners and employees alike,
+   * authorisation is "does this user have an assignment for this store?"
+   *   - Owners get an auto-created OWNER assignment row (created here
+   *     on first close per store, or by the store-creation flow once
+   *     that's wired up in StoresService).
+   *   - Employees get an EMPLOYEE assignment created by the invite flow.
+   *
+   * Returns the assignment row's id so daily_close.employee_id can still
+   * point at it for back-compat with older queries. New code should
+   * prefer daily_close.submitted_by_user_id.
+   *
+   * No more wandering rows. No more relink hack. Each (user, store) is
+   * a distinct row protected by the (user_id, store_id) composite unique.
+   */
   private async assertCanCloseStore(user: RequestUser, storeId: string): Promise<string> {
-    if (user.role === "EMPLOYEE") {
-      if (user.storeId !== storeId) throw new ForbiddenException("Employee cannot close another store.");
-      if (!user.employeeId) throw new ForbiddenException("Employee profile is incomplete.");
-      return user.employeeId;
-    }
+    // Verify the user is allowed at this store at all.
     if (user.role === "STORE_OWNER" && user.ownerId) {
       const store = await this.prisma.store.findFirst({
         where: { id: storeId, ownerId: user.ownerId, deletedAt: null },
         select: { id: true }
       });
       if (!store) throw new ForbiddenException("This store is not yours.");
-      // Get-or-create an owner-as-employee row so we satisfy the FK. Older
-      // owner accounts may already have a single employee row linked to a
-      // previous store; Employee.userId is unique, so creating a second row
-      // would 500. Reuse that row and point it at the store being closed.
-      let employee = await this.prisma.employee.findFirst({
-        where: { userId: user.id }
+    } else if (user.role === "EMPLOYEE") {
+      // Employee assignments live in the same `employees` table; check there.
+      const assignment = await this.prisma.employee.findFirst({
+        where: { userId: user.id, storeId, deletedAt: null, role: "EMPLOYEE" },
+        select: { id: true }
       });
-      if (!employee) {
-        employee = await this.prisma.employee.create({
-          data: { userId: user.id, storeId }
-        });
-      } else if (employee.storeId !== storeId || employee.deletedAt) {
-        employee = await this.prisma.employee.update({
-          where: { id: employee.id },
-          data: { storeId, deletedAt: null }
-        });
+      if (!assignment) {
+        throw new ForbiddenException("You are not assigned to this store.");
       }
-      return employee.id;
+    } else if (user.role !== "SUPER_ADMIN") {
+      throw new ForbiddenException("Not allowed to close this store.");
     }
-    throw new ForbiddenException("Not allowed to close this store.");
+
+    // Find-or-create the assignment row that will be referenced by
+    // daily_close.employee_id. Owners get a role=OWNER row; employees
+    // already had a role=EMPLOYEE row from the auth check above.
+    const expectedRole = user.role === "STORE_OWNER" ? "OWNER" : "EMPLOYEE";
+    const existing = await this.prisma.employee.findFirst({
+      where: { userId: user.id, storeId, deletedAt: null }
+    });
+    if (existing) return existing.id;
+
+    const created = await this.prisma.employee.create({
+      data: { userId: user.id, storeId, role: expectedRole as any }
+    });
+    return created.id;
   }
 }

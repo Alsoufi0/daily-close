@@ -15,6 +15,18 @@ enum UserRole {
   @@map("user_role")
 }
 
+// Per-(user, store) assignment role on the `employees` table.
+// OWNER rows are auto-created when a store is created so we can answer
+// "is user X allowed to close store Y?" via a single uniform query
+// regardless of whether X owns Y or works at Y.
+enum EmployeeRole {
+  OWNER
+  EMPLOYEE
+  MANAGER
+
+  @@map("employee_role")
+}
+
 enum CloseStatus {
   PENDING
   CLOSED
@@ -50,7 +62,13 @@ model User {
   role         UserRole
   createdAt    DateTime       @default(now()) @map("created_at")
   owner        Owner?
-  employee     Employee?
+  // `employees` is now a list (was single Employee?) — a single user can
+  // be assigned to many stores. See migration 006_store_assignments.sql.
+  employees    Employee[]
+  // Closes this user has submitted, captured via daily_close.submitted_by_user_id.
+  // Stored separately from the employee FK so owner-closes don't need a
+  // synthesised employee row.
+  submittedCloses DailyClose[] @relation("DailyCloseSubmittedBy")
   notifications Notification[]
   auditLogs     AuditLog[]
 
@@ -71,15 +89,25 @@ model Owner {
   @@map("owners")
 }
 
+// `employees` rows are STORE ASSIGNMENTS: one row per (user, store, role).
+// One user can have many rows — one per store they're assigned to. Role
+// distinguishes OWNER (auto-created with the store) from EMPLOYEE (invited
+// by an owner). Composite uniqueness on (user_id, store_id) prevents
+// duplicate assignments, but a user CAN appear on many stores.
+//
+// See migration 006_store_assignments.sql for the constraint reshape.
 model Employee {
   id          String       @id @default(cuid())
-  userId      String       @unique @map("user_id")
+  userId      String       @map("user_id")
   storeId     String       @map("store_id")
+  role        EmployeeRole @default(EMPLOYEE)
   deletedAt   DateTime?    @map("deleted_at")
   user        User         @relation(fields: [userId], references: [id])
   store       Store        @relation(fields: [storeId], references: [id])
   dailyCloses DailyClose[]
 
+  @@unique([userId, storeId], map: "employees_user_store_uniq")
+  @@index([userId])
   @@index([deletedAt])
   @@map("employees")
 }
@@ -109,7 +137,13 @@ model DailyClose {
   id             String          @id @default(cuid())
   idempotencyKey String?         @unique @map("idempotency_key")
   storeId        String          @map("store_id")
-  employeeId     String          @map("employee_id")
+  // employeeId is now nullable — owner-closes don't synthesise a fake
+  // employee row anymore. Old rows keep their link; new rows may set
+  // null and rely on submittedByUserId for "who closed it".
+  employeeId     String?         @map("employee_id")
+  // Always set on new closes via migration 006. Source of truth for
+  // "who actually submitted this close" regardless of role.
+  submittedByUserId String       @map("submitted_by_user_id")
   date           DateTime
   cashSales      Decimal         @map("cash_sales") @db.Decimal(12, 2)
   cardSales      Decimal         @map("card_sales") @db.Decimal(12, 2)
@@ -126,7 +160,8 @@ model DailyClose {
   status         CloseStatus
   createdAt      DateTime        @default(now()) @map("created_at")
   store          Store           @relation(fields: [storeId], references: [id])
-  employee       Employee        @relation(fields: [employeeId], references: [id])
+  employee       Employee?       @relation(fields: [employeeId], references: [id])
+  submittedBy    User            @relation("DailyCloseSubmittedBy", fields: [submittedByUserId], references: [id])
   expenseItems   Expense[]
   uploadedReports UploadedReport[]
 

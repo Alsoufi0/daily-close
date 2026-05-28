@@ -44,7 +44,14 @@ export class SupabaseAuthService {
       },
       include: {
         owner: true,
-        employee: { include: { store: true } }
+        // Post migration 006: a user can have MANY assignment rows.
+        // Pick EMPLOYEE-role assignments only here; OWNER rows are auto-
+        // created for the owner's own stores and don't represent the
+        // user being "an employee" at those stores.
+        employees: {
+          where: { deletedAt: null, role: "EMPLOYEE" },
+          include: { store: true }
+        }
       }
     });
 
@@ -57,15 +64,21 @@ export class SupabaseAuthService {
       });
     }
 
+    // For back-compat with callers that still use the legacy single-
+    // store RequestUser fields, expose the FIRST EMPLOYEE assignment.
+    // New code should query assignments directly (e.g. DailyCloseService
+    // looks up by (userId, storeId) instead of trusting these fields).
+    const primaryAssignment = user.employees[0];
+
     const requestUser: RequestUser = {
       id: user.id,
       authUserId: data.user.id,
       name: user.name,
       email: user.email,
       role: user.role,
-      ownerId: user.owner?.id || user.employee?.store?.ownerId,
-      employeeId: user.employee?.id,
-      storeId: user.employee?.storeId
+      ownerId: user.owner?.id || primaryAssignment?.store?.ownerId,
+      employeeId: primaryAssignment?.id,
+      storeId: primaryAssignment?.storeId
     };
 
     // Cache and trim
@@ -97,7 +110,7 @@ export class SupabaseAuthService {
 
     let user = await this.prisma.user.findFirst({
       where: { OR: [{ authUserId: authId }, { email }] },
-      include: { owner: true, employee: { include: { store: true } } }
+      include: { owner: true, employees: { where: { deletedAt: null, role: "EMPLOYEE" }, include: { store: true } } }
     });
 
     if (!user) {
@@ -116,13 +129,13 @@ export class SupabaseAuthService {
             }
           }
         },
-        include: { owner: true, employee: { include: { store: true } } }
+        include: { owner: true, employees: { where: { deletedAt: null, role: "EMPLOYEE" }, include: { store: true } } }
       });
     } else if (!user.authUserId) {
       user = await this.prisma.user.update({
         where: { id: user.id },
         data: { authUserId: authId },
-        include: { owner: true, employee: { include: { store: true } } }
+        include: { owner: true, employees: { where: { deletedAt: null, role: "EMPLOYEE" }, include: { store: true } } }
       });
     }
 
@@ -137,19 +150,20 @@ export class SupabaseAuthService {
       });
       user = (await this.prisma.user.findUnique({
         where: { id: user.id },
-        include: { owner: true, employee: { include: { store: true } } }
+        include: { owner: true, employees: { where: { deletedAt: null, role: "EMPLOYEE" }, include: { store: true } } }
       })) as any;
     }
 
+    const primary = user!.employees?.[0];
     return {
       id: user!.id,
       authUserId: authId,
       name: user!.name,
       email: user!.email,
       role: user!.role,
-      ownerId: user!.owner?.id || user!.employee?.store?.ownerId,
-      employeeId: user!.employee?.id,
-      storeId: user!.employee?.storeId
+      ownerId: user!.owner?.id || primary?.store?.ownerId,
+      employeeId: primary?.id,
+      storeId: primary?.storeId
     };
   }
 

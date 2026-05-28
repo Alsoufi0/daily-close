@@ -3,7 +3,14 @@ import { PrismaService } from "../prisma/prisma.service";
 
 export interface CreateDailyCloseRecord {
   storeId: string;
-  employeeId: string;
+  // `employeeId` is the assignment-row id used for the existing FK link
+  // (kept populated for back-compat with reports.service.ts queries that
+  // join `employee → user`). New code should treat `submittedByUserId`
+  // as the source of truth for "who closed this".
+  employeeId: string | null;
+  // Always set — captures the actual user that submitted the close.
+  // Wired in via migration 006_store_assignments.sql.
+  submittedByUserId: string;
   date: Date;
   cashSales: number;
   cardSales: number;

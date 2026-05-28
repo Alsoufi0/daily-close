@@ -32,7 +32,14 @@ function makeService(overrides: Partial<{
       findUnique: jest.fn().mockResolvedValue({ timezone: "UTC" })
     },
     employee: {
-      findFirst: jest.fn().mockResolvedValue({ id: "employee-1" }),
+      // Post migration 006: assertCanCloseStore queries by (userId, storeId)
+      // and never relinks. Return non-null only when the store matches the
+      // default test store ("store-1"); tests that probe other stores
+      // (e.g. "forbids employee from closing another store") need null.
+      findFirst: jest.fn().mockImplementation((args: any) => {
+        if (args?.where?.storeId && args.where.storeId !== "store-1") return null;
+        return { id: "employee-1", userId: args?.where?.userId, storeId: "store-1", role: args?.where?.role || "EMPLOYEE" };
+      }),
       create: jest.fn().mockResolvedValue({ id: "employee-new" }),
       update: jest.fn().mockResolvedValue({ id: "employee-existing", storeId: "store-1", deletedAt: null })
     }
@@ -144,9 +151,9 @@ describe("DailyCloseService.finishClosing", () => {
     await expect(service.finishClosing(baseInput, owner)).rejects.toThrow(ForbiddenException);
   });
 
-  it("allows owner to close a store they own, auto-creating employee row", async () => {
+  it("allows owner to close a store they own, auto-creating an OWNER-role assignment row", async () => {
     const { service, prisma, repository } = makeService();
-    prisma.employee.findFirst.mockResolvedValueOnce(null); // no existing owner-employee row
+    prisma.employee.findFirst.mockResolvedValueOnce(null); // no existing assignment row
     const owner: RequestUser = {
       id: "u-owner",
       name: "Owner",
@@ -155,11 +162,18 @@ describe("DailyCloseService.finishClosing", () => {
       ownerId: "owner-1"
     };
     const result = await service.finishClosing(baseInput, owner);
+    // Post migration 006: the auto-created row carries role:"OWNER" so it's
+    // distinguishable from employee assignments. submittedByUserId on the
+    // close row captures the actual user.
     expect(prisma.employee.create).toHaveBeenCalledWith({
-      data: { userId: "u-owner", storeId: "store-1" }
+      data: { userId: "u-owner", storeId: "store-1", role: "OWNER" }
     });
     expect(repository.create).toHaveBeenCalledWith(
-      expect.objectContaining({ employeeId: "employee-new", storeId: "store-1" })
+      expect.objectContaining({
+        employeeId: "employee-new",
+        submittedByUserId: "u-owner",
+        storeId: "store-1"
+      })
     );
     expect(result.status).toBe("CLOSED");
   });
@@ -288,14 +302,13 @@ describe("DailyCloseService.uploadReport", () => {
     expect(result.totalSales).toBe(3704.91);
   });
 
-  it("reuses an existing owner employee row when uploading for a different store", async () => {
+  // Replaces the prior "reuses an existing owner employee row" test which
+  // exercised commit e4922a1's wandering-row hack. Post migration 006 each
+  // (user, store) is its own assignment — the hack is gone.
+  it("creates a fresh OWNER assignment row when an owner closes a NEW store they own", async () => {
     const { service, storage, ocr, posParser, prisma } = makeService();
-    prisma.employee.findFirst.mockResolvedValueOnce({
-      id: "employee-existing",
-      userId: "user-owner",
-      storeId: "old-store",
-      deletedAt: null
-    });
+    // No assignment exists for (this owner, this store) yet → forces create.
+    prisma.employee.findFirst.mockImplementation(() => null);
     storage.uploadBase64.mockResolvedValue("https://storage.example/report.jpg");
     ocr.extractText.mockResolvedValue("Gross Sales $3,704.91 Cash $1,169.27 Credit/Debit $2,535.64");
     posParser.parse.mockReturnValue({
@@ -319,11 +332,13 @@ describe("DailyCloseService.uploadReport", () => {
       ownerUser
     );
 
-    expect(prisma.employee.create).not.toHaveBeenCalled();
-    expect(prisma.employee.update).toHaveBeenCalledWith({
-      where: { id: "employee-existing" },
-      data: { storeId: "store-1", deletedAt: null }
+    // Critical regression guard: we CREATE a per-store row instead of
+    // updating an existing one. The wandering-row behaviour from
+    // e4922a1 is gone — no `update` calls on the employees table.
+    expect(prisma.employee.create).toHaveBeenCalledWith({
+      data: { userId: "user-owner", storeId: "store-1", role: "OWNER" }
     });
+    expect(prisma.employee.update).not.toHaveBeenCalled();
   });
 });
 

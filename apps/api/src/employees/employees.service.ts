@@ -33,8 +33,12 @@ export class EmployeesService {
 
   async listForOwner(user: RequestUser) {
     this.assertOwner(user);
+    // Only EMPLOYEE-role assignments. OWNER-role rows are auto-created
+    // by migration 006 / future store-creation flow so the owner can
+    // close their own stores; they're not "employees" from the owner's
+    // POV and shouldn't appear in the employees list.
     return this.prisma.employee.findMany({
-      where: { store: { ownerId: user.ownerId }, deletedAt: null },
+      where: { store: { ownerId: user.ownerId }, deletedAt: null, role: "EMPLOYEE" },
       include: { user: true, store: true },
       orderBy: { user: { name: "asc" } }
     });
@@ -74,22 +78,96 @@ export class EmployeesService {
         password: "", // unused - Supabase handles auth
         role: "EMPLOYEE",
         authUserId,
-        employee: {
-          create: { storeId: input.storeId }
+        // Post migration 006: `employees` is a list (multi-store
+        // assignments). Initial invite creates the first EMPLOYEE-role
+        // assignment for the invited store; additional stores are added
+        // via assignToStore() below.
+        employees: {
+          create: { storeId: input.storeId, role: "EMPLOYEE" }
         }
       },
-      include: { employee: true }
+      include: { employees: true }
     });
 
     return {
       id: created.id,
-      employeeId: created.employee?.id,
+      employeeId: created.employees[0]?.id,
       email: created.email,
       name: created.name,
       storeId: input.storeId,
       tempPassword,
       invitedViaSupabase: Boolean(this.supabase)
     };
+  }
+
+  /**
+   * Assign an EXISTING employee to an additional store the owner owns.
+   * Idempotent — if the user is already assigned to this store, returns
+   * the existing assignment without erroring.
+   *
+   * Why this exists: the `invite()` method only creates ONE assignment
+   * (for the invited store). When the same employee should also work
+   * Store B, the owner uses this endpoint instead of inviting again
+   * (which would fail because the user's email already exists).
+   */
+  async assignToStore(user: RequestUser, employeeId: string, targetStoreId: string) {
+    this.assertOwner(user);
+
+    // Verify the source employee belongs to one of the owner's stores
+    // (i.e. the owner has the right to "transfer/extend" this employee).
+    const source = await this.prisma.employee.findFirst({
+      where: { id: employeeId, store: { ownerId: user.ownerId }, deletedAt: null },
+      include: { user: true }
+    });
+    if (!source) throw new NotFoundException("Employee not found.");
+
+    // Target store must also belong to the same owner.
+    const targetStore = await this.prisma.store.findFirst({
+      where: { id: targetStoreId, ownerId: user.ownerId, deletedAt: null }
+    });
+    if (!targetStore) throw new BadRequestException("Target store does not belong to you.");
+
+    // Idempotent: if already assigned, return the existing row.
+    const existing = await this.prisma.employee.findFirst({
+      where: { userId: source.userId, storeId: targetStoreId, deletedAt: null }
+    });
+    if (existing) {
+      return {
+        employeeId: existing.id,
+        userId: source.userId,
+        storeId: targetStoreId,
+        alreadyAssigned: true
+      };
+    }
+
+    const created = await this.prisma.employee.create({
+      data: { userId: source.userId, storeId: targetStoreId, role: "EMPLOYEE" }
+    });
+    return {
+      employeeId: created.id,
+      userId: source.userId,
+      storeId: targetStoreId,
+      alreadyAssigned: false
+    };
+  }
+
+  /**
+   * List every EMPLOYEE-role assignment for a single user, scoped to
+   * stores the requesting owner owns. Used by the admin UI to show
+   * "Maya works at: Store #1, Store #3" with per-store unassign actions.
+   */
+  async listAssignmentsForUser(user: RequestUser, employeeUserId: string) {
+    this.assertOwner(user);
+    return this.prisma.employee.findMany({
+      where: {
+        userId: employeeUserId,
+        store: { ownerId: user.ownerId },
+        deletedAt: null,
+        role: "EMPLOYEE"
+      },
+      include: { store: true },
+      orderBy: { store: { storeName: "asc" } }
+    });
   }
 
   async resetPassword(user: RequestUser, employeeId: string) {
@@ -138,7 +216,7 @@ export class EmployeesService {
     const updated = await this.prisma.user.update({
       where: { id: emp.userId },
       data: { role },
-      include: { employee: true }
+      include: { employees: true }
     });
 
     if (this.supabase && emp.user.authUserId) {
