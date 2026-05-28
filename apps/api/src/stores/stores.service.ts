@@ -16,8 +16,20 @@ export class StoresService {
       });
     }
 
-    if (user.role === "EMPLOYEE" && user.storeId) {
-      return this.prisma.store.findMany({ where: { id: user.storeId, deletedAt: null } });
+    if (user.role === "EMPLOYEE") {
+      // Post Phase 1 / migration 006: an employee can have many active
+      // assignments. Return every store the user is assigned to (not
+      // just the primary one from user.storeId, which was the only
+      // store the legacy single-employee-row model could represent).
+      return this.prisma.store.findMany({
+        where: {
+          deletedAt: null,
+          employees: {
+            some: { userId: user.id, deletedAt: null, role: "EMPLOYEE" }
+          }
+        },
+        orderBy: { storeName: "asc" }
+      });
     }
 
     throw new ForbiddenException("No stores are available for this user.");

@@ -2,7 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
+  Modal,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,7 +17,7 @@ import { formatMoney, formatMoneyExact, toMoney } from "@smokeshop/shared/utils/
 import type { ParsedPOSReport } from "@smokeshop/shared/types";
 import { ApiError, finishClose, generateIdempotencyKey, uploadReport } from "../api";
 import { QueuedForRetryError } from "../outbox";
-import { clearDraft, loadDraft, saveDraft } from "../persistence";
+import { clearDraft, loadDraft, loadSelectedStoreId, saveDraft, saveSelectedStoreId } from "../persistence";
 import { OfflineBanner } from "../components/OfflineBanner";
 import { uploadMobilePosReport } from "../upload-pos-report";
 import { useSession } from "../use-session";
@@ -102,9 +104,47 @@ export function EmployeeScreen({ onBack }: { onBack: () => void }) {
     ? -1
     : STEPS.findIndex((s) => s.key === step);
 
-  const activeStore = session.stores[0] ?? (session.profile?.storeId
-    ? { id: session.profile.storeId, storeName: "My Store" }
-    : { id: "store-1", storeName: "Store #1" });
+  // Phase 3: explicit store picker for users with multi-store assignments.
+  // selectedStoreId is persisted across launches so a user with one store
+  // never sees a picker, and a user with several lands on the one they
+  // most recently closed.
+  const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
+  const [storePickerOpen, setStorePickerOpen] = useState(false);
+
+  // Hydrate the saved selection on mount. If it's not in the current
+  // stores list (employee was unassigned from that store), fall back to
+  // the first available store.
+  useEffect(() => {
+    let cancelled = false;
+    loadSelectedStoreId().then((saved) => {
+      if (cancelled) return;
+      if (saved && session.stores.some((s) => s.id === saved)) {
+        setSelectedStoreId(saved);
+      } else if (session.stores[0]) {
+        setSelectedStoreId(session.stores[0].id);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [session.stores]);
+
+  const activeStore =
+    session.stores.find((s) => s.id === selectedStoreId) ??
+    session.stores[0] ??
+    (session.profile?.storeId
+      ? { id: session.profile.storeId, storeName: "My Store" }
+      : { id: "store-1", storeName: "Store #1" });
+
+  function pickStore(storeId: string) {
+    setSelectedStoreId(storeId);
+    saveSelectedStoreId(storeId);
+    setStorePickerOpen(false);
+    // Reset the close form when switching stores so we don't carry
+    // numbers from Store A into a close for Store B.
+    reset();
+  }
+
   const employeeId = session.profile?.employeeId ?? "employee-maya";
 
   // Restore in-progress close from AsyncStorage on cold start. Only restore
@@ -271,6 +311,23 @@ export function EmployeeScreen({ onBack }: { onBack: () => void }) {
       />
       <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
         <OfflineBanner />
+        {/* Multi-store picker — hidden when the user has only one store so
+            single-store employees see no UI clutter. Tapping opens a
+            sheet listing every store the user is assigned to. */}
+        {session.stores.length > 1 ? (
+          <Pressable
+            onPress={() => setStorePickerOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel={`Closing for ${activeStore.storeName}. Tap to switch store.`}
+            style={s.storePicker}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={s.storePickerLabel}>{t("closing.closingFor")}</Text>
+              <Text style={s.storePickerValue}>{activeStore.storeName}</Text>
+            </View>
+            <Text style={s.storePickerChevron}>▾</Text>
+          </Pressable>
+        ) : null}
         {restored ? (
           <Banner tone="warn" title={t("closing.resumedTitle")} body={t("closing.resumedBody")} />
         ) : null}
@@ -411,6 +468,44 @@ export function EmployeeScreen({ onBack }: { onBack: () => void }) {
           ) : null}
         </Card>
       </ScrollView>
+
+      {/* Store picker sheet — surfaces when the user taps the
+          "Closing for: X ▾" pill at the top. Lists every store the user
+          is currently assigned to. Picking a store resets the form so
+          numbers from Store A don't bleed into a close for Store B. */}
+      <Modal
+        visible={storePickerOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setStorePickerOpen(false)}
+      >
+        <Pressable style={s.storePickerBackdrop} onPress={() => setStorePickerOpen(false)}>
+          <Pressable style={s.storePickerSheet} onPress={(e) => e.stopPropagation()}>
+            <Text style={s.storePickerSheetTitle}>{t("closing.pickStore")}</Text>
+            <Text style={s.storePickerSheetSubtitle}>{t("closing.pickStoreHelp")}</Text>
+            {session.stores.map((store) => {
+              const isSelected = store.id === activeStore.id;
+              return (
+                <TouchableOpacity
+                  key={store.id}
+                  onPress={() => pickStore(store.id)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isSelected }}
+                  style={[
+                    s.storePickerRow,
+                    isSelected && { borderColor: colors.leaf, backgroundColor: colors.leafSoft }
+                  ]}
+                >
+                  <Text style={[s.storePickerRowText, isSelected && { color: colors.leaf }]}>
+                    {store.storeName}
+                  </Text>
+                  {isSelected ? <Text style={s.storePickerCheck}>✓</Text> : null}
+                </TouchableOpacity>
+              );
+            })}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -446,5 +541,79 @@ const s = StyleSheet.create({
     textAlignVertical: "top"
   },
   doneIcon: { fontSize: 56 },
-  doneTitle: { color: colors.ink, fontWeight: font.black, fontSize: 22, textAlign: "center" }
+  doneTitle: { color: colors.ink, fontWeight: font.black, fontSize: 22, textAlign: "center" },
+
+  // Multi-store picker (Phase 3)
+  storePicker: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    padding: spacing.md,
+    backgroundColor: colors.white,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.inputBorder
+  },
+  storePickerLabel: {
+    color: colors.inkSoft,
+    fontWeight: font.bold,
+    fontSize: 11,
+    textTransform: "uppercase",
+    letterSpacing: 0.6
+  },
+  storePickerValue: {
+    color: colors.ink,
+    fontWeight: font.black,
+    fontSize: 16,
+    marginTop: 2
+  },
+  storePickerChevron: {
+    color: colors.inkSoft,
+    fontWeight: font.black,
+    fontSize: 18
+  },
+  storePickerBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(15, 18, 16, 0.45)",
+    justifyContent: "flex-end"
+  },
+  storePickerSheet: {
+    backgroundColor: colors.white,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+    padding: spacing.lg,
+    gap: spacing.sm,
+    maxHeight: "70%"
+  },
+  storePickerSheetTitle: {
+    color: colors.ink,
+    fontWeight: font.black,
+    fontSize: 18
+  },
+  storePickerSheetSubtitle: {
+    color: colors.inkSoft,
+    fontWeight: font.bold,
+    fontSize: 13,
+    marginBottom: spacing.sm
+  },
+  storePickerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.inputBorder,
+    backgroundColor: colors.white
+  },
+  storePickerRowText: {
+    color: colors.ink,
+    fontWeight: font.black,
+    fontSize: 15
+  },
+  storePickerCheck: {
+    color: colors.leaf,
+    fontWeight: font.black,
+    fontSize: 16
+  }
 });

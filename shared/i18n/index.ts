@@ -794,7 +794,10 @@ const supplementalTranslations: Record<Language, Dictionary> = {
     "net.offlineBody": "Closes will sync automatically when you reconnect.",
     "net.syncingOne": "1 pending — syncing…",
     "net.syncingMany": "{count} pending — syncing…",
-    "net.syncingBody": "Your closes are safe and will land on the server shortly."
+    "net.syncingBody": "Your closes are safe and will land on the server shortly.",
+    "closing.closingFor": "Closing for",
+    "closing.pickStore": "Pick a store",
+    "closing.pickStoreHelp": "You're assigned to more than one store. Choose the one you're closing now."
   },
   ar: {
     "common.back": "\u0631\u062c\u0648\u0639",
@@ -1010,7 +1013,10 @@ const supplementalTranslations: Record<Language, Dictionary> = {
     "net.offlineBody": "\u0633\u062a\u062a\u0645 \u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u0625\u063a\u0644\u0627\u0642\u0627\u062a \u062a\u0644\u0642\u0627\u0626\u064a\u0627\u064b \u0639\u0646\u062f \u0625\u0639\u0627\u062f\u0629 \u0627\u0644\u0627\u062a\u0635\u0627\u0644.",
     "net.syncingOne": "\u0625\u063a\u0644\u0627\u0642 \u0648\u0627\u062d\u062f \u0642\u064a\u062f \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629\u2026",
     "net.syncingMany": "{count} \u0625\u063a\u0644\u0627\u0642\u0627\u062a \u0642\u064a\u062f \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629\u2026",
-    "net.syncingBody": "\u0625\u063a\u0644\u0627\u0642\u0627\u062a\u0643 \u0645\u062d\u0641\u0648\u0638\u0629 \u0648\u0633\u064a\u062a\u0645 \u0625\u0631\u0633\u0627\u0644\u0647\u0627 \u0644\u0644\u062e\u0627\u062f\u0645 \u0642\u0631\u064a\u0628\u0627\u064b."
+    "net.syncingBody": "\u0625\u063a\u0644\u0627\u0642\u0627\u062a\u0643 \u0645\u062d\u0641\u0648\u0638\u0629 \u0648\u0633\u064a\u062a\u0645 \u0625\u0631\u0633\u0627\u0644\u0647\u0627 \u0644\u0644\u062e\u0627\u062f\u0645 \u0642\u0631\u064a\u0628\u0627\u064b.",
+    "closing.closingFor": "\u064a\u062a\u0645 \u0627\u0644\u0625\u063a\u0644\u0627\u0642 \u0644\u0640",
+    "closing.pickStore": "\u0627\u062e\u062a\u0631 \u0645\u062a\u062c\u0631\u0627\u064b",
+    "closing.pickStoreHelp": "\u0623\u0646\u062a \u0645\u064f\u0639\u064a\u064e\u0651\u0646 \u0641\u064a \u0623\u0643\u062b\u0631 \u0645\u0646 \u0645\u062a\u062c\u0631. \u0627\u062e\u062a\u0631 \u0627\u0644\u0645\u062a\u062c\u0631 \u0627\u0644\u0630\u064a \u062a\u064f\u063a\u0644\u0642\u0647 \u0627\u0644\u0622\u0646."
   },
   es: {
     "common.back": "Atr\u00e1s",
@@ -1226,7 +1232,10 @@ const supplementalTranslations: Record<Language, Dictionary> = {
     "net.offlineBody": "Los cierres se sincronizarán automáticamente cuando vuelvas a conectarte.",
     "net.syncingOne": "1 pendiente — sincronizando…",
     "net.syncingMany": "{count} pendientes — sincronizando…",
-    "net.syncingBody": "Tus cierres están seguros y se enviarán al servidor en breve."
+    "net.syncingBody": "Tus cierres están seguros y se enviarán al servidor en breve.",
+    "closing.closingFor": "Cerrando para",
+    "closing.pickStore": "Elige una tienda",
+    "closing.pickStoreHelp": "Estás asignado a más de una tienda. Elige la que estás cerrando ahora."
   },
   hi: {
     "common.back": "\u0935\u093e\u092a\u0938",
@@ -1442,7 +1451,10 @@ const supplementalTranslations: Record<Language, Dictionary> = {
     "net.offlineBody": "\u0928\u0947\u091f \u0906\u0924\u0947 \u0939\u0940 \u0915\u094d\u0932\u094b\u091c \u0916\u0941\u0926 \u0938\u093f\u0902\u0915 \u0939\u094b \u091c\u093e\u090f\u0902\u0917\u0947.",
     "net.syncingOne": "1 \u092c\u093e\u0915\u0940 \u2014 \u0938\u093f\u0902\u0915 \u0939\u094b \u0930\u0939\u093e \u0939\u0948\u2026",
     "net.syncingMany": "{count} \u092c\u093e\u0915\u0940 \u2014 \u0938\u093f\u0902\u0915 \u0939\u094b \u0930\u0939\u0947 \u0939\u0948\u0902\u2026",
-    "net.syncingBody": "\u0906\u092a\u0915\u0947 \u0915\u094d\u0932\u094b\u091c \u0938\u0941\u0930\u0915\u094d\u0937\u093f\u0924 \u0939\u0948\u0902 \u0914\u0930 \u091c\u0932\u094d\u0926 \u0939\u0940 \u0938\u0930\u094d\u0935\u0930 \u092a\u0930 \u092a\u0939\u0941\u0902\u091a \u091c\u093e\u090f\u0902\u0917\u0947."
+    "net.syncingBody": "\u0906\u092a\u0915\u0947 \u0915\u094d\u0932\u094b\u091c \u0938\u0941\u0930\u0915\u094d\u0937\u093f\u0924 \u0939\u0948\u0902 \u0914\u0930 \u091c\u0932\u094d\u0926 \u0939\u0940 \u0938\u0930\u094d\u0935\u0930 \u092a\u0930 \u092a\u0939\u0941\u0902\u091a \u091c\u093e\u090f\u0902\u0917\u0947.",
+    "closing.closingFor": "\u0907\u0938\u0915\u0947 \u0932\u093f\u090f \u0915\u094d\u0932\u094b\u091c:",
+    "closing.pickStore": "\u0938\u094d\u091f\u094b\u0930 \u091a\u0941\u0928\u0947\u0902",
+    "closing.pickStoreHelp": "\u0906\u092a \u090f\u0915 \u0938\u0947 \u091c\u093c\u094d\u092f\u093e\u0926\u093e \u0938\u094d\u091f\u094b\u0930 \u092e\u0947\u0902 \u0905\u0938\u093e\u0907\u0928 \u0939\u0948\u0902. \u0935\u094b \u0938\u094d\u091f\u094b\u0930 \u091a\u0941\u0928\u0947\u0902 \u091c\u093f\u0938\u0947 \u0906\u092a \u0905\u092d\u0940 \u0915\u094d\u0932\u094b\u091c \u0915\u0930 \u0930\u0939\u0947 \u0939\u0948\u0902."
   }
 };
 

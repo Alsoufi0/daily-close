@@ -32,7 +32,13 @@ operational tracker.
 | `47a7f98` (partner) | post-PDF | Moved `regenerator-runtime` to root dependency so Docker runtime stage carries it. |
 | `ac88a32` (partner) | upload 500 | OCR.space log sanitised — no longer dumps the entire base64 image to stdout (which was crashing the container). |
 | `a203301` | docs | This file (AUDIT_BACKLOG.md) created so audit progress isn't trapped in chat history. |
-| `e4922a1` (partner) | upload 500 round 2 | Owner-as-employee row now relinks instead of creating a duplicate. Was blocking uploads for any owner that had previously closed a different store (Employee.userId is UNIQUE, so the second create() crashed with 500). See "Known structural debt" section below for the long-term shape. |
+| `e4922a1` (partner) | upload 500 round 2 | Owner-as-employee row now relinks instead of creating a duplicate. Was blocking uploads for any owner that had previously closed a different store (Employee.userId is UNIQUE, so the second create() crashed with 500). Superseded by `bd57fcd` Phase 1 (constraint dropped entirely). |
+| `2e34d14` | docs | Documented the owner-as-employee debt in this file. |
+| `47a7f98` (partner) | post-PDF deploy | Moved `regenerator-runtime` to root package.json so the Docker runtime stage carries it. |
+| `ac88a32` (partner) | upload 500 round 3 | OCR.space log sanitised — was dumping the entire base64 image to stdout, crashing the Render container. |
+| `bd57fcd` | #9 partial + own-debt | **Phase 1 of multi-store assignments**: reshaped `employees` from "one row per user" to "one row per (user, store, role)". Migration 006 adds `role` enum + `daily_close.submitted_by_user_id`, drops UNIQUE on user_id, adds (user_id, store_id) composite UNIQUE, backfills owner OWNER-role rows and submitted_by_user_id. API: `assertCanCloseStore` now assignment-based, no wandering. New endpoints: `POST /employees/:id/assignments`, `GET /employees/by-user/:userId/assignments`. **Replaces** the e4922a1 hack. |
+| `d034b56` | Phase 2 of multi-store | Web `/admin/employees` page grouped by user, each employee shows store chips with per-chip remove + "Assign to another store" modal. |
+| (this commit) | Phase 3 of multi-store | Mobile store picker on the close screen — hidden when single-store, opens a sheet when multi-store. Persisted across launches via AsyncStorage. `stores.listForUser` now returns ALL assigned stores for employees (was only the primary). |
 
 ---
 

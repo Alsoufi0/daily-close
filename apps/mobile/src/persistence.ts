@@ -75,3 +75,28 @@ export async function clearDraft(): Promise<void> {
     /* ignore */
   }
 }
+
+// ── Active-store selection (Phase 3 / multi-store assignments) ────────────
+//
+// An employee can be assigned to multiple stores. The mobile app needs to
+// know WHICH store they're closing for right now. The picker on the close
+// screen lets the user choose; we persist the selection across launches
+// so they don't have to re-pick every shift.
+
+const SELECTED_STORE_KEY = "dailyclose:selected-store-id";
+
+export async function saveSelectedStoreId(storeId: string): Promise<void> {
+  try {
+    await AsyncStorage.setItem(SELECTED_STORE_KEY, storeId);
+  } catch {
+    /* persistence is best-effort */
+  }
+}
+
+export async function loadSelectedStoreId(): Promise<string | null> {
+  try {
+    return await AsyncStorage.getItem(SELECTED_STORE_KEY);
+  } catch {
+    return null;
+  }
+}
