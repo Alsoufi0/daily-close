@@ -132,7 +132,7 @@ operational tracker.
 | Supabase project ref | `gvlycdpjaxewlwgspiqz` |
 | Migration 005 (idempotency_key column) | ✅ applied to staging Supabase |
 | Migration 006 (store assignments) | ✅ applied to staging Supabase — ran statement-by-statement (Prisma `$executeRawUnsafe` 42601 on the multi-statement file is expected). Verified: role col, composite unique, submitted_by_user_id, 4 OWNER backfill assignments. Fresh-account upload smoke test passed end-to-end. |
-| Migration 007 (date → timestamptz) | ❌ NOT yet applied — fixes the false "already closed for this date" bug. Partner action below. Idempotent + safe to run as one statement (single `do $$ … $$` block, so no 42601 problem). |
+| Migration 007 (date → timestamptz) | ✅ applied to staging Supabase via SQL Editor — verified `daily_close.date` is now `timestamp with time zone` (timestamptz). Fixes the false "already closed for this date" bug. |
 | `ALLOW_DEMO_AUTH` env var on Render | ✅ removed |
 | `NODE_ENV` on Render staging | `staging` (temporary — Sentry-required-in-prod gate is disabled until SENTRY_DSN is set) |
 | `SENTRY_DSN` on Render staging | ❌ not set — see "Pending dashboard work" below |
@@ -143,7 +143,6 @@ operational tracker.
 
 ## 🔑 Pending dashboard work (partner)
 
-0. **Apply migration 007** (`supabase/migrations/007_daily_close_date_timestamptz.sql`) to staging Supabase. Fixes the false "already closed for this date" rejection. It's a single `do $$ … $$` block, so it runs fine in one shot (no 42601). Idempotent — only alters if the column is still `date`.
 1. **OCR_SPACE_API_KEY** — get free registered key at `https://ocr.space/ocrapi/freekey` (60 sec, no credit card). Add to Render staging env. Replaces public `helloworld` key (which throttles aggressively).
 2. **SENTRY_DSN** — create `daily-close-staging` Sentry project (free tier), add DSN to Render staging env, then flip `NODE_ENV` from `staging` back to `production` so staging mirrors prod behavior.
 3. **Supabase PITR** — enable Point-in-Time Recovery on staging Supabase project (~$10/mo). Required for any meaningful disaster-recovery story.
