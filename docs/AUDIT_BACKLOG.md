@@ -38,7 +38,8 @@ operational tracker.
 | `ac88a32` (partner) | upload 500 round 3 | OCR.space log sanitised — was dumping the entire base64 image to stdout, crashing the Render container. |
 | `bd57fcd` | #9 partial + own-debt | **Phase 1 of multi-store assignments**: reshaped `employees` from "one row per user" to "one row per (user, store, role)". Migration 006 adds `role` enum + `daily_close.submitted_by_user_id`, drops UNIQUE on user_id, adds (user_id, store_id) composite UNIQUE, backfills owner OWNER-role rows and submitted_by_user_id. API: `assertCanCloseStore` now assignment-based, no wandering. New endpoints: `POST /employees/:id/assignments`, `GET /employees/by-user/:userId/assignments`. **Replaces** the e4922a1 hack. |
 | `d034b56` | Phase 2 of multi-store | Web `/admin/employees` page grouped by user, each employee shows store chips with per-chip remove + "Assign to another store" modal. |
-| (this commit) | Phase 3 of multi-store | Mobile store picker on the close screen — hidden when single-store, opens a sheet when multi-store. Persisted across launches via AsyncStorage. `stores.listForUser` now returns ALL assigned stores for employees (was only the primary). |
+| `360624d` | Phase 3 of multi-store | Mobile store picker on the close screen — hidden when single-store, opens a sheet when multi-store. Persisted across launches via AsyncStorage. `stores.listForUser` now returns ALL assigned stores for employees (was only the primary). |
+| (this commit) | #7 partial (date drift) | **Close-date bug fix.** `daily_close.date` was a Postgres `date` (date-only) in migration 001 while Prisma + all day-range code treat it as a timestamp. Against a date-only column Postgres truncated the guard's UTC-instant range bounds, so a late-night close stored under one calendar date falsely matched the *next* day's close attempt → "This store is already closed for this date" even though the dashboard (which filters in full-precision JS) correctly showed it as needing a close. Migration 007 converts the column to `timestamptz`; Prisma field annotated `@db.Timestamptz(3)`. **Partner must apply migration 007 to staging Supabase.** |
 
 ---
 
@@ -131,6 +132,7 @@ operational tracker.
 | Supabase project ref | `gvlycdpjaxewlwgspiqz` |
 | Migration 005 (idempotency_key column) | ✅ applied to staging Supabase |
 | Migration 006 (store assignments) | ✅ applied to staging Supabase — ran statement-by-statement (Prisma `$executeRawUnsafe` 42601 on the multi-statement file is expected). Verified: role col, composite unique, submitted_by_user_id, 4 OWNER backfill assignments. Fresh-account upload smoke test passed end-to-end. |
+| Migration 007 (date → timestamptz) | ❌ NOT yet applied — fixes the false "already closed for this date" bug. Partner action below. Idempotent + safe to run as one statement (single `do $$ … $$` block, so no 42601 problem). |
 | `ALLOW_DEMO_AUTH` env var on Render | ✅ removed |
 | `NODE_ENV` on Render staging | `staging` (temporary — Sentry-required-in-prod gate is disabled until SENTRY_DSN is set) |
 | `SENTRY_DSN` on Render staging | ❌ not set — see "Pending dashboard work" below |
@@ -141,6 +143,7 @@ operational tracker.
 
 ## 🔑 Pending dashboard work (partner)
 
+0. **Apply migration 007** (`supabase/migrations/007_daily_close_date_timestamptz.sql`) to staging Supabase. Fixes the false "already closed for this date" rejection. It's a single `do $$ … $$` block, so it runs fine in one shot (no 42601). Idempotent — only alters if the column is still `date`.
 1. **OCR_SPACE_API_KEY** — get free registered key at `https://ocr.space/ocrapi/freekey` (60 sec, no credit card). Add to Render staging env. Replaces public `helloworld` key (which throttles aggressively).
 2. **SENTRY_DSN** — create `daily-close-staging` Sentry project (free tier), add DSN to Render staging env, then flip `NODE_ENV` from `staging` back to `production` so staging mirrors prod behavior.
 3. **Supabase PITR** — enable Point-in-Time Recovery on staging Supabase project (~$10/mo). Required for any meaningful disaster-recovery story.

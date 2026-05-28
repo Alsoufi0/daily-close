@@ -54,23 +54,23 @@ enum NotificationType {
 }
 
 model User {
-  id           String         @id @default(cuid())
-  authUserId   String?        @unique @map("auth_user_id")
-  name         String
-  email        String         @unique
-  password     String
-  role         UserRole
-  createdAt    DateTime       @default(now()) @map("created_at")
-  owner        Owner?
+  id              String         @id @default(cuid())
+  authUserId      String?        @unique @map("auth_user_id")
+  name            String
+  email           String         @unique
+  password        String
+  role            UserRole
+  createdAt       DateTime       @default(now()) @map("created_at")
+  owner           Owner?
   // `employees` is now a list (was single Employee?) — a single user can
   // be assigned to many stores. See migration 006_store_assignments.sql.
-  employees    Employee[]
+  employees       Employee[]
   // Closes this user has submitted, captured via daily_close.submitted_by_user_id.
   // Stored separately from the employee FK so owner-closes don't need a
   // synthesised employee row.
-  submittedCloses DailyClose[] @relation("DailyCloseSubmittedBy")
-  notifications Notification[]
-  auditLogs     AuditLog[]
+  submittedCloses DailyClose[]   @relation("DailyCloseSubmittedBy")
+  notifications   Notification[]
+  auditLogs       AuditLog[]
 
   @@map("users")
 }
@@ -134,36 +134,41 @@ model Store {
 }
 
 model DailyClose {
-  id             String          @id @default(cuid())
-  idempotencyKey String?         @unique @map("idempotency_key")
-  storeId        String          @map("store_id")
+  id                String           @id @default(cuid())
+  idempotencyKey    String?          @unique @map("idempotency_key")
+  storeId           String           @map("store_id")
   // employeeId is now nullable — owner-closes don't synthesise a fake
   // employee row anymore. Old rows keep their link; new rows may set
   // null and rely on submittedByUserId for "who closed it".
-  employeeId     String?         @map("employee_id")
+  employeeId        String?          @map("employee_id")
   // Always set on new closes via migration 006. Source of truth for
   // "who actually submitted this close" regardless of role.
-  submittedByUserId String       @map("submitted_by_user_id")
-  date           DateTime
-  cashSales      Decimal         @map("cash_sales") @db.Decimal(12, 2)
-  cardSales      Decimal         @map("card_sales") @db.Decimal(12, 2)
-  totalSales     Decimal         @map("total_sales") @db.Decimal(12, 2)
-  tax            Decimal         @default(0) @db.Decimal(12, 2)
-  refunds        Decimal         @default(0) @db.Decimal(12, 2)
-  discounts      Decimal         @default(0) @db.Decimal(12, 2)
-  lottery        Decimal?        @db.Decimal(12, 2)
-  expectedCash   Decimal         @map("expected_cash") @db.Decimal(12, 2)
-  countedCash    Decimal         @map("counted_cash") @db.Decimal(12, 2)
-  difference     Decimal         @db.Decimal(12, 2)
-  expenses       Decimal         @default(0) @db.Decimal(12, 2)
-  notes          String?
-  status         CloseStatus
-  createdAt      DateTime        @default(now()) @map("created_at")
-  store          Store           @relation(fields: [storeId], references: [id])
-  employee       Employee?       @relation(fields: [employeeId], references: [id])
-  submittedBy    User            @relation("DailyCloseSubmittedBy", fields: [submittedByUserId], references: [id])
-  expenseItems   Expense[]
-  uploadedReports UploadedReport[]
+  submittedByUserId String           @map("submitted_by_user_id")
+  // Stored as a full timestamp (timestamptz), NOT a date-only value. The
+  // close-guard and dashboard compute store-local day boundaries as UTC
+  // instants and range-query against this column; a date-only type made
+  // Postgres truncate the bounds and falsely match a prior day's close.
+  // Migration 007 converts the legacy `date` column to timestamptz.
+  date              DateTime         @db.Timestamptz(3)
+  cashSales         Decimal          @map("cash_sales") @db.Decimal(12, 2)
+  cardSales         Decimal          @map("card_sales") @db.Decimal(12, 2)
+  totalSales        Decimal          @map("total_sales") @db.Decimal(12, 2)
+  tax               Decimal          @default(0) @db.Decimal(12, 2)
+  refunds           Decimal          @default(0) @db.Decimal(12, 2)
+  discounts         Decimal          @default(0) @db.Decimal(12, 2)
+  lottery           Decimal?         @db.Decimal(12, 2)
+  expectedCash      Decimal          @map("expected_cash") @db.Decimal(12, 2)
+  countedCash       Decimal          @map("counted_cash") @db.Decimal(12, 2)
+  difference        Decimal          @db.Decimal(12, 2)
+  expenses          Decimal          @default(0) @db.Decimal(12, 2)
+  notes             String?
+  status            CloseStatus
+  createdAt         DateTime         @default(now()) @map("created_at")
+  store             Store            @relation(fields: [storeId], references: [id])
+  employee          Employee?        @relation(fields: [employeeId], references: [id])
+  submittedBy       User             @relation("DailyCloseSubmittedBy", fields: [submittedByUserId], references: [id])
+  expenseItems      Expense[]
+  uploadedReports   UploadedReport[]
 
   @@unique([storeId, date])
   @@index([storeId, date])
@@ -187,12 +192,12 @@ model Expense {
 }
 
 model UploadedReport {
-  id           String     @id @default(cuid())
-  dailyCloseId String?    @map("daily_close_id")
-  imageUrl     String     @map("image_url")
-  parsedJson   Json       @map("parsed_json")
-  parserType   String     @map("parser_type")
-  createdAt    DateTime   @default(now()) @map("created_at")
+  id           String      @id @default(cuid())
+  dailyCloseId String?     @map("daily_close_id")
+  imageUrl     String      @map("image_url")
+  parsedJson   Json        @map("parsed_json")
+  parserType   String      @map("parser_type")
+  createdAt    DateTime    @default(now()) @map("created_at")
   dailyClose   DailyClose? @relation(fields: [dailyCloseId], references: [id])
 
   @@index([dailyCloseId])
