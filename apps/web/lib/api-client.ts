@@ -204,6 +204,41 @@ export async function listEmployees(token: string): Promise<any[]> {
   return apiFetch<any[]>("/employees", token);
 }
 
+/**
+ * Assign an EXISTING employee to an additional store the owner owns.
+ * `employeeId` is any existing assignment-row id for that user; the
+ * server resolves the user, verifies ownership, and creates a new
+ * assignment for the target store.
+ *
+ * Idempotent — if the user already has an assignment for the target
+ * store, returns the existing row with `alreadyAssigned: true`.
+ */
+export async function assignEmployeeToStore(
+  token: string,
+  employeeId: string,
+  storeId: string
+): Promise<{ employeeId: string; userId: string; storeId: string; alreadyAssigned: boolean }> {
+  return apiFetch(`/employees/${employeeId}/assignments`, token, {
+    method: "POST",
+    body: JSON.stringify({ storeId })
+  });
+}
+
+/**
+ * List every store a given employee-user is currently assigned to,
+ * scoped to the owner's stores. Used by the admin UI to render the
+ * "Maya works at: Store #1, Store #3" chip list per user.
+ */
+export async function listEmployeeAssignments(
+  token: string,
+  userId: string
+): Promise<Array<{ id: string; storeId: string; store: { id: string; storeName: string } }>> {
+  return apiFetch<Array<{ id: string; storeId: string; store: { id: string; storeName: string } }>>(
+    `/employees/by-user/${userId}/assignments`,
+    token
+  );
+}
+
 export async function inviteEmployee(
   token: string,
   input: { name: string; email: string; storeId: string }
