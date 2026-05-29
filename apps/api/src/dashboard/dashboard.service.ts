@@ -241,6 +241,14 @@ export class DashboardService {
       take: 10
     });
     const storesClosed = stores.filter((store) => store.closedToday).length;
+    // Suppress missed-close alerts for stores that have since completed today's
+    // close. The alert rows are written by the missed-close cron and are not
+    // cleared on close, so without this a store shows "Closed" on its card while
+    // a stale "not closed yet" banner lingers up top. A store that is closedToday
+    // has reported in, so its missed-close alert is no longer actionable.
+    const closedStoreIds = new Set(
+      stores.filter((store) => store.closedToday).map((store) => store.id)
+    );
     const missingCash = stores.reduce((sum, store) => sum + Math.min(store.difference, 0), 0);
     const totalSales = stores.reduce((sum, store) => sum + store.totalSales, 0);
     // A store only "needs attention" if it has missing cash, OR it hasn't closed AND its close time has passed.
@@ -258,13 +266,15 @@ export class DashboardService {
       missingCash,
       needsAttention,
       stores,
-      alerts: alerts.map((alert) => ({
-        id: alert.id,
-        storeId: alert.storeId ?? undefined,
-        message: alert.message,
-        status: alert.status,
-        createdAt: alert.createdAt.toISOString()
-      }))
+      alerts: alerts
+        .filter((alert) => !alert.storeId || !closedStoreIds.has(alert.storeId))
+        .map((alert) => ({
+          id: alert.id,
+          storeId: alert.storeId ?? undefined,
+          message: alert.message,
+          status: alert.status,
+          createdAt: alert.createdAt.toISOString()
+        }))
     };
   }
 }

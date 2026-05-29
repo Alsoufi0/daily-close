@@ -27,7 +27,13 @@ export class MissedCloseService {
     // Use effectiveCloseMin so midnight-closing stores aren't flagged all day.
     const missing = stores.filter((store: any) => {
       const tz = store.timezone || "America/New_York";
-      const { start, end } = DashboardService.storeLocalDayRange(tz, date);
+      // Use the SAME business-day range the dashboard uses for `closedToday`
+      // (storeBusinessDayRange, which is close-time aware) so the cron and the
+      // dashboard never disagree about whether a store has closed "today".
+      // Previously this used storeLocalDayRange (plain calendar day), which
+      // diverged from the dashboard around the close-time boundary and produced
+      // false "not closed yet" alerts.
+      const { start, end } = DashboardService.storeBusinessDayRange(tz, store.closeTime || "23:30", date);
       const hasCloseToday = store.dailyCloses.some((c: any) => c.date >= start && c.date <= end);
       if (hasCloseToday) return false;
       return DashboardService.isPastCloseTime(tz, store.closeTime || "23:30", date);
