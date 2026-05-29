@@ -62,7 +62,10 @@ Re-reviewed current state, ranked what's left by severity, ran a security pass.
 - 🟡 **MEDIUM — #7 dual-schema drift.** Date column fixed, but Prisma and the Supabase SQL are still maintained independently. Pick one canonical.
 - 🟡 **MEDIUM — #9 Organization layer** (franchise / multi-owner). Not started.
 - 🟡 **MEDIUM — #10 backups.** Supabase PITR not enabled; no off-site copy. (Partner dashboard.)
-- 🟢 **LOW** — receipts weren't persisted/linked to closes (being addressed now); pagination missing on `/stores`, `/employees`, `/daily-close/history`; reports render PDFs client-side (OOM risk at scale); i18n `MutationObserver` fragility (#7.1).
+- 🟢 **LOW** — pagination missing on `/stores`, `/employees`, `/daily-close/history`; reports render PDFs client-side (OOM risk at scale); i18n `MutationObserver` fragility (#7.1). (Receipt persistence + owner Receipts page now DONE by partner.)
+
+### Open follow-up — cash/check expense allocation (the one piece of the close-expenses ask not yet built)
+The partner shipped multi-line expenses (categories + add-button + mobile parity), but the requested **per-expense cash/check choice** is not implemented (`ExpenseItemDto` has category/amount/description, no payment method). Left intentionally NOT auto-built this session because: (a) it lives in the exact files the partner was actively editing — parallel edits risk conflicts; (b) doing it correctly changes the cash-drawer reconciliation (a check-paid expense should NOT reduce expected cash), which is high-stakes and can't be visually verified unattended; (c) it needs an `Expense.payment_method` column + migration. **Decision to confirm:** should check-paid expenses stop reducing expected cash (correct reconciliation) or only be recorded? Spec once confirmed: add `method: "cash"|"check"` to expense rows (web + mobile toggle), thread through `ExpenseItemDto`, persist on `Expense`, and compute `expectedCash = cashSales − refunds − (cash expenses only)`.
 
 ### Security pass
 - ✅ No hardcoded secrets/tokens in source.
