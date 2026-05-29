@@ -1,7 +1,8 @@
 import { ForbiddenException, Injectable, NotFoundException, Optional } from "@nestjs/common";
 import { PDFDocument, rgb } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
-import { loadFontsForLang } from "./pdf-fonts";
+import { loadFontsForLang, isRtl } from "./pdf-fonts";
+import { shapeArabicRtl } from "./arabic-shaper";
 import { RequestUser } from "../auth/request-user";
 import { DashboardService } from "../dashboard/dashboard.service";
 import { PrismaService } from "../prisma/prisma.service";
@@ -334,22 +335,60 @@ export class ReportsService {
     const margin = 42;
     const pageWidth = 612;
     const pageHeight = 792;
+    const rtl = isRtl(lang);
     let page = pdf.addPage([pageWidth, pageHeight]);
     let y = pageHeight - margin;
 
-    const draw = (text: string, x: number, size = 10, font = regular, color = rgb(0.08, 0.12, 0.1)) => {
-      page.drawText(this.pdfText(text), { x, y, size, font, color });
+    // pdf-lib has no shaping/BiDi: reshape Arabic into connected presentation
+    // forms (reversed for the LTR drawer) so it reads correctly; pass-through
+    // for everything else.
+    const shape = (text: string) => (rtl ? shapeArabicRtl(this.pdfText(text)) : this.pdfText(text));
+    // Always render numbers/money with Latin digits in the PDF. Arabic-locale
+    // formatting injects Arabic-Indic digits + BiDi marks that pdf-lib draws
+    // in the wrong order ("flipped" dates/amounts).
+    const pdfMoney = (value: number) =>
+      new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value);
+
+    const widthOf = (text: string, size: number, font = regular) => font.widthOfTextAtSize(text, size);
+    // Draw a single text run. For RTL the run is anchored to the right margin
+    // (or to `rightX` when given) so headings/labels sit where an Arabic reader
+    // expects, instead of the top-left.
+    const drawRun = (
+      text: string,
+      leftX: number,
+      size = 10,
+      font = regular,
+      color = rgb(0.08, 0.12, 0.1),
+      rightX = pageWidth - margin
+    ) => {
+      const s = shape(text);
+      const x = rtl ? rightX - widthOf(s, size, font) : leftX;
+      page.drawText(s, { x, y, size, font, color });
+    };
+    // A "label: value" line where the value stays Latin/LTR. For RTL we split
+    // them: value pinned left, shaped label pinned right (never shape a mixed
+    // Arabic+number string — that would reverse the number too).
+    const drawLabelValue = (label: string, value: string, size = 9) => {
+      if (rtl) {
+        page.drawText(value, { x: margin, y, size, font: regular });
+        const s = shape(label);
+        page.drawText(s, { x: pageWidth - margin - widthOf(s, size), y, size, font: regular });
+      } else {
+        page.drawText(`${label}: ${value}`, { x: margin, y, size, font: regular });
+      }
     };
     const newPage = () => {
       page = pdf.addPage([pageWidth, pageHeight]);
       y = pageHeight - margin;
     };
+    const cleanDateTime = (d: Date) =>
+      new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).format(d);
 
-    draw(this.t(lang, "title"), margin, 22, bold, rgb(0.12, 0.48, 0.3));
+    drawRun(this.t(lang, "title"), margin, 22, bold, rgb(0.12, 0.48, 0.3));
     y -= 28;
-    draw(`${this.t(lang, "generated")}: ${new Date().toISOString()}`, margin, 9);
+    drawLabelValue(this.t(lang, "generated"), cleanDateTime(new Date()));
     y -= 15;
-    draw(`${this.t(lang, "dateRange")}: ${range.from} - ${range.to}`, margin, 9);
+    drawLabelValue(this.t(lang, "dateRange"), `${range.from} - ${range.to}`);
     y -= 28;
 
     const totalSales = rows.reduce((sum, row) => sum + row.totalSales, 0);
@@ -357,29 +396,48 @@ export class ReportsService {
     const totalNet = rows.reduce((sum, row) => sum + row.netProfit, 0);
     const cards = [
       [this.t(lang, "closes"), String(rows.length)],
-      [this.t(lang, "totalSales"), this.money(totalSales, lang)],
-      [this.t(lang, "shortage"), this.money(totalShort, lang)],
-      [this.t(lang, "netProfit"), this.money(totalNet, lang)]
+      [this.t(lang, "totalSales"), pdfMoney(totalSales)],
+      [this.t(lang, "shortage"), pdfMoney(totalShort)],
+      [this.t(lang, "netProfit"), pdfMoney(totalNet)]
     ];
     cards.forEach(([label, value], index) => {
-      const x = margin + index * 132;
+      // First card on the right for RTL so reading order matches the script.
+      const x = rtl ? pageWidth - margin - 120 - index * 132 : margin + index * 132;
       page.drawRectangle({ x, y: y - 48, width: 120, height: 48, color: rgb(0.95, 0.96, 0.93) });
-      page.drawText(this.pdfText(label), { x: x + 8, y: y - 18, size: 8, font: bold, color: rgb(0.42, 0.46, 0.43) });
-      page.drawText(this.pdfText(value), { x: x + 8, y: y - 38, size: 13, font: bold, color: rgb(0.08, 0.12, 0.1) });
+      const labelText = shape(label);
+      const valueText = shape(value);
+      const labelX = rtl ? x + 120 - 8 - widthOf(labelText, 8, bold) : x + 8;
+      const valueX = rtl ? x + 120 - 8 - widthOf(valueText, 13, bold) : x + 8;
+      page.drawText(labelText, { x: labelX, y: y - 18, size: 8, font: bold, color: rgb(0.42, 0.46, 0.43) });
+      page.drawText(valueText, { x: valueX, y: y - 38, size: 13, font: bold, color: rgb(0.08, 0.12, 0.1) });
     });
     y -= 72;
 
-    const headers = [this.t(lang, "store"), this.t(lang, "closeDate"), this.t(lang, "totalSales"), this.t(lang, "difference"), this.t(lang, "status")];
-    const widths = [170, 95, 95, 95, 95];
+    // Column model. For RTL we reverse the column order so the first logical
+    // column (store) sits on the right, and right-align text within each cell.
+    let headers = [this.t(lang, "store"), this.t(lang, "closeDate"), this.t(lang, "totalSales"), this.t(lang, "difference"), this.t(lang, "status")];
+    let widths = [170, 95, 95, 95, 95];
+    if (rtl) {
+      headers = [...headers].reverse();
+      widths = [...widths].reverse();
+    }
     const xPositions = widths.reduce<number[]>((acc, width, index) => {
       acc.push(index === 0 ? margin : acc[index - 1] + widths[index - 1]);
       return acc;
     }, []);
 
+    const drawCell = (text: string, colIndex: number, size: number, font: typeof regular, color = rgb(0.08, 0.12, 0.1)) => {
+      const s = shape(text);
+      const x = rtl ? xPositions[colIndex] + widths[colIndex] - 4 - widthOf(s, size, font) : xPositions[colIndex] + 4;
+      page.drawText(s, { x, y, size, font, color });
+    };
+
     const drawHeader = () => {
       page.drawRectangle({ x: margin, y: y - 18, width: pageWidth - margin * 2, height: 22, color: rgb(0.94, 0.92, 0.88) });
-      headers.forEach((header, i) => page.drawText(this.pdfText(header), { x: xPositions[i] + 4, y: y - 12, size: 8, font: bold }));
-      y -= 28;
+      const savedY = y;
+      y = savedY - 12;
+      headers.forEach((header, i) => drawCell(header, i, 8, bold));
+      y = savedY - 28;
     };
     drawHeader();
 
@@ -388,28 +446,26 @@ export class ReportsService {
         newPage();
         drawHeader();
       }
-      const values = [
+      let values = [
         row.storeName.slice(0, 28),
         row.closeDate,
-        this.money(row.totalSales, lang),
-        this.money(row.difference, lang),
+        pdfMoney(row.totalSales),
+        pdfMoney(row.difference),
         row.status
       ];
-      values.forEach((value, i) => page.drawText(this.pdfText(value), { x: xPositions[i] + 4, y, size: 8, font: regular }));
+      if (rtl) values = [...values].reverse();
+      values.forEach((value, i) => drawCell(value, i, 8, regular));
       y -= 18;
       if (row.notes) {
-        page.drawText(this.pdfText(`${this.t(lang, "notes")}: ${row.notes}`).slice(0, 105), {
-          x: margin + 4,
-          y,
-          size: 7,
-          font: regular,
-          color: rgb(0.36, 0.39, 0.37)
-        });
+        const noteText = `${this.t(lang, "notes")}: ${row.notes}`.slice(0, 105);
+        const s = shape(noteText);
+        const x = rtl ? pageWidth - margin - 4 - widthOf(s, 7) : margin + 4;
+        page.drawText(s, { x, y, size: 7, font: regular, color: rgb(0.36, 0.39, 0.37) });
         y -= 14;
       }
     }
 
-    page.drawText(this.pdfText("Daily Close"), { x: margin, y: 28, size: 8, font: bold, color: rgb(0.12, 0.48, 0.3) });
+    page.drawText("Daily Close", { x: margin, y: 28, size: 8, font: bold, color: rgb(0.12, 0.48, 0.3) });
     return pdf.save();
   }
 
