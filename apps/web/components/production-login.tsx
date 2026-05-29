@@ -26,9 +26,7 @@ export function ProductionLogin() {
   const { t, dir } = useLanguage();
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [phoneCode, setPhoneCode] = useState("");
   const [authMode, setAuthMode] = useState<"email" | "phone">("email");
-  const [phoneCodeSent, setPhoneCodeSent] = useState(false);
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [message, setMessage] = useState("");
@@ -48,6 +46,7 @@ export function ProductionLogin() {
 
   async function login() {
     setLoading(true);
+    setMessage("");
     const supabase = createBrowserSupabase();
     if (!supabase) {
       setMessage(t("auth.demoFallback"));
@@ -55,7 +54,14 @@ export function ProductionLogin() {
       return;
     }
 
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    // Supabase signInWithPassword accepts either { email, password } or
+    // { phone, password } — we use the same flow for both tabs so phone
+    // sign-in is a single submit, not an OTP send-then-verify dance.
+    const creds =
+      authMode === "email"
+        ? { email: email.trim(), password }
+        : { phone: phone.trim(), password };
+    const { data, error } = await supabase.auth.signInWithPassword(creds);
     setLoading(false);
     if (error || !data.session) {
       setMessage(error?.message || t("auth.loginFailed"));
@@ -63,47 +69,6 @@ export function ProductionLogin() {
     }
 
     window.localStorage.setItem("dailyclose-token", data.session.access_token);
-    window.location.href = "/owner";
-  }
-
-  async function sendPhoneCode() {
-    setLoading(true);
-    setMessage("");
-    const supabase = createBrowserSupabase();
-    if (!supabase) {
-      setLoading(false);
-      setMessage(t("auth.buildMisconfigured"));
-      return;
-    }
-    const { error } = await supabase.auth.signInWithOtp({ phone: phone.trim() });
-    setLoading(false);
-    if (error) {
-      setMessage(error.message || t("auth.phoneCodeFailed"));
-      return;
-    }
-    setPhoneCodeSent(true);
-    setMessage(t("auth.phoneCodeSent"));
-  }
-
-  async function verifyPhoneCode() {
-    setLoading(true);
-    setMessage("");
-    const supabase = createBrowserSupabase();
-    if (!supabase) {
-      setLoading(false);
-      setMessage(t("auth.buildMisconfigured"));
-      return;
-    }
-    const { data, error } = await supabase.auth.verifyOtp({
-      phone: phone.trim(),
-      token: phoneCode.trim(),
-      type: "sms"
-    });
-    setLoading(false);
-    if (error || !data.session) {
-      setMessage(error?.message || t("auth.phoneCodeFailed"));
-      return;
-    }
     window.location.href = "/owner";
   }
 
@@ -189,43 +154,20 @@ export function ProductionLogin() {
             </button>
           </div>
 
-          {authMode === "email" ? (
-            <div className="space-y-3">
-              <label className="block">
-                <span className="text-sm font-black">{t("auth.email")}</span>
+          <div className="space-y-3">
+            <label className="block">
+              <span className="text-sm font-black">
+                {authMode === "email" ? t("auth.email") : t("auth.phone")}
+              </span>
+              {authMode === "email" ? (
                 <input
                   className="focus-ring mt-2 h-12 w-full rounded-lg border border-ink/15 px-4 font-bold"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   autoComplete="email"
+                  type="email"
                 />
-              </label>
-              <label className="block">
-                <span className="text-sm font-black">{t("nav.password")}</span>
-                <div className="relative mt-2">
-                  <input
-                    className="focus-ring h-12 w-full rounded-lg border border-ink/15 px-4 pr-12 font-bold"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    type={showPw ? "text" : "password"}
-                    autoComplete="current-password"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPw((v) => !v)}
-                    aria-label={showPw ? t("auth.hidePassword") : t("auth.showPassword")}
-                    className="focus-ring absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-2 text-ink/55 hover:bg-smoke"
-                  >
-                    {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-              </label>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <label className="block">
-                <span className="text-sm font-black">{t("auth.phone")}</span>
+              ) : (
                 <input
                   className="focus-ring mt-2 h-12 w-full rounded-lg border border-ink/15 px-4 font-bold"
                   value={phone}
@@ -234,21 +176,30 @@ export function ProductionLogin() {
                   autoComplete="tel"
                   placeholder="+15551234567"
                 />
-              </label>
-              {phoneCodeSent ? (
-                <label className="block">
-                  <span className="text-sm font-black">{t("auth.smsCode")}</span>
-                  <input
-                    className="focus-ring mt-2 h-12 w-full rounded-lg border border-ink/15 px-4 font-bold"
-                    value={phoneCode}
-                    onChange={(event) => setPhoneCode(event.target.value)}
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                  />
-                </label>
-              ) : null}
-            </div>
-          )}
+              )}
+            </label>
+            <label className="block">
+              <span className="text-sm font-black">{t("nav.password")}</span>
+              <div className="relative mt-2">
+                <input
+                  className="focus-ring h-12 w-full rounded-lg border border-ink/15 px-4 pr-12 font-bold"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  type={showPw ? "text" : "password"}
+                  autoComplete="current-password"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPw((v) => !v)}
+                  aria-label={showPw ? t("auth.hidePassword") : t("auth.showPassword")}
+                  className="focus-ring absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-2 text-ink/55 hover:bg-smoke"
+                >
+                  {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </label>
+          </div>
 
           {expired ? (
             <p className="mt-3 rounded-lg border border-warning/30 bg-red-50 p-3 text-sm font-bold text-warning">
@@ -262,16 +213,10 @@ export function ProductionLogin() {
           <div className="mt-5 grid gap-3">
             <button
               className="focus-ring flex h-14 items-center justify-center gap-2 rounded-lg bg-leaf text-lg font-black text-white shadow-sm transition-transform active:scale-[0.99] disabled:opacity-60"
-              onClick={authMode === "email" ? login : phoneCodeSent ? verifyPhoneCode : sendPhoneCode}
+              onClick={login}
               disabled={loading}
             >
-              {loading
-                ? t("auth.signingIn")
-                : authMode === "phone" && !phoneCodeSent
-                  ? t("auth.sendSmsCode")
-                  : authMode === "phone"
-                    ? t("auth.verifySmsCode")
-                    : t("auth.signIn")}
+              {loading ? t("auth.signingIn") : t("auth.signIn")}
               {!loading ? <ArrowRight size={22} aria-hidden /> : null}
             </button>
             <Link
