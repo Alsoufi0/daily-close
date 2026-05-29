@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { clsx } from "clsx";
 import { formatMoney, formatMoneyExact, toMoney } from "@smokeshop/shared/utils/money";
+import { suggestBusinessDate, shouldConfirmBusinessDate, storeLocalDateToUtcNoon } from "@smokeshop/shared/timezones";
 import { scannedReport } from "../lib/mock-data";
 import { ApiError, finishDailyClose, uploadReport } from "../lib/api-client";
 import { preprocessReceipt } from "../lib/preprocess-image";
@@ -476,75 +477,6 @@ function fileToDataUrl(file: File, errorMessage: string): Promise<string> {
     reader.onload = () => resolve(String(reader.result || ""));
     reader.readAsDataURL(file);
   });
-}
-
-function parseCloseTime(closeTime?: string) {
-  const [hh, mm] = (closeTime || "23:30").split(":").map((part) => Number(part) || 0);
-  return hh * 60 + mm;
-}
-
-function localParts(timezone?: string, date = new Date()) {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: timezone || "America/New_York",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false
-  }).formatToParts(date);
-  const get = (type: string) => Number(parts.find((part) => part.type === type)?.value || 0);
-  return {
-    year: get("year"),
-    month: get("month"),
-    day: get("day"),
-    minutes: get("hour") * 60 + get("minute")
-  };
-}
-
-function toLocalDateString(parts: { year: number; month: number; day: number }, dayOffset = 0) {
-  const d = new Date(Date.UTC(parts.year, parts.month - 1, parts.day + dayOffset, 12, 0, 0));
-  return d.toISOString().slice(0, 10);
-}
-
-function suggestBusinessDate(store: { timezone?: string; closeTime?: string }) {
-  const parts = localParts(store.timezone);
-  const closeMin = parseCloseTime(store.closeTime);
-  const overnight = parts.minutes < 6 * 60;
-  const previousBusinessDay = overnight && (closeMin >= 6 * 60 || parts.minutes >= closeMin);
-  return toLocalDateString(parts, previousBusinessDay ? -1 : 0);
-}
-
-function shouldConfirmBusinessDate(store: { timezone?: string; closeTime?: string }, suggestedDate: string) {
-  const parts = localParts(store.timezone);
-  const closeMin = parseCloseTime(store.closeTime);
-  const today = toLocalDateString(parts);
-  const earlyBeforeClose = parts.minutes < closeMin && !(closeMin < 6 * 60 && parts.minutes < 6 * 60);
-  return earlyBeforeClose || suggestedDate !== today;
-}
-
-function timezoneOffsetMinutes(timezone: string, date: Date) {
-  const dtf = new Intl.DateTimeFormat("en-US", {
-    timeZone: timezone,
-    hourCycle: "h23",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit"
-  });
-  const parts = dtf.formatToParts(date);
-  const get = (type: string) => Number(parts.find((part) => part.type === type)?.value || 0);
-  const asUtc = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"), get("second"));
-  return Math.round((asUtc - date.getTime()) / 60000);
-}
-
-function storeLocalDateToUtcNoon(date: string, timezone = "America/New_York") {
-  const [year, month, day] = date.split("-").map((part) => Number(part));
-  const guess = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
-  const offset = timezoneOffsetMinutes(timezone, guess);
-  return new Date(guess.getTime() - offset * 60_000).toISOString();
 }
 
 function StepProgress({

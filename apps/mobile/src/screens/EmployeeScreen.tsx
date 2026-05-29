@@ -16,6 +16,7 @@ import * as ImagePicker from "expo-image-picker";
 import { formatMoney, formatMoneyExact, toMoney } from "@smokeshop/shared/utils/money";
 import type { ParsedPOSReport } from "@smokeshop/shared/types";
 import { ApiError, finishClose, generateIdempotencyKey, uploadReport } from "../api";
+import { suggestBusinessDate, storeLocalDateToUtcNoon } from "@smokeshop/shared/timezones";
 import { QueuedForRetryError } from "../outbox";
 import { clearDraft, loadDraft, loadSelectedStoreId, saveDraft, saveSelectedStoreId } from "../persistence";
 import { OfflineBanner } from "../components/OfflineBanner";
@@ -244,11 +245,18 @@ export function EmployeeScreen({ onBack }: { onBack: () => void }) {
   async function submit() {
     setSubmitting(true);
     try {
+      // Anchor the close to the STORE's business day (its timezone + close
+      // time), not the phone's clock — so a close submitted from a different
+      // timezone, or after midnight, still lands on the correct day. Mirrors
+      // the web close flow via the shared helpers.
+      const tz = (activeStore as { timezone?: string }).timezone;
+      const closeTime = (activeStore as { closeTime?: string }).closeTime;
+      const businessDate = suggestBusinessDate({ timezone: tz, closeTime });
       await finishClose(
         {
           storeId: activeStore.id,
           employeeId,
-          date: new Date().toISOString(),
+          date: storeLocalDateToUtcNoon(businessDate, tz),
           cashSales: report.cashSales,
           cardSales: report.cardSales,
           totalSales: report.totalSales,

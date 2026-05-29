@@ -61,6 +61,20 @@ export class DashboardService {
   // submitted late-evening in earlier timezones (e.g. a 23:00 PT close is at
   // 06:00 UTC the next day, so a Render server in UTC would query the wrong
   // day and falsely report the store as not-yet-closed).
+  // YYYY-MM-DD calendar date of an instant, on the store's clock (not UTC).
+  static formatLocalDate(date: Date, timezone = "America/New_York"): string {
+    try {
+      return new Intl.DateTimeFormat("en-CA", {
+        timeZone: timezone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit"
+      }).format(date);
+    } catch {
+      return date.toISOString().slice(0, 10);
+    }
+  }
+
   static storeLocalDayRange(timezone: string, now = new Date()): { start: Date; end: Date } {
     try {
       const parts = new Intl.DateTimeFormat("en-CA", {
@@ -207,7 +221,11 @@ export class DashboardService {
 
     return closes.map((c: any) => ({
       id: c.id,
-      date: c.date.toISOString().slice(0, 10),
+      // Display the close date on the STORE's clock, not UTC. The stored
+      // instant is anchored to noon in the store tz for new closes, but older
+      // rows may hold a raw submission instant whose UTC date is a day off for
+      // late-night US closes — formatting in the store tz corrects both.
+      date: DashboardService.formatLocalDate(c.date, c.store?.timezone || "America/New_York"),
       storeId: c.storeId,
       storeName: c.store.storeName,
       totalSales: Number(c.totalSales),

@@ -68,6 +68,11 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 export interface StoreRecord {
   id: string;
   storeName: string;
+  // The store's own timezone + close time drive which business day a close
+  // belongs to (see suggestBusinessDate). The /stores endpoint returns these;
+  // optional here so the legacy fallback store objects still typecheck.
+  timezone?: string;
+  closeTime?: string;
 }
 
 export async function getProfile(): Promise<SessionProfile> {
