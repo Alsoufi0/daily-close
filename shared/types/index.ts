@@ -12,6 +12,8 @@ export interface StoreSummary {
   cashSales: number;
   cardSales: number;
   difference: number;
+  expenses: number;
+  netProfit: number;
   timezone?: string;
   closeTime?: string;
   pastCloseTime?: boolean;
@@ -32,6 +34,8 @@ export interface OwnerDashboardSummary {
   storesClosed: number;
   totalStores: number;
   totalSales: number;
+  totalExpenses: number;
+  totalNet: number;
   missingCash: number;
   needsAttention: number;
   stores: StoreSummary[];

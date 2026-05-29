@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import type { OwnerDashboardSummary } from "@shared/types";
+import { netProfit } from "@shared/utils/money";
 import { RequestUser } from "../auth/request-user";
 import { PrismaService } from "../prisma/prisma.service";
 
@@ -195,6 +196,15 @@ export class DashboardService {
         cashSales: close ? Number(close.cashSales) : 0,
         cardSales: close ? Number(close.cardSales) : 0,
         difference: close ? Number(close.difference) : 0,
+        expenses: close ? Number(close.expenses) || 0 : 0,
+        netProfit: close
+          ? netProfit({
+              totalSales: Number(close.totalSales),
+              tax: Number(close.tax),
+              refunds: Number(close.refunds),
+              expenses: Number(close.expenses)
+            })
+          : 0,
         timezone: tz,
         closeTime,
         pastCloseTime: DashboardService.isPastCloseTime(tz, closeTime, date)
@@ -245,6 +255,8 @@ export class DashboardService {
         storesClosed: 0,
         totalStores: 0,
         totalSales: 0,
+        totalExpenses: 0,
+        totalNet: 0,
         missingCash: 0,
         needsAttention: 0,
         stores: [],
@@ -270,6 +282,8 @@ export class DashboardService {
     );
     const missingCash = stores.reduce((sum, store) => sum + Math.min(store.difference, 0), 0);
     const totalSales = stores.reduce((sum, store) => sum + store.totalSales, 0);
+    const totalExpenses = stores.reduce((sum, store) => sum + store.expenses, 0);
+    const totalNet = stores.reduce((sum, store) => sum + store.netProfit, 0);
     // A store only "needs attention" if it has missing cash, OR it hasn't closed AND its close time has passed.
     const needsAttention = stores.filter(
       (store) =>
@@ -282,6 +296,8 @@ export class DashboardService {
       storesClosed,
       totalStores: stores.length,
       totalSales,
+      totalExpenses,
+      totalNet,
       missingCash,
       needsAttention,
       stores,

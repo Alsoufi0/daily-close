@@ -199,8 +199,14 @@ export function OwnerDashboard() {
         </div>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard label={t("dashboard.salesToday")} value={formatMoney(summary.totalSales)} />
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        <MetricCard label={t("dashboard.grossSales")} value={formatMoney(summary.totalSales)} />
+        <MetricCard label={t("dashboard.expenses")} value={formatMoney(summary.totalExpenses)} />
+        <MetricCard
+          label={t("dashboard.netProfit")}
+          value={formatMoney(summary.totalNet)}
+          tone={summary.totalNet < 0 ? "bad" : "good"}
+        />
         <MetricCard
           label={t("dashboard.storesClosed")}
           value={`${summary.storesClosed}/${summary.totalStores}`}
@@ -281,7 +287,7 @@ export function OwnerDashboard() {
           </div>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {summary.stores.map((store) => {
+            {summary.stores.slice(0, 3).map((store) => {
               const barWidth = store.closedToday ? Math.max(6, (store.totalSales / maxSales) * 100) : 0;
               const pastClose = Boolean(store.pastCloseTime);
               const needsClosing = !store.closedToday && pastClose;
@@ -335,6 +341,21 @@ export function OwnerDashboard() {
                     </div>
                   </div>
 
+                  {store.closedToday ? (
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      <div className="rounded-lg bg-smoke p-3">
+                        <p className="text-xs font-black uppercase text-ink/55">{t("dashboard.expenses")}</p>
+                        <p className="text-xl font-black">{formatMoney(store.expenses)}</p>
+                      </div>
+                      <div className="rounded-lg bg-smoke p-3">
+                        <p className="text-xs font-black uppercase text-ink/55">{t("dashboard.netProfit")}</p>
+                        <p className={`text-xl font-black ${store.netProfit < 0 ? "text-warning" : ""}`}>
+                          {formatMoney(store.netProfit)}
+                        </p>
+                      </div>
+                    </div>
+                  ) : null}
+
                   <div
                     className={
                       diffTone === "bad"
@@ -359,6 +380,15 @@ export function OwnerDashboard() {
             })}
           </div>
         )}
+        {summary.stores.length > 3 ? (
+          <a
+            href="/stores"
+            className="focus-ring mt-3 flex items-center justify-between gap-3 rounded-xl border border-ink/10 bg-white p-4 font-black text-ink hover:bg-smoke"
+          >
+            <span>{t("dashboard.viewAllStores")}</span>
+            <span className="text-leaf">{summary.totalStores} →</span>
+          </a>
+        ) : null}
         {summary.stores.length === 1 ? (
           <a
             href="/admin/stores"

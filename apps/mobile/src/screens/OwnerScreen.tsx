@@ -19,6 +19,8 @@ const EMPTY_SUMMARY: OwnerDashboardSummary = {
   storesClosed: 0,
   totalStores: 0,
   totalSales: 0,
+  totalExpenses: 0,
+  totalNet: 0,
   missingCash: 0,
   needsAttention: 0,
   stores: [],

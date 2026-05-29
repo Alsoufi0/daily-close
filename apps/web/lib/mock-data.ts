@@ -20,6 +20,8 @@ export const stores: StoreSummary[] = [
     cashSales: 1800,
     cardSales: 2700,
     difference: 5,
+    expenses: 120,
+    netProfit: 4080,
     timezone: "America/New_York",
     closeTime: "23:30"
   },
@@ -31,6 +33,8 @@ export const stores: StoreSummary[] = [
     cashSales: 0,
     cardSales: 0,
     difference: 0,
+    expenses: 0,
+    netProfit: 0,
     timezone: "America/New_York",
     closeTime: "22:00",
     pastCloseTime: true
@@ -43,6 +47,8 @@ export const stores: StoreSummary[] = [
     cashSales: 1500,
     cardSales: 2400,
     difference: -40,
+    expenses: 210,
+    netProfit: 3690,
     timezone: "America/Chicago",
     closeTime: "23:30"
   }
