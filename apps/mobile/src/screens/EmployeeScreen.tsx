@@ -13,7 +13,7 @@ import {
   View
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import { formatMoney, formatMoneyExact, toMoney } from "@smokeshop/shared/utils/money";
+import { formatMoney, formatMoneyExact, netProfit, toMoney } from "@smokeshop/shared/utils/money";
 import type { ParsedPOSReport } from "@smokeshop/shared/types";
 import { ApiError, finishClose, generateIdempotencyKey, uploadReport } from "../api";
 import { suggestBusinessDate, storeLocalDateToUtcNoon } from "@smokeshop/shared/timezones";
@@ -443,6 +443,17 @@ export function EmployeeScreen({ onBack }: { onBack: () => void }) {
           {step === "expenses" ? (
             <>
               <MoneyInput label={t("closing.expenses")} value={expenses} onChange={setExpenses} />
+              <MetricCard
+                label={t("closing.netProfit")}
+                value={formatMoney(
+                  netProfit({
+                    totalSales: report.totalSales,
+                    tax: report.tax,
+                    refunds: report.refunds,
+                    expenses: toMoney(expenses)
+                  })
+                )}
+              />
               <Text style={s.inputLabel}>{t("closing.notes")}</Text>
               <TextInput
                 style={s.notes}

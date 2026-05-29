@@ -14,7 +14,7 @@ import {
   Upload
 } from "lucide-react";
 import { clsx } from "clsx";
-import { formatMoney, formatMoneyExact, toMoney } from "@smokeshop/shared/utils/money";
+import { formatMoney, formatMoneyExact, netProfit, toMoney } from "@smokeshop/shared/utils/money";
 import { suggestBusinessDate, shouldConfirmBusinessDate, storeLocalDateToUtcNoon } from "@smokeshop/shared/timezones";
 import { scannedReport } from "../lib/mock-data";
 import { ApiError, finishDailyClose, uploadReport } from "../lib/api-client";
@@ -402,6 +402,17 @@ export function EmployeeClose() {
         {step === "expenses" ? (
           <div className="space-y-4 fade-in">
             <MoneyInput label={t("closing.expenses")} value={expenses} onChange={setExpenses} />
+            <MetricCard
+              label={t("closing.netProfit")}
+              value={formatMoney(
+                netProfit({
+                  totalSales: toMoney(totalSales),
+                  tax: toMoney(tax),
+                  refunds: toMoney(refunds),
+                  expenses: toMoney(expenses)
+                })
+              )}
+            />
             <label className="block">
               <span className="text-base font-black">{t("closing.notes")}</span>
               <textarea

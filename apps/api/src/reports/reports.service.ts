@@ -6,6 +6,7 @@ import { RequestUser } from "../auth/request-user";
 import { DashboardService } from "../dashboard/dashboard.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { ReportQueryDto } from "./dto/report-query.dto";
+import { netProfit } from "@shared/utils/money";
 
 type ReportLang = NonNullable<ReportQueryDto["lang"]>;
 
@@ -19,6 +20,7 @@ interface ReportRow {
   cashCounted: number;
   difference: number;
   expenses: number;
+  netProfit: number;
   status: string;
   notes: string;
   completedAt: string;
@@ -41,6 +43,7 @@ const labels: Record<ReportLang, Record<string, string>> = {
     cashCounted: "Cash Counted",
     difference: "Short/Over",
     expenses: "Expenses",
+    netProfit: "Net Profit",
     status: "Status",
     notes: "Notes",
     completedAt: "Completed At",
@@ -67,6 +70,7 @@ const labels: Record<ReportLang, Record<string, string>> = {
     cashCounted: "النقد المعدود",
     difference: "نقص/زيادة",
     expenses: "المصاريف",
+    netProfit: "صافي الربح",
     status: "الحالة",
     notes: "ملاحظات",
     completedAt: "وقت الإكمال",
@@ -93,6 +97,7 @@ const labels: Record<ReportLang, Record<string, string>> = {
     cashCounted: "Efectivo contado",
     difference: "Falta/Sobra",
     expenses: "Gastos",
+    netProfit: "Ganancia neta",
     status: "Estado",
     notes: "Notas",
     completedAt: "Completado",
@@ -119,6 +124,7 @@ const labels: Record<ReportLang, Record<string, string>> = {
     cashCounted: "गिना हुआ नकद",
     difference: "कम/ज्यादा",
     expenses: "खर्च",
+    netProfit: "शुद्ध लाभ",
     status: "स्थिति",
     notes: "नोट्स",
     completedAt: "पूरा हुआ",
@@ -247,6 +253,12 @@ export class ReportsService {
           cashCounted: Number(close.countedCash),
           difference: Number(close.difference),
           expenses: Number(close.expenses),
+          netProfit: netProfit({
+            totalSales: Number(close.totalSales),
+            tax: Number(close.tax),
+            refunds: Number(close.refunds),
+            expenses: Number(close.expenses)
+          }),
           status: this.statusLabel(lang, close.status),
           notes: close.notes || "",
           completedAt: this.localTime(tz, close.createdAt, lang)
@@ -267,6 +279,7 @@ export class ReportsService {
       ["cashCounted", this.t(lang, "cashCounted")],
       ["difference", this.t(lang, "difference")],
       ["expenses", this.t(lang, "expenses")],
+      ["netProfit", this.t(lang, "netProfit")],
       ["status", this.t(lang, "status")],
       ["notes", this.t(lang, "notes")],
       ["completedAt", this.t(lang, "completedAt")]
@@ -276,7 +289,7 @@ export class ReportsService {
         .map(([key]) => {
           const value = row[key];
           const formatted =
-            typeof value === "number" && ["totalSales", "cashExpected", "cashCounted", "difference", "expenses"].includes(key)
+            typeof value === "number" && ["totalSales", "cashExpected", "cashCounted", "difference", "expenses", "netProfit"].includes(key)
               ? this.money(value, lang)
               : value;
           return this.csvEscape(formatted);
@@ -335,16 +348,18 @@ export class ReportsService {
 
     const totalSales = rows.reduce((sum, row) => sum + row.totalSales, 0);
     const totalShort = rows.reduce((sum, row) => sum + Math.min(row.difference, 0), 0);
+    const totalNet = rows.reduce((sum, row) => sum + row.netProfit, 0);
     const cards = [
       [this.t(lang, "closes"), String(rows.length)],
       [this.t(lang, "totalSales"), this.money(totalSales, lang)],
-      [this.t(lang, "shortage"), this.money(totalShort, lang)]
+      [this.t(lang, "shortage"), this.money(totalShort, lang)],
+      [this.t(lang, "netProfit"), this.money(totalNet, lang)]
     ];
     cards.forEach(([label, value], index) => {
-      const x = margin + index * 172;
-      page.drawRectangle({ x, y: y - 48, width: 156, height: 48, color: rgb(0.95, 0.96, 0.93) });
-      page.drawText(this.pdfText(label), { x: x + 10, y: y - 18, size: 8, font: bold, color: rgb(0.42, 0.46, 0.43) });
-      page.drawText(this.pdfText(value), { x: x + 10, y: y - 38, size: 14, font: bold, color: rgb(0.08, 0.12, 0.1) });
+      const x = margin + index * 132;
+      page.drawRectangle({ x, y: y - 48, width: 120, height: 48, color: rgb(0.95, 0.96, 0.93) });
+      page.drawText(this.pdfText(label), { x: x + 8, y: y - 18, size: 8, font: bold, color: rgb(0.42, 0.46, 0.43) });
+      page.drawText(this.pdfText(value), { x: x + 8, y: y - 38, size: 13, font: bold, color: rgb(0.08, 0.12, 0.1) });
     });
     y -= 72;
 

@@ -60,3 +60,20 @@ export function getDifferenceTone(value: number): "good" | "bad" | "neutral" {
   if (value > 0) return "good";
   return "neutral";
 }
+
+/**
+ * Daily net for a close. This is a daily indicator, NOT full accounting profit
+ * (the app does not track cost of goods sold). Formula:
+ *   net = totalSales - tax - refunds - expenses
+ * Rationale: sales tax collected is remitted to the state (not the owner's
+ * money), refunds reverse a sale, and expenses are money paid out. If the
+ * owner's accounting treats tax differently, this is the single line to change.
+ */
+export function netProfit(p: {
+  totalSales: number;
+  tax: number;
+  refunds: number;
+  expenses: number;
+}): number {
+  return (p.totalSales || 0) - (p.tax || 0) - (p.refunds || 0) - (p.expenses || 0);
+}
