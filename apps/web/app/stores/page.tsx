@@ -51,10 +51,20 @@ function StoresPageInner() {
   const [filter, setFilter] = useState<Filter>("all");
 
   useEffect(() => {
+    // Wait for the auth token to resolve before fetching — on first render it's
+    // briefly undefined, and firing then would set a spurious "Please sign in."
+    // error that lingered even after the real fetch succeeded. RequireAuth
+    // handles the genuinely-unauthenticated case.
+    if (!session.token) return;
     let cancelled = false;
+    setLoading(true);
+    setError(null);
     getOwnerDashboard(session.token)
       .then((data) => {
-        if (!cancelled) setSummary(data);
+        if (!cancelled) {
+          setSummary(data);
+          setError(null);
+        }
       })
       .catch((err) => {
         if (!cancelled) setError(err instanceof ApiError ? err.message : "Could not load stores");
