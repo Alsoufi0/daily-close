@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Check, Loader2, Store, UserPlus } from "lucide-react";
+import { getBrowserTimeZone, getSupportedTimeZones } from "@smokeshop/shared/timezones";
 import { useSession } from "../../lib/use-session";
 import { ApiError, createStore, inviteEmployee } from "../../lib/api-client";
 import { RequireAuth } from "../../components/require-auth";
@@ -25,11 +26,13 @@ function SetupPageInner() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const browserTz = typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : "America/New_York";
+  const browserTz = getBrowserTimeZone();
+  const timeZones = useMemo(() => getSupportedTimeZones(), []);
   // form state
   const [storeName, setStoreName] = useState("");
   const [storeAddress, setStoreAddress] = useState("");
   const [closeTime, setCloseTime] = useState("23:30");
+  const [timezone, setTimezone] = useState(browserTz);
   const [empName, setEmpName] = useState("");
   const [empEmail, setEmpEmail] = useState("");
 
@@ -46,7 +49,7 @@ function SetupPageInner() {
         storeName,
         address: storeAddress || undefined,
         closeTime,
-        timezone: browserTz
+        timezone
       });
       setStoreId(created.id);
       setStep("employee");
@@ -139,6 +142,24 @@ function SetupPageInner() {
               />
               <p className="mt-1 text-xs font-bold text-ink/55">
                 Used to send a missed-close alert if no one submits by this time.
+              </p>
+            </Field>
+            <Field label="Timezone">
+              <select
+                className="focus-ring h-12 w-full rounded-lg border border-ink/15 px-4 font-bold"
+                value={timezone}
+                onChange={(e) => setTimezone(e.target.value)}
+              >
+                {timeZones.map((zone) => (
+                  <option key={zone} value={zone}>
+                    {zone}
+                    {zone === browserTz ? " (detected)" : ""}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs font-bold text-ink/55">
+                Detected from your device. Pick the store's real timezone so close
+                times and missed-close alerts follow the store's clock — not yours. ({browserTz})
               </p>
             </Field>
             <button
