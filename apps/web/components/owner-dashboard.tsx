@@ -199,82 +199,95 @@ export function OwnerDashboard() {
         </div>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-        <MetricCard label={t("dashboard.grossSales")} value={formatMoney(summary.totalSales)} />
-        <MetricCard label={t("dashboard.expenses")} value={formatMoney(summary.totalExpenses)} />
-        <MetricCard
-          label={t("dashboard.netProfit")}
-          value={formatMoney(summary.totalNet)}
-          tone={summary.totalNet < 0 ? "bad" : "good"}
-        />
-        <MetricCard
-          label={t("dashboard.storesClosed")}
-          value={`${summary.storesClosed}/${summary.totalStores}`}
-          tone={allClosed ? "good" : "warning"}
-        />
-        <MetricCard
-          label={t("dashboard.missingCash")}
-          value={formatMoneyExact(summary.missingCash)}
-          tone={summary.missingCash < 0 ? "bad" : "good"}
-        />
-        <MetricCard
-          label={t("dashboard.needsAttention")}
-          value={String(summary.needsAttention)}
-          tone={summary.needsAttention === 0 ? "good" : "warning"}
-        />
-      </div>
-
-      <div className="grid gap-3 lg:grid-cols-2">
-        {visibleAlerts.length > 0 ? (
-          <div className="flex items-start gap-3 rounded-xl border border-gold/40 bg-yellow-50 p-4 text-gold">
-            <AlertTriangle size={26} aria-hidden className="mt-0.5" />
-            <div className="flex-1 space-y-0.5">
-              <p className="text-lg font-black leading-snug">{visibleAlerts[0].message}</p>
-              <p className="text-sm font-bold text-ink/65">{t("dashboard.callStore")}</p>
-            </div>
-            <button
-              onClick={() => dismissAlert(visibleAlerts[0].id)}
-              disabled={dismissing === visibleAlerts[0].id}
-              aria-label={t("dashboard.dismissAlert")}
-              className="focus-ring flex h-8 w-8 items-center justify-center rounded-lg text-gold hover:bg-yellow-100 disabled:opacity-50"
+      {/* Condensed hero: one card with Net Profit headline + Gross/Expenses
+          subtitle + a donut for stores-closed progress, with operational
+          status as chips below. Folds the previous six metric cards into
+          a single mobile-friendly block. */}
+      <section className="rounded-2xl border border-ink/10 bg-white p-4 shadow-sm sm:p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-xs font-black uppercase tracking-wide text-ink/50">{t("dashboard.netProfit")}</p>
+            <p
+              className={`mt-1 text-4xl font-black tracking-tight sm:text-5xl ${summary.totalNet < 0 ? "text-warning" : "text-ink"}`}
             >
-              {dismissing === visibleAlerts[0].id ? (
-                <Loader2 className="animate-spin" size={16} aria-hidden />
-              ) : (
-                <X size={16} aria-hidden />
-              )}
-            </button>
-          </div>
-        ) : (
-          <div className="flex items-start gap-3 rounded-xl border border-leaf/30 bg-green-50 p-4 text-leaf">
-            <CheckCircle2 size={26} aria-hidden className="mt-0.5" />
-            <div className="space-y-0.5">
-              <p className="text-lg font-black leading-snug">{t("dashboard.noMissedAlerts")}</p>
-              <p className="text-sm font-bold text-ink/65">{t("dashboard.everyStoreReported")}</p>
+              {formatMoney(summary.totalNet)}
+            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-bold">
+              <span>
+                <span className="text-ink/45">{t("dashboard.grossSales")}</span>{" "}
+                <span className="text-ink">{formatMoney(summary.totalSales)}</span>
+              </span>
+              <span className="text-ink/30">·</span>
+              <span>
+                <span className="text-ink/45">{t("dashboard.expenses")}</span>{" "}
+                <span className="text-ink">{formatMoney(summary.totalExpenses)}</span>
+              </span>
             </div>
           </div>
-        )}
+          <div className="shrink-0 text-center">
+            <Donut
+              value={summary.storesClosed}
+              total={summary.totalStores}
+              tone={allClosed ? "good" : summary.storesClosed === 0 ? "neutral" : "warning"}
+            />
+            <p className="mt-1 text-[11px] font-black uppercase tracking-wide text-ink/50">
+              {t("dashboard.storesClosed")}
+            </p>
+          </div>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <StatusChip
+            tone={summary.missingCash < 0 ? "bad" : "good"}
+            label={t("dashboard.missingCash")}
+            value={formatMoneyExact(summary.missingCash)}
+          />
+          <StatusChip
+            tone={summary.needsAttention === 0 ? "good" : "warning"}
+            label={t("dashboard.needsAttention")}
+            value={String(summary.needsAttention)}
+          />
+        </div>
+      </section>
 
-        {shortageStore ? (
-          <div className="flex items-start gap-3 rounded-xl border border-warning/30 bg-red-50 p-4 text-warning">
-            <XCircle size={26} aria-hidden className="mt-0.5" />
-            <div className="space-y-0.5">
-              <p className="text-lg font-black leading-snug">
-                {shortageStore.storeName} {t("dashboard.isShort")} {formatMoneyExact(shortageStore.difference)}
-              </p>
-              <p className="text-sm font-bold text-ink/65">{t("dashboard.cashLower")}</p>
+      {/* Compact alerts: only render when there is a real problem. The
+          all-clear state is conveyed by the hero's chips, so we save two
+          rows of vertical real estate on mobile when nothing is wrong. */}
+      {visibleAlerts.length > 0 || shortageStore ? (
+        <div className="grid gap-3 lg:grid-cols-2">
+          {visibleAlerts.length > 0 ? (
+            <div className="flex items-start gap-3 rounded-xl border border-gold/40 bg-yellow-50 p-3 text-gold sm:p-4">
+              <AlertTriangle size={22} aria-hidden className="mt-0.5 shrink-0" />
+              <div className="flex-1 space-y-0.5">
+                <p className="text-base font-black leading-snug sm:text-lg">{visibleAlerts[0].message}</p>
+                <p className="text-xs font-bold text-ink/65 sm:text-sm">{t("dashboard.callStore")}</p>
+              </div>
+              <button
+                onClick={() => dismissAlert(visibleAlerts[0].id)}
+                disabled={dismissing === visibleAlerts[0].id}
+                aria-label={t("dashboard.dismissAlert")}
+                className="focus-ring flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-gold hover:bg-yellow-100 disabled:opacity-50"
+              >
+                {dismissing === visibleAlerts[0].id ? (
+                  <Loader2 className="animate-spin" size={14} aria-hidden />
+                ) : (
+                  <X size={14} aria-hidden />
+                )}
+              </button>
             </div>
-          </div>
-        ) : (
-          <div className="flex items-start gap-3 rounded-xl border border-leaf/30 bg-green-50 p-4 text-leaf">
-            <CheckCircle2 size={26} aria-hidden className="mt-0.5" />
-            <div className="space-y-0.5">
-              <p className="text-lg font-black leading-snug">{t("dashboard.noCashShortage")}</p>
-              <p className="text-sm font-bold text-ink/65">{t("dashboard.cashMatches")}</p>
+          ) : null}
+          {shortageStore ? (
+            <div className="flex items-start gap-3 rounded-xl border border-warning/30 bg-red-50 p-3 text-warning sm:p-4">
+              <XCircle size={22} aria-hidden className="mt-0.5 shrink-0" />
+              <div className="space-y-0.5">
+                <p className="text-base font-black leading-snug sm:text-lg">
+                  {shortageStore.storeName} {t("dashboard.isShort")} {formatMoneyExact(shortageStore.difference)}
+                </p>
+                <p className="text-xs font-bold text-ink/65 sm:text-sm">{t("dashboard.cashLower")}</p>
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          ) : null}
+        </div>
+      ) : null}
 
       <div>
         <h2 className="mb-3 text-2xl font-black">{t("dashboard.storeComparison")}</h2>
@@ -286,7 +299,7 @@ export function OwnerDashboard() {
             </p>
           </div>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:snap-none sm:grid-cols-2 sm:overflow-visible sm:px-0 xl:grid-cols-3">
             {summary.stores.slice(0, 3).map((store) => {
               const barWidth = store.closedToday ? Math.max(6, (store.totalSales / maxSales) * 100) : 0;
               const pastClose = Boolean(store.pastCloseTime);
@@ -298,7 +311,7 @@ export function OwnerDashboard() {
               return (
                 <article
                   key={store.id}
-                  className="flex min-w-0 flex-col rounded-xl border border-ink/10 bg-white p-3 shadow-sm transition-shadow hover:shadow-md sm:p-4"
+                  className="flex min-w-[85%] shrink-0 snap-start flex-col rounded-xl border border-ink/10 bg-white p-3 shadow-sm transition-shadow hover:shadow-md sm:min-w-0 sm:shrink sm:snap-none sm:p-4"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex min-w-0 items-center gap-2">
@@ -430,5 +443,74 @@ function DashboardSkeleton() {
         ))}
       </div>
     </section>
+  );
+}
+
+// Donut chart for the hero card — pure SVG so we don't pull a charting lib.
+// The colored arc shows progress (closed / total), centered text gives the
+// raw fraction, and the tone tints the arc by overall state.
+function Donut({
+  value,
+  total,
+  tone
+}: {
+  value: number;
+  total: number;
+  tone: "good" | "warning" | "neutral";
+}) {
+  const r = 36;
+  const c = 2 * Math.PI * r;
+  const pct = total > 0 ? Math.min(1, value / total) : 0;
+  const arc = c * pct;
+  const colorClass =
+    tone === "good" ? "text-leaf" : tone === "warning" ? "text-gold" : "text-ink/40";
+  return (
+    <svg viewBox="0 0 100 100" className={`h-24 w-24 sm:h-28 sm:w-28 ${colorClass}`} aria-hidden>
+      <circle cx="50" cy="50" r={r} fill="none" stroke="currentColor" strokeOpacity="0.12" strokeWidth="10" />
+      <circle
+        cx="50"
+        cy="50"
+        r={r}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="10"
+        strokeLinecap="round"
+        strokeDasharray={`${arc} ${c}`}
+        transform="rotate(-90 50 50)"
+      />
+      <text
+        x="50"
+        y="50"
+        textAnchor="middle"
+        dominantBaseline="central"
+        className="fill-current font-black"
+        fontSize="22"
+      >
+        {value}/{total}
+      </text>
+    </svg>
+  );
+}
+
+function StatusChip({
+  tone,
+  label,
+  value
+}: {
+  tone: "good" | "bad" | "warning";
+  label: string;
+  value: string;
+}) {
+  const cls =
+    tone === "good"
+      ? "bg-leaf/10 text-leaf"
+      : tone === "bad"
+        ? "bg-red-50 text-warning"
+        : "bg-yellow-100 text-gold";
+  return (
+    <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-black ${cls}`}>
+      <span className="opacity-70">{label}</span>
+      <span>{value}</span>
+    </span>
   );
 }
