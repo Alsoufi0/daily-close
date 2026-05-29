@@ -14,7 +14,7 @@ import {
   TrendingUp
 } from "lucide-react";
 import { createBrowserSupabase } from "../lib/supabase-browser";
-import { useLanguage } from "./language-provider";
+import { useLanguage, LanguageSelect } from "./language-provider";
 
 const FEATURES = [
   { icon: Clock, titleKey: "home.featureCloseTitle", bodyKey: "home.featureCloseBody" },
@@ -109,6 +109,9 @@ export function ProductionLogin() {
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-14 lg:px-8" dir={dir}>
+      <div className="mb-5 flex justify-end">
+        <LanguageSelect />
+      </div>
       <div className="mb-5 lg:hidden">
         <span className="inline-flex items-center gap-2 rounded-full bg-leaf/10 px-3 py-1 text-xs font-black uppercase tracking-wide text-leaf">
           <Store size={14} aria-hidden />

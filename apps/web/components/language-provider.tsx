@@ -266,7 +266,18 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   // don't re-fire. State change drives the actual re-render of every consumer
   // because `value` (below) is keyed on `lang`.
   const setLang = useCallback((next: Language) => {
+    // Persist first, then hard-refresh so EVERY string re-resolves in the new
+    // language. The in-place DOM translation pass doesn't reliably catch text
+    // rendered once at mount (or by server components), so a reload is the
+    // dependable way to apply a language switch everywhere. The provider
+    // restores the persisted language on load.
+    try {
+      window.localStorage.setItem("dailyclose-lang", next);
+    } catch {
+      /* localStorage may be unavailable (Safari private mode) */
+    }
     setLangState(next);
+    if (typeof window !== "undefined") window.location.reload();
   }, []);
 
   const value = useMemo(
