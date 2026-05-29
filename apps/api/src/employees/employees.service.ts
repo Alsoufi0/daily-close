@@ -47,26 +47,56 @@ export class EmployeesService {
   async invite(user: RequestUser, input: InviteEmployeeDto) {
     this.assertOwner(user);
 
+    const email = input.email?.trim() || undefined;
+    const phone = input.phone?.trim() || undefined;
+    if (!email && !phone) {
+      throw new BadRequestException("Provide an email or phone for the employee.");
+    }
+
     // Store must belong to this owner
     const store = await this.prisma.store.findFirst({
       where: { id: input.storeId, ownerId: user.ownerId }
     });
     if (!store) throw new BadRequestException("Store does not belong to you.");
 
-    const existingUser = await this.prisma.user.findUnique({ where: { email: input.email } });
-    if (existingUser) throw new ConflictException("A user with this email already exists.");
+    // The `users` table requires a unique email today, so a phone-only invite
+    // gets a deterministic placeholder derived from the phone. The real phone
+    // lives in Supabase auth.users (used for sign-in and future SMS sends).
+    // A follow-up migration can add `users.phone` + make email nullable; until
+    // then this keeps the feature shipping without a schema change.
+    const syntheticEmail = phone
+      ? `phone_${phone.replace(/\D/g, "")}@invites.dailyclose.local`
+      : undefined;
+    const lookupEmail = email ?? syntheticEmail!;
 
-    // Strong temporary password the owner shares with the employee.
+    const existingUser = await this.prisma.user.findUnique({ where: { email: lookupEmail } });
+    if (existingUser) {
+      throw new ConflictException(
+        email
+          ? "A user with this email already exists."
+          : "A user with this phone already exists."
+      );
+    }
+
+    // Strong temporary password the owner shares with the employee (over
+    // whichever channel they prefer — email, SMS, in person).
     const tempPassword = randomBytes(9).toString("base64url") + "Aa1!";
 
     let authUserId: string | undefined;
     if (this.supabase) {
-      const create = await this.supabase.auth.admin.createUser({
-        email: input.email,
-        password: tempPassword,
-        email_confirm: true,
-        user_metadata: { name: input.name, role: "EMPLOYEE" }
-      });
+      const create = email
+        ? await this.supabase.auth.admin.createUser({
+            email,
+            password: tempPassword,
+            email_confirm: true,
+            user_metadata: { name: input.name, role: "EMPLOYEE" }
+          })
+        : await this.supabase.auth.admin.createUser({
+            phone: phone!,
+            password: tempPassword,
+            phone_confirm: true,
+            user_metadata: { name: input.name, role: "EMPLOYEE" }
+          });
       if (create.error) throw new BadRequestException(create.error.message);
       authUserId = create.data.user?.id;
     }
@@ -74,7 +104,7 @@ export class EmployeesService {
     const created = await this.prisma.user.create({
       data: {
         name: input.name,
-        email: input.email,
+        email: lookupEmail,
         password: "", // unused - Supabase handles auth
         role: "EMPLOYEE",
         authUserId,
@@ -92,7 +122,8 @@ export class EmployeesService {
     return {
       id: created.id,
       employeeId: created.employees[0]?.id,
-      email: created.email,
+      email: email ?? null,
+      phone: phone ?? null,
       name: created.name,
       storeId: input.storeId,
       tempPassword,

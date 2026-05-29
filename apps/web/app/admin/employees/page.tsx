@@ -20,6 +20,8 @@ export default function EmployeesAdminPage() {
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [contactType, setContactType] = useState<"email" | "phone">("email");
   const [storeId, setStoreId] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -216,15 +218,23 @@ export default function EmployeesAdminPage() {
     setError(null);
     setInfo(null);
     try {
-      const result = await inviteEmployee(session.token, { name, email, storeId });
+      const payload =
+        contactType === "email"
+          ? { name, email, storeId }
+          : { name, phone, storeId };
+      const result = await inviteEmployee(session.token, payload);
+      // Display whichever contact channel was used (email for email-invites,
+      // phone for phone-invites) so the share modal still has something to
+      // label the credentials with.
+      const contactDisplay = result.email || result.phone || "";
       setEmployees((prev) => [
         ...prev,
-        { id: result.id, user: { name, email }, storeId }
+        { id: result.id, user: { name, email: contactDisplay }, storeId }
       ]);
-      // Show the temp password modal so the owner can share it.
-      setResetResult({ email: result.email, tempPassword: result.tempPassword });
+      setResetResult({ email: contactDisplay, tempPassword: result.tempPassword });
       setName("");
       setEmail("");
+      setPhone("");
       setShowForm(false);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not invite employee");
@@ -272,15 +282,47 @@ export default function EmployeesAdminPage() {
               onChange={(e) => setName(e.target.value)}
             />
           </Field>
-          <Field label="Email">
-            <input
-              required
-              type="email"
-              className="focus-ring h-12 w-full rounded-lg border border-ink/15 px-4 text-base font-bold"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </Field>
+          <div>
+            <div className="mb-2 grid grid-cols-2 rounded-lg bg-smoke p-0.5 text-sm font-black">
+              <button
+                type="button"
+                onClick={() => setContactType("email")}
+                className={contactType === "email" ? "rounded-md bg-white px-3 py-1.5 shadow-sm" : "px-3 py-1.5 text-ink/55"}
+              >
+                Email
+              </button>
+              <button
+                type="button"
+                onClick={() => setContactType("phone")}
+                className={contactType === "phone" ? "rounded-md bg-white px-3 py-1.5 shadow-sm" : "px-3 py-1.5 text-ink/55"}
+              >
+                Phone
+              </button>
+            </div>
+            {contactType === "email" ? (
+              <Field label="Email">
+                <input
+                  required
+                  type="email"
+                  className="focus-ring h-12 w-full rounded-lg border border-ink/15 px-4 text-base font-bold"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </Field>
+            ) : (
+              <Field label="Phone (E.164, e.g. +15551234567)">
+                <input
+                  required
+                  type="tel"
+                  inputMode="tel"
+                  placeholder="+15551234567"
+                  className="focus-ring h-12 w-full rounded-lg border border-ink/15 px-4 text-base font-bold"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                />
+              </Field>
+            )}
+          </div>
           <Field label="Store">
             <select
               required

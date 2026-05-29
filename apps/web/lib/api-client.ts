@@ -241,11 +241,14 @@ export async function listEmployeeAssignments(
 
 export async function inviteEmployee(
   token: string,
-  input: { name: string; email: string; storeId: string }
+  // Provide email OR phone (E.164, e.g. "+15551234567"). The server requires
+  // at least one and returns whichever was supplied alongside the tempPassword.
+  input: { name: string; storeId: string; email?: string; phone?: string }
 ): Promise<{
   id: string;
   employeeId: string;
-  email: string;
+  email: string | null;
+  phone: string | null;
   name: string;
   storeId: string;
   tempPassword: string;
