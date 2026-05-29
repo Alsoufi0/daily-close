@@ -1,4 +1,4 @@
-import { SmsService } from "./sms.service";
+import { SmsService, SMS_COMPLIANCE_FOOTER } from "./sms.service";
 
 describe("SmsService", () => {
   const original = { ...process.env };
@@ -107,5 +107,61 @@ describe("SmsService", () => {
     // Trailing slash should be normalized away.
     expect(body).toContain("https://app.example.com/close");
     expect(body).not.toContain("app.example.com//close");
+    // A2P 10DLC: the compliance footer MUST be on its own line at the end.
+    expect(body.endsWith(`\n${SMS_COMPLIANCE_FOOTER}`)).toBe(true);
+    expect(body).toContain(
+      "Reply STOP to unsubscribe. HELP for help. Msg & data rates may apply."
+    );
+  });
+
+  it("SMS_COMPLIANCE_FOOTER is the exact carrier-required disclaimer text", () => {
+    expect(SMS_COMPLIANCE_FOOTER).toBe(
+      "Reply STOP to unsubscribe. HELP for help. Msg & data rates may apply."
+    );
+  });
+
+  it("sendEmployeeWelcome refuses to send when no active consent exists", async () => {
+    process.env.TWILIO_ACCOUNT_SID = "AC123";
+    process.env.TWILIO_AUTH_TOKEN = "token";
+    process.env.TWILIO_FROM_NUMBER = "+15550001234";
+    fetchSpy.mockResolvedValue({ ok: true } as any);
+    const prisma = {
+      phoneConsent: { findFirst: jest.fn().mockResolvedValue(null) }
+    } as any;
+    const svc = new SmsService(prisma);
+    const result = await svc.sendEmployeeWelcome({
+      phone: "+15551234567",
+      name: "Maya",
+      storeName: "Store",
+      tempPassword: "x"
+    });
+    expect(result.sent).toBe(false);
+    expect(result.error).toMatch(/consent/i);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("sendEmployeeWelcome sends when an active consent row exists", async () => {
+    process.env.TWILIO_ACCOUNT_SID = "AC123";
+    process.env.TWILIO_AUTH_TOKEN = "token";
+    process.env.TWILIO_FROM_NUMBER = "+15550001234";
+    fetchSpy.mockResolvedValue({ ok: true } as any);
+    const prisma = {
+      phoneConsent: {
+        findFirst: jest
+          .fn()
+          .mockResolvedValue({ id: "c1", phone: "+15551234567", optedOutAt: null })
+      }
+    } as any;
+    const svc = new SmsService(prisma);
+    const result = await svc.sendEmployeeWelcome({
+      phone: "+15551234567",
+      name: "Maya",
+      storeName: "Store",
+      tempPassword: "x"
+    });
+    expect(result.sent).toBe(true);
+    expect(prisma.phoneConsent.findFirst).toHaveBeenCalledWith({
+      where: { phone: "+15551234567", optedOutAt: null }
+    });
   });
 });

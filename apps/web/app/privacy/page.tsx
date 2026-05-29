@@ -27,6 +27,13 @@ export default function PrivacyPage() {
           of the corresponding daily close record.
         </p>
         <p>
+          <strong>SMS and phone numbers:</strong> When an owner invites an
+          employee by phone number, we collect that phone number and store it
+          to send a one-time sign-in SMS. We retain consent records as
+          required by carrier regulations. We do not sell phone numbers and
+          do not use them for marketing.
+        </p>
+        <p>
           <strong>Delete my data:</strong> email{" "}
           <a className="underline" href="mailto:support@dailyclose.app">
             support@dailyclose.app

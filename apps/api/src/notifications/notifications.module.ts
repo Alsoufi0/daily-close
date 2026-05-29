@@ -4,12 +4,13 @@ import { MissedCloseService } from "./missed-close.service";
 import { NotificationsController } from "./notifications.controller";
 import { NotificationsService } from "./notifications.service";
 import { SmsService } from "./sms.service";
+import { SmsWebhookController } from "./sms-webhook.controller";
 import { WeeklySummaryService } from "./weekly-summary.service";
 import { WhatsAppService } from "./whatsapp.service";
 
 @Module({
   imports: [AuthModule],
-  controllers: [NotificationsController],
+  controllers: [NotificationsController, SmsWebhookController],
   providers: [NotificationsService, MissedCloseService, WeeklySummaryService, WhatsAppService, SmsService],
   exports: [NotificationsService, MissedCloseService, WeeklySummaryService, WhatsAppService, SmsService]
 })

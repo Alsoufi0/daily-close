@@ -72,6 +72,7 @@ model User {
   uploadedReports UploadedReport[]
   notifications   Notification[]
   auditLogs       AuditLog[]
+  attestedConsents PhoneConsent[] @relation("PhoneConsentAttester")
 
   @@map("users")
 }
@@ -106,6 +107,7 @@ model Employee {
   user        User         @relation(fields: [userId], references: [id])
   store       Store        @relation(fields: [storeId], references: [id])
   dailyCloses DailyClose[]
+  phoneConsents PhoneConsent[]
 
   @@unique([userId, storeId], map: "employees_user_store_uniq")
   @@index([userId])
@@ -129,6 +131,7 @@ model Store {
   uploadedReports UploadedReport[]
   notifications Notification[]
   auditLogs     AuditLog[]
+  phoneConsents PhoneConsent[]
 
   @@index([ownerId])
   @@index([deletedAt])
@@ -230,6 +233,29 @@ model Notification {
 
   @@index([userId, status])
   @@map("notifications")
+}
+
+// Twilio A2P 10DLC compliance — audit trail of who consented to SMS,
+// when, and what they were shown. One row per consent event. STOP-replies
+// flip `opted_out_at` rather than deleting the row so the audit trail
+// stays intact. See migration 010_phone_consents.sql.
+model PhoneConsent {
+  id                  String    @id @default(cuid())
+  phone               String
+  employeeId          String?   @map("employee_id")
+  consentedByUserId   String    @map("consented_by_user_id")
+  storeId             String    @map("store_id")
+  consentMethod       String    @map("consent_method")
+  consentText         String    @map("consent_text")
+  consentedAt         DateTime  @default(now()) @map("consented_at")
+  optedOutAt          DateTime? @map("opted_out_at")
+  employee            Employee? @relation(fields: [employeeId], references: [id])
+  consentedBy         User      @relation("PhoneConsentAttester", fields: [consentedByUserId], references: [id])
+  store               Store     @relation(fields: [storeId], references: [id])
+
+  @@index([phone])
+  @@index([employeeId])
+  @@map("phone_consents")
 }
 
 model AuditLog {

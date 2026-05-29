@@ -243,7 +243,15 @@ export async function inviteEmployee(
   token: string,
   // Provide email OR phone (E.164, e.g. "+15551234567"). The server requires
   // at least one and returns whichever was supplied alongside the tempPassword.
-  input: { name: string; storeId: string; email?: string; phone?: string }
+  input: {
+    name: string;
+    storeId: string;
+    email?: string;
+    phone?: string;
+    // Required when `phone` is set — A2P 10DLC owner-attestation payload.
+    // `text` is the exact label the owner saw next to the checkbox.
+    consent?: { granted: boolean; text: string };
+  }
 ): Promise<{
   id: string;
   employeeId: string;

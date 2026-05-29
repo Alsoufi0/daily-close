@@ -39,6 +39,47 @@ export default function TermsPage() {
           </a>
           .
         </p>
+
+        <h2 id="sms-program" className="pt-6 text-2xl font-black text-ink">
+          SMS Program Terms
+        </h2>
+        <p>
+          <strong>Program name:</strong> Daily Close Employee Invites.
+        </p>
+        <p>
+          <strong>Who sends messages:</strong> Daily Close.
+        </p>
+        <p>
+          <strong>Message types:</strong> a one-time welcome SMS containing
+          sign-in credentials when a store owner invites an employee, plus
+          occasional account or security notifications.
+        </p>
+        <p>
+          <strong>Message frequency:</strong> low — typically one message
+          per invite, plus rare account or security alerts.
+        </p>
+        <p>
+          <strong>Costs:</strong> Message and data rates may apply. Carrier
+          fees may apply.
+        </p>
+        <p>
+          <strong>Opt-out:</strong> Reply STOP to any message to unsubscribe.
+          Reply HELP for help.
+        </p>
+        <p>
+          <strong>Contact:</strong> Email{" "}
+          <a className="underline" href="mailto:support@dailyclose.app">
+            support@dailyclose.app
+          </a>{" "}
+          for help. {/* TODO: confirm final support address before A2P submission */}
+        </p>
+        <p>
+          See our{" "}
+          <a className="underline" href="/privacy">
+            Privacy Policy
+          </a>{" "}
+          for how we handle phone numbers and consent records.
+        </p>
       </div>
     </main>
   );

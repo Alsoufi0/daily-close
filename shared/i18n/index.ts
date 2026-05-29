@@ -287,7 +287,9 @@ export const translations: Record<Language, Dictionary> = {
     "receipts.download": "\u062a\u062d\u0645\u064a\u0644",
     "receipts.downloadAll": "\u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u0643\u0644",
     "receipts.unknownEmployee": "\u0645\u0648\u0638\u0641 \u063a\u064a\u0631 \u0645\u0639\u0631\u0648\u0641",
-    "nav.receipts": "\u0627\u0644\u0625\u064a\u0635\u0627\u0644\u0627\u062a"
+    "nav.receipts": "\u0627\u0644\u0625\u064a\u0635\u0627\u0644\u0627\u062a",
+    "admin.smsConsentLabel":
+      "\u0623\u064f\u0624\u0643\u0651\u062f \u0623\u0646\u0651 \u0647\u0630\u0627 \u0627\u0644\u0645\u0648\u0638\u0641 \u0648\u0627\u0641\u0642 \u0639\u0644\u0649 \u0627\u0633\u062a\u0644\u0627\u0645 \u0631\u0633\u0627\u0626\u0644 SMS \u0645\u0646 Daily Close \u0639\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u0631\u0642\u0645. \u0642\u062f \u062a\u064f\u0637\u0628\u064e\u0651\u0642 \u0631\u0633\u0648\u0645 \u0627\u0644\u0631\u0633\u0627\u0626\u0644 \u0648\u0627\u0644\u0628\u064a\u0627\u0646\u0627\u062a."
   },
   es: {
     "common.export": "Exportar",
@@ -420,7 +422,9 @@ export const translations: Record<Language, Dictionary> = {
     "receipts.download": "Descargar",
     "receipts.downloadAll": "Descargar todo",
     "receipts.unknownEmployee": "Empleado desconocido",
-    "nav.receipts": "Recibos"
+    "nav.receipts": "Recibos",
+    "admin.smsConsentLabel":
+      "Confirmo que este empleado ha aceptado recibir SMS de Daily Close en este número. Pueden aplicar tarifas estándar de mensajes y datos."
   },
   hi: {
     "common.export": "एक्सपोर्ट",
@@ -553,7 +557,9 @@ export const translations: Record<Language, Dictionary> = {
     "receipts.download": "\u0921\u093e\u0909\u0928\u0932\u094b\u0921",
     "receipts.downloadAll": "\u0938\u092c \u0921\u093e\u0909\u0928\u0932\u094b\u0921 \u0915\u0930\u0947\u0902",
     "receipts.unknownEmployee": "\u0905\u091c\u094d\u091e\u093e\u0924 \u0915\u0930\u094d\u092e\u091a\u093e\u0930\u0940",
-    "nav.receipts": "\u0930\u0938\u0940\u0926\u0947\u0902"
+    "nav.receipts": "\u0930\u0938\u0940\u0926\u0947\u0902",
+    "admin.smsConsentLabel":
+      "\u092e\u0948\u0902 \u092a\u0941\u0937\u094d\u091f\u093f \u0915\u0930\u0924\u093e/\u0924\u0940 \u0939\u0942\u0901 \u0915\u093f \u0907\u0938 \u0915\u0930\u094d\u092e\u091a\u093e\u0930\u0940 \u0928\u0947 \u0907\u0938 \u0928\u0902\u092c\u0930 \u092a\u0930 Daily Close \u0938\u0947 SMS \u092a\u094d\u0930\u093e\u092a\u094d\u0924 \u0915\u0930\u0928\u0947 \u0915\u0940 \u0938\u0939\u092e\u0924\u093f \u0926\u0940 \u0939\u0948\u0964 \u092e\u093e\u0928\u0915 \u0938\u0902\u0926\u0947\u0936 \u0914\u0930 \u0921\u0947\u091f\u093e \u0936\u0941\u0932\u094d\u0915 \u0932\u093e\u0917\u0942 \u0939\u094b \u0938\u0915\u0924\u0947 \u0939\u0948\u0902\u0964"
   }
 };
 

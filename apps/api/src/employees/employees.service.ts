@@ -57,6 +57,17 @@ export class EmployeesService {
       throw new BadRequestException("Provide an email or phone for the employee.");
     }
 
+    // Twilio A2P 10DLC: every phone-channel invite MUST carry an explicit
+    // owner attestation. We reject before any user/auth side-effects so
+    // partial state never lands when the UI forgets the checkbox.
+    if (phone) {
+      if (!input.consent || input.consent.granted !== true || !input.consent.text?.trim()) {
+        throw new BadRequestException(
+          "SMS consent is required to invite an employee by phone."
+        );
+      }
+    }
+
     // Store must belong to this owner
     const store = await this.prisma.store.findFirst({
       where: { id: input.storeId, ownerId: user.ownerId }
@@ -122,6 +133,23 @@ export class EmployeesService {
       },
       include: { employees: true }
     });
+
+    // Persist the consent record IMMEDIATELY after the user/employee row so
+    // it's queryable before we attempt any SMS. The downstream
+    // SmsService.sendEmployeeWelcome refuses to send unless an active
+    // (non-opted-out) phone_consents row exists for the target phone.
+    if (phone && input.consent) {
+      await this.prisma.phoneConsent.create({
+        data: {
+          phone,
+          employeeId: created.employees[0]?.id,
+          consentedByUserId: user.id,
+          storeId: input.storeId,
+          consentMethod: "owner_attestation_v1",
+          consentText: input.consent.text
+        }
+      });
+    }
 
     // Best-effort welcome SMS for phone invites. We never block the invite on
     // SMS — Twilio could be misconfigured, the carrier could reject, the owner

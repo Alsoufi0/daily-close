@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Copy, Key, Loader2, Plus, ShieldCheck, Store, Trash2, User, X } from "lucide-react";
 import { useSession } from "../../../lib/use-session";
+import { useLanguage } from "../../../components/language-provider";
 import {
   ApiError,
   assignEmployeeToStore,
@@ -15,6 +16,11 @@ import {
 
 export default function EmployeesAdminPage() {
   const session = useSession();
+  const { t } = useLanguage();
+  // A2P 10DLC: when contactType === "phone" the owner MUST tick this box
+  // before the submit button enables. The exact label is captured on submit
+  // and persisted server-side so the audit trail records what the owner saw.
+  const [smsConsent, setSmsConsent] = useState(false);
   const [employees, setEmployees] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -218,10 +224,18 @@ export default function EmployeesAdminPage() {
     setError(null);
     setInfo(null);
     try {
+      const consentText = t("admin.smsConsentLabel");
       const payload =
         contactType === "email"
           ? { name, email, storeId }
-          : { name, phone, storeId };
+          : {
+              name,
+              phone,
+              storeId,
+              // Send the EXACT localized text the owner just saw next to
+              // the checkbox so the persisted consent row matches the UI.
+              consent: { granted: smsConsent, text: consentText }
+            };
       const result = await inviteEmployee(session.token, payload);
       const contactDisplay = result.email || result.phone || "";
       setEmployees((prev) => [
@@ -246,6 +260,7 @@ export default function EmployeesAdminPage() {
       setName("");
       setEmail("");
       setPhone("");
+      setSmsConsent(false);
       setShowForm(false);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not invite employee");
@@ -348,6 +363,19 @@ export default function EmployeesAdminPage() {
               ))}
             </select>
           </Field>
+          {contactType === "phone" ? (
+            <label className="flex items-start gap-2 rounded-lg border border-ink/15 bg-smoke/40 p-3 text-sm font-bold text-ink/80">
+              <input
+                type="checkbox"
+                required
+                checked={smsConsent}
+                onChange={(e) => setSmsConsent(e.target.checked)}
+                className="mt-0.5 h-4 w-4 flex-shrink-0 accent-leaf"
+                aria-describedby="sms-consent-help"
+              />
+              <span id="sms-consent-help">{t("admin.smsConsentLabel")}</span>
+            </label>
+          ) : null}
           <div className="flex gap-3">
             <button
               type="button"
@@ -358,7 +386,7 @@ export default function EmployeesAdminPage() {
             </button>
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || (contactType === "phone" && !smsConsent)}
               className="focus-ring flex h-12 flex-1 items-center justify-center gap-2 rounded-lg bg-leaf font-black text-white disabled:opacity-60"
             >
               {submitting ? <Loader2 className="animate-spin" size={18} /> : null}

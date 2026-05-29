@@ -1,4 +1,12 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, Optional } from "@nestjs/common";
+import { PrismaService } from "../prisma/prisma.service";
+
+// Twilio A2P 10DLC compliance footer. Carriers (and the campaign reviewer)
+// require every promotional/transactional SMS sent on a 10DLC campaign to
+// include opt-out instructions and a cost disclaimer on its own line.
+// Exported so the test asserts the exact string we ship.
+export const SMS_COMPLIANCE_FOOTER =
+  "Reply STOP to unsubscribe. HELP for help. Msg & data rates may apply.";
 
 /**
  * Twilio SMS sender.
@@ -26,6 +34,11 @@ import { Injectable, Logger } from "@nestjs/common";
 @Injectable()
 export class SmsService {
   private readonly logger = new Logger(SmsService.name);
+
+  // PrismaService is @Optional so the unit-test (`new SmsService()`) stays
+  // dependency-free. In the running app Nest injects it automatically and
+  // hasActiveConsent() can gate sends against the phone_consents table.
+  constructor(@Optional() private readonly prisma?: PrismaService) {}
 
   isConfigured(): boolean {
     return Boolean(
@@ -101,11 +114,45 @@ export class SmsService {
     storeName: string;
     tempPassword: string;
   }): Promise<{ sent: boolean; error?: string }> {
+    // A2P 10DLC: refuse to send if we don't have a recorded, non-opted-out
+    // consent row for this phone. The invite endpoint creates the row
+    // immediately before calling this; a missing row means someone wired up
+    // a new SMS surface without capturing consent — fail closed.
+    const hasConsent = await this.hasActiveConsent(opts.phone);
+    if (!hasConsent) {
+      this.logger.warn(
+        `Refusing to send welcome SMS to ${opts.phone}: no active consent on record.`
+      );
+      return { sent: false, error: "No active SMS consent on record" };
+    }
+
     const appUrl = (process.env.APP_URL || "the Daily Close app").replace(/\/+$/, "");
     const body =
       `Daily Close: Hi ${opts.name}, you're set up to close ${opts.storeName}. ` +
       `Sign in at ${appUrl}/close (Phone tab) with this number and password: ${opts.tempPassword}. ` +
-      `Please change it after your first sign-in.`;
+      `Please change it after your first sign-in.` +
+      `\n${SMS_COMPLIANCE_FOOTER}`;
     return this.send(opts.phone, body);
+  }
+
+  /**
+   * True iff there's at least one phone_consents row for the given phone
+   * with opted_out_at IS NULL. When Prisma isn't wired up (unit tests
+   * constructing `new SmsService()` with no args), we default to TRUE so
+   * existing tests that don't care about consent keep passing — the
+   * production code path always has Prisma injected.
+   */
+  async hasActiveConsent(phone: string): Promise<boolean> {
+    if (!this.prisma) return true;
+    try {
+      const row = await this.prisma.phoneConsent.findFirst({
+        where: { phone, optedOutAt: null }
+      });
+      return Boolean(row);
+    } catch (err: any) {
+      this.logger.warn(`hasActiveConsent lookup failed: ${err?.message || err}`);
+      // Fail closed: if we can't verify consent, don't send.
+      return false;
+    }
   }
 }

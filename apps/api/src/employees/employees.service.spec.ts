@@ -41,6 +41,10 @@ function build(prismaOverrides: Record<string, any> = {}) {
         employees: [{ id: "emp-new" }]
       }),
       ...(prismaOverrides.user || {})
+    },
+    phoneConsent: {
+      create: jest.fn().mockResolvedValue({ id: "consent-1" }),
+      ...(prismaOverrides.phoneConsent || {})
     }
   } as any;
   // SMS isn't exercised by these tests; the stub keeps the constructor honest
@@ -106,6 +110,56 @@ describe("EmployeesService", () => {
     expect(result.employeeId).toBe("emp-new");
     expect(typeof result.tempPassword).toBe("string");
     expect(result.tempPassword.length).toBeGreaterThan(8);
+  });
+
+  it("invite by phone REJECTS when consent is missing (A2P 10DLC)", async () => {
+    const { service } = build();
+    await expect(
+      service.invite(owner, { name: "Maya", phone: "+15551234567", storeId: "s-1" })
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it("invite by phone REJECTS when consent.granted is false", async () => {
+    const { service } = build();
+    await expect(
+      service.invite(owner, {
+        name: "Maya",
+        phone: "+15551234567",
+        storeId: "s-1",
+        consent: { granted: false, text: "I agree" }
+      })
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it("invite by phone REJECTS when consent text is empty/whitespace", async () => {
+    const { service } = build();
+    await expect(
+      service.invite(owner, {
+        name: "Maya",
+        phone: "+15551234567",
+        storeId: "s-1",
+        consent: { granted: true, text: "   " }
+      })
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it("invite by phone with valid consent persists a phone_consents row", async () => {
+    const { service, prisma } = build();
+    await service.invite(owner, {
+      name: "Maya",
+      phone: "+15551234567",
+      storeId: "s-1",
+      consent: { granted: true, text: "I confirm this employee has agreed..." }
+    });
+    expect(prisma.phoneConsent.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        phone: "+15551234567",
+        consentedByUserId: "u-owner",
+        storeId: "s-1",
+        consentMethod: "owner_attestation_v1",
+        consentText: "I confirm this employee has agreed..."
+      })
+    });
   });
 
   it("resetPassword forbids non-owners", async () => {

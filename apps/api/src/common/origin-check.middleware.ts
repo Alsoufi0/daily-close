@@ -38,7 +38,10 @@ export class OriginCheckMiddleware implements NestMiddleware {
     "/subscriptions/webhook",
     "/notifications/check-missed-close",
     "/notifications/weekly-summary",
-    "/notifications/monthly-summary"
+    "/notifications/monthly-summary",
+    // Twilio inbound SMS webhook. Twilio has no browser origin; authenticity
+    // is verified via X-Twilio-Signature inside SmsWebhookController.
+    "/sms/webhook"
   ];
 
   private allowedOriginsCache: string[] | null = null;
