@@ -37,11 +37,89 @@ export default function SmsOptInProofPage() {
 
         <section>
           <h2 className="text-2xl font-black text-ink">4. Screenshot</h2>
-          {/* TODO: replace this placeholder with a real screenshot at /sms-opt-in-screenshot.png before Twilio submission */}
-          <div className="mt-2 flex items-center justify-center rounded-md border-2 border-dashed border-ink/30 bg-ink/5 px-6 py-16 text-center text-sm font-bold text-ink/55">
-            Screenshot of the invite form with the consent checkbox required to
-            enable Send Invite.
+          {/* Inline visual mock that faithfully replicates the Admin -> Employees -> Add Employee -> Phone tab form. */}
+          <div className="mt-2 rounded-xl border border-ink/15 bg-white p-5 shadow-sm">
+            <div className="mb-4 text-xs font-black uppercase tracking-wide text-ink/55">
+              Admin / Employees / Add Employee
+            </div>
+
+            <div className="space-y-4">
+              {/* Full name field */}
+              <label className="block">
+                <span className="text-sm font-black">Full name</span>
+                <div className="mt-2">
+                  <div className="focus-ring h-12 w-full rounded-lg border border-ink/15 px-4 text-base font-bold flex items-center">
+                    Maya Patel
+                  </div>
+                </div>
+              </label>
+
+              {/* Email / Phone tab toggle */}
+              <div>
+                <div className="mb-2 grid grid-cols-2 rounded-lg bg-smoke p-0.5 text-sm font-black">
+                  <div className="px-3 py-1.5 text-center text-ink/55">Email</div>
+                  <div className="rounded-md bg-white px-3 py-1.5 text-center shadow-sm">Phone</div>
+                </div>
+
+                {/* Phone (E.164) field */}
+                <label className="block">
+                  <span className="text-sm font-black">Phone (E.164, e.g. +15551234567)</span>
+                  <div className="mt-2">
+                    <div className="focus-ring h-12 w-full rounded-lg border border-ink/15 px-4 text-base font-bold flex items-center">
+                      +15551234567
+                    </div>
+                  </div>
+                </label>
+              </div>
+
+              {/* Store field */}
+              <label className="block">
+                <span className="text-sm font-black">Store</span>
+                <div className="mt-2">
+                  <div className="focus-ring h-12 w-full rounded-lg border border-ink/15 px-3 text-base font-bold flex items-center">
+                    Brooklyn Smoke
+                  </div>
+                </div>
+              </label>
+
+              {/* Required consent checkbox (checked, with visible focus ring) */}
+              <div className="flex items-start gap-2 rounded-lg border border-ink/15 bg-smoke/40 p-3 text-sm font-bold text-ink/80 ring-2 ring-leaf/60 ring-offset-2">
+                <span
+                  aria-hidden
+                  className="mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-sm bg-leaf text-white"
+                >
+                  <svg viewBox="0 0 16 16" fill="none" className="h-3 w-3">
+                    <path d="M3 8.5l3 3 7-7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+                <span>
+                  I confirm this employee has agreed to receive SMS from Daily
+                  Close at this number. Standard message and data rates may
+                  apply.
+                </span>
+              </div>
+
+              {/* Send invite button row */}
+              <div className="flex gap-3">
+                <div className="focus-ring h-12 flex-1 rounded-lg border-2 border-ink/15 bg-white font-black text-ink flex items-center justify-center">
+                  Cancel
+                </div>
+                <div className="focus-ring flex h-12 flex-1 items-center justify-center gap-2 rounded-lg bg-leaf font-black text-white">
+                  Send invite
+                </div>
+              </div>
+              <p className="text-xs font-bold text-ink/55">
+                The Send Invite button is disabled until the consent checkbox
+                above is checked. Shown enabled here because the checkbox is
+                checked in this mock.
+              </p>
+            </div>
           </div>
+          <p className="mt-2 text-xs font-bold text-ink/55">
+            Faithful visual mock of the Add Employee → Phone tab consent UI.
+            Reviewer can also view the same UI live in the admin dashboard
+            after signup.
+          </p>
         </section>
 
         <section>

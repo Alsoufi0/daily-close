@@ -26,8 +26,8 @@ export default function GlobalError({
       </h1>
       <p className="mt-3 max-w-md text-base font-bold text-ink/65">
         Try refreshing. If it keeps happening, email{" "}
-        <a className="underline" href="mailto:support@dailyclose.app">
-          support@dailyclose.app
+        <a className="underline" href="mailto:dailyclose@yahoo.com">
+          dailyclose@yahoo.com
         </a>{" "}
         and we'll take a look.
       </p>

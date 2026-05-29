@@ -35,8 +35,8 @@ export default function PrivacyPage() {
         </p>
         <p>
           <strong>Delete my data:</strong> email{" "}
-          <a className="underline" href="mailto:support@dailyclose.us">
-            support@dailyclose.us
+          <a className="underline" href="mailto:dailyclose@yahoo.com">
+            dailyclose@yahoo.com
           </a>{" "}
           and we will remove your account and all related records within 30
           days.
