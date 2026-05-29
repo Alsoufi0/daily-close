@@ -259,13 +259,14 @@ export class DashboardService {
       take: 10
     });
     const storesClosed = stores.filter((store) => store.closedToday).length;
-    // Suppress missed-close alerts for stores that have since completed today's
-    // close. The alert rows are written by the missed-close cron and are not
-    // cleared on close, so without this a store shows "Closed" on its card while
-    // a stale "not closed yet" banner lingers up top. A store that is closedToday
-    // has reported in, so its missed-close alert is no longer actionable.
-    const closedStoreIds = new Set(
-      stores.filter((store) => store.closedToday).map((store) => store.id)
+    // A missed-close alert is only actionable while the store is CURRENTLY in a
+    // missed state — past its close time today AND still not closed. The cron
+    // writes notification rows that are never cleared, so gating the banner on
+    // the LIVE store state is what keeps it honest: it disappears once the store
+    // closes, and it never shows before the close time (or for a stale alert
+    // left over from a prior day / a timezone change).
+    const missedStoreIds = new Set(
+      stores.filter((store) => !store.closedToday && store.pastCloseTime).map((store) => store.id)
     );
     const missingCash = stores.reduce((sum, store) => sum + Math.min(store.difference, 0), 0);
     const totalSales = stores.reduce((sum, store) => sum + store.totalSales, 0);
@@ -285,7 +286,7 @@ export class DashboardService {
       needsAttention,
       stores,
       alerts: alerts
-        .filter((alert) => !alert.storeId || !closedStoreIds.has(alert.storeId))
+        .filter((alert) => !alert.storeId || missedStoreIds.has(alert.storeId))
         .map((alert) => ({
           id: alert.id,
           storeId: alert.storeId ?? undefined,

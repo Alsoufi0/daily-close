@@ -192,23 +192,51 @@ describe("DashboardService", () => {
     expect(prisma.dailyClose.findMany).not.toHaveBeenCalled();
   });
 
-  it("maps notifications into alerts", async () => {
+  it("surfaces a missed-close alert only when its store is live-missed", async () => {
+    // now 12:00 > 10:00 close, s2 has no close today -> alert is actionable.
+    const now = new Date("2026-05-22T12:00:00.000Z");
     const prisma = makePrisma(
-      [],
+      [{ id: "s2", storeName: "Store #2", timezone: "UTC", closeTime: "10:00", dailyCloses: [] }],
       [
         {
           id: "n1",
           storeId: "s2",
           message: "Store #2 has not completed closing yet.",
           status: "PENDING",
-          createdAt: new Date("2026-05-22T22:00:00Z")
+          createdAt: new Date("2026-05-22T11:00:00Z")
         }
       ]
     );
     const service = new DashboardService(prisma);
-    const summary = await service.getMyToday(owner);
+    const summary = await service.getMyToday(owner, now);
     expect(summary.alerts).toHaveLength(1);
     expect(summary.alerts[0].message).toContain("Store #2");
     expect(summary.alerts[0].status).toBe("PENDING");
+  });
+
+  it("suppresses a stale missed-close alert once its store is no longer live-missed", async () => {
+    // s2 has since closed today, so its lingering notification must not show.
+    const now = new Date("2026-05-22T12:00:00.000Z");
+    const closeDate = new Date("2026-05-22T11:00:00.000Z");
+    const prisma = makePrisma(
+      [
+        {
+          id: "s2", storeName: "Store #2", timezone: "UTC", closeTime: "10:00",
+          dailyCloses: [{ date: closeDate, totalSales: 100, cashSales: 50, cardSales: 50, difference: 0 }]
+        }
+      ],
+      [
+        {
+          id: "n1",
+          storeId: "s2",
+          message: "Store #2 has not completed closing yet.",
+          status: "PENDING",
+          createdAt: new Date("2026-05-22T11:00:00Z")
+        }
+      ]
+    );
+    const service = new DashboardService(prisma);
+    const summary = await service.getMyToday(owner, now);
+    expect(summary.alerts).toHaveLength(0);
   });
 });
