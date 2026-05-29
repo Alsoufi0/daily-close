@@ -9,6 +9,34 @@ operational tracker.
 
 ---
 
+## 🔁 Audit refresh — 2026-05-29
+
+Re-reviewed current state, ranked what's left by severity, ran a security pass.
+
+### Shipped since the last refresh (this session)
+- **Migration 007** (`daily_close.date` `date`→`timestamptz`) applied + verified — fixed the false "store already closed for this date" rejection (dual-schema drift, audit #7).
+- **Close-date timezone unification** — web + mobile now share one source of truth (`shared/timezones.ts`); a close is anchored to the STORE's business day regardless of submitter location; History renders dates on the store's clock.
+- **Missed-close banner** — cron aligned to the dashboard's business-day definition; banner now gated on LIVE store state (past close + not closed), so stale notifications no longer linger.
+- **First-run timezone selector** added to store creation (was Admin-only).
+- **Infra:** Render moved to the shared `DailyClose` workspace (new staging API `daily-close-api-staging-z3f0`); Vercel staging repointed + rebuilt.
+
+### Remaining, by severity
+- 🔴 **CRITICAL — #1 Stripe webhook signature not verified.** `subscriptions.controller.ts:webhook` only checks a signature header *exists*; it never runs `stripe.webhooks.constructEvent`. A forged POST can flip an owner to `ACTIVE`. Paused pending the billing-provider decision, but it is a live vuln while Stripe is in use.
+- 🟠 **HIGH — prod hardening.** Staging API has `ALLOWED_ORIGINS=*` (origin/CSRF defense effectively off) and `NODE_ENV=staging` (prod-only gates relaxed). Must lock origins + flip NODE_ENV before production.
+- 🟠 **HIGH — #6 queue worker.** WhatsApp/Resend/cron sends are inline; weekly summary is sequential per-owner. Needs Redis + BullMQ + worker. (Partner: add Redis.)
+- 🟡 **MEDIUM — "Invalid session" refresh gap.** Idle tab loses the Supabase session and the API 401s instead of refreshing. Not yet investigated.
+- 🟡 **MEDIUM — #7 dual-schema drift.** Date column fixed, but Prisma and the Supabase SQL are still maintained independently. Pick one canonical.
+- 🟡 **MEDIUM — #9 Organization layer** (franchise / multi-owner). Not started.
+- 🟡 **MEDIUM — #10 backups.** Supabase PITR not enabled; no off-site copy. (Partner dashboard.)
+- 🟢 **LOW** — receipts weren't persisted/linked to closes (being addressed now); pagination missing on `/stores`, `/employees`, `/daily-close/history`; reports render PDFs client-side (OOM risk at scale); i18n `MutationObserver` fragility (#7.1).
+
+### Security pass
+- ✅ No hardcoded secrets/tokens in source.
+- ✅ Demo-auth backdoors removed (boot gate); cookie sessions + origin-check CSRF middleware; idempotency on `/finish`; `SubscriptionGuard` on writes; OCR/exception logs sanitised.
+- ❌ Stripe webhook unverified (above). ⚠️ `ALLOWED_ORIGINS=*` negates the CSRF middleware on staging.
+
+---
+
 ## ✅ Shipped to `staging`
 
 | Commit | Audit ref | What |
