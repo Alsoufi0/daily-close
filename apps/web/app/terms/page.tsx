@@ -34,8 +34,8 @@ export default function TermsPage() {
         </p>
         <p>
           For support, contact{" "}
-          <a className="underline" href="mailto:support@dailyclose.app">
-            support@dailyclose.app
+          <a className="underline" href="mailto:support@dailyclose.us">
+            support@dailyclose.us
           </a>
           .
         </p>
@@ -68,8 +68,8 @@ export default function TermsPage() {
         </p>
         <p>
           <strong>Contact:</strong> Email{" "}
-          <a className="underline" href="mailto:support@dailyclose.app">
-            support@dailyclose.app
+          <a className="underline" href="mailto:support@dailyclose.us">
+            support@dailyclose.us
           </a>{" "}
           for help. {/* TODO: confirm final support address before A2P submission */}
         </p>
