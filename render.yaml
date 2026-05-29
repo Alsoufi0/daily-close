@@ -16,8 +16,11 @@ services:
         value: "false"
       # ALLOW_DEMO_AUTH was removed. The API refuses to boot if it is set —
       # see apps/api/src/main.ts.
+      # Production site is dailyclose.us (the code also hardcodes this domain
+      # as a belt; keep the env in sync anyway). Include www + the legacy
+      # Vercel URL so existing links keep working during the cutover.
       - key: ALLOWED_ORIGINS
-        value: https://daily-close-mvp.vercel.app
+        value: https://dailyclose.us,https://www.dailyclose.us,https://daily-close-mvp.vercel.app
       # Secrets — set these in the Render dashboard after first deploy
       - key: DATABASE_URL
         sync: false
@@ -39,7 +42,22 @@ services:
       - key: STRIPE_CHECKOUT_URL
         sync: false # legacy fallback if you prefer a static link
       - key: SITE_URL
-        value: https://daily-close-mvp.vercel.app
+        value: https://dailyclose.us
+      # Base URL embedded in the employee welcome SMS sign-in link. Without it
+      # the link renders as "the Daily Close app/close" (broken).
+      - key: APP_URL
+        value: https://dailyclose.us
+      # Twilio A2P 10DLC — REQUIRED for any SMS to actually send. Without these
+      # SmsService.isConfigured() is false and every send is a silent no-op.
+      # Set the secret values in the Render dashboard.
+      - key: TWILIO_ACCOUNT_SID
+        sync: false # AC...
+      - key: TWILIO_AUTH_TOKEN
+        sync: false # also verifies the inbound /sms/webhook signature
+      - key: TWILIO_MESSAGING_SERVICE_SID
+        sync: false # MG... — preferred; handles STOP/HELP + sender pool
+      - key: TWILIO_FROM_NUMBER
+        sync: false # +1... — fallback only if no Messaging Service
       # OCR — Google Vision preferred when both keys are present
       - key: GOOGLE_VISION_API_KEY
         sync: false

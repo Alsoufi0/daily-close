@@ -98,6 +98,8 @@ export class OriginCheckMiddleware implements NestMiddleware {
       const host = new URL(origin).hostname;
       if (host === "localhost" || host === "127.0.0.1") return true;
       if (host.endsWith(".vercel.app")) return true;
+      // Production custom domain — see the matching note in main.ts originChecker.
+      if (host === "dailyclose.us" || host.endsWith(".dailyclose.us")) return true;
     } catch {
       /* fall through */
     }

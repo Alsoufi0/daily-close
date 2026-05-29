@@ -27,10 +27,9 @@ import { AllExceptionsFilter } from "./common/all-exceptions.filter";
   }
 }
 
-// Sentry is mandatory in production (audit fix #10). Running a SaaS blind to
-// errors is an operational anti-pattern; if the DSN is missing in prod we
-// refuse to boot rather than silently swallow exceptions. In dev/test/staging
-// Sentry is optional — initialised when a DSN is present, skipped otherwise.
+// Sentry is initialised when SENTRY_DSN is set. Missing-DSN in production is
+// logged loudly but no longer fatal — a hard-fail at boot took the whole API
+// down before a DSN had been provisioned. Re-tighten once Sentry is wired.
 if (process.env.SENTRY_DSN) {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const Sentry = require("@sentry/node");
@@ -41,10 +40,9 @@ if (process.env.SENTRY_DSN) {
   });
 } else if (process.env.NODE_ENV === "production") {
   // eslint-disable-next-line no-console
-  console.error(
-    "[FATAL] SENTRY_DSN is required in production. Configure it in the Render dashboard and redeploy."
+  console.warn(
+    "[WARN] SENTRY_DSN not set in production — errors will not be reported. Configure ASAP."
   );
-  process.exit(1);
 }
 
 function securityHeaders(_req: unknown, res: { setHeader: (name: string, value: string) => void }, next: () => void) {
@@ -78,6 +76,11 @@ function originChecker(value: string | undefined) {
       const host = new URL(requestOrigin).hostname;
       if (host === "localhost" || host === "127.0.0.1") return callback(null, true);
       if (host.endsWith(".vercel.app")) return callback(null, true);
+      // Production custom domain. Hardcoded alongside *.vercel.app so the live
+      // site keeps working even if the ALLOWED_ORIGINS env var drifts stale —
+      // it did: it still pointed at the old daily-close-mvp.vercel.app after
+      // the dailyclose.us cutover, which 404'd every browser API call.
+      if (host === "dailyclose.us" || host.endsWith(".dailyclose.us")) return callback(null, true);
     } catch {
       /* fall through to deny */
     }
