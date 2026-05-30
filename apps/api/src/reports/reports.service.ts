@@ -6,6 +6,7 @@ import { RequestUser } from "../auth/request-user";
 import { DashboardService } from "../dashboard/dashboard.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { ReportQueryDto } from "./dto/report-query.dto";
+import { ReceiptsQueryDto } from "./dto/receipts-query.dto";
 import { netProfit } from "@shared/utils/money";
 
 type ReportLang = NonNullable<ReportQueryDto["lang"]>;
@@ -405,5 +406,76 @@ export class ReportsService {
 
     page.drawText(this.pdfText("Daily Close"), { x: margin, y: 28, size: 8, font: bold, color: rgb(0.12, 0.48, 0.3) });
     return pdf.save();
+  }
+
+  /**
+   * Owner-only: list POS-report uploads for one of the owner's stores within
+   * a date range. Employees cannot call this — they only see their own close
+   * flow, not the historical receipts grid.
+   */
+  async listReceipts(query: ReceiptsQueryDto, user: RequestUser) {
+    if (user.role !== "STORE_OWNER" || !user.ownerId) {
+      throw new ForbiddenException("Only owners can view receipts.");
+    }
+    const store = await this.prisma.store.findFirst({
+      where: { id: query.storeId, ownerId: user.ownerId, deletedAt: null },
+      select: { id: true, storeName: true, timezone: true }
+    });
+    if (!store) throw new ForbiddenException("This store is not yours.");
+
+    // Default to last 7 days in the store's local timezone if no range given.
+    const tz = store.timezone || "America/New_York";
+    const today = DashboardService.formatLocalDate(new Date(), tz);
+    const fromStr = query.from || (() => {
+      const d = new Date();
+      d.setUTCDate(d.getUTCDate() - 7);
+      return DashboardService.formatLocalDate(d, tz);
+    })();
+    const toStr = query.to || today;
+
+    const fromRange = DashboardService.storeLocalDayRange(tz, new Date(`${fromStr}T12:00:00Z`));
+    const toRange = DashboardService.storeLocalDayRange(tz, new Date(`${toStr}T12:00:00Z`));
+
+    const rows = await this.prisma.uploadedReport.findMany({
+      where: {
+        OR: [
+          { storeId: store.id, createdAt: { gte: fromRange.start, lte: toRange.end } },
+          { dailyClose: { storeId: store.id, date: { gte: fromRange.start, lte: toRange.end } } }
+        ]
+      },
+      include: {
+        dailyClose: {
+          include: { submittedBy: true }
+        },
+        uploadedBy: true
+      },
+      orderBy: { createdAt: "desc" },
+      take: 200
+    });
+
+    return rows.map((row: any) => {
+      const dc = row.dailyClose;
+      const employeeName = row.uploadedBy?.name ?? dc?.submittedBy?.name ?? "";
+      const closeDate = dc ? this.localDate(tz, dc.date) : this.localDate(tz, row.createdAt);
+      return {
+        id: row.id,
+        imageUrl: row.imageUrl,
+        storeName: store.storeName,
+        closeDate,
+        employeeName,
+        parsedJson: row.parsedJson,
+        dailyClose: dc
+          ? {
+              id: dc.id,
+              totalSales: Number(dc.totalSales),
+              cashSales: Number(dc.cashSales),
+              cardSales: Number(dc.cardSales),
+              difference: Number(dc.difference),
+              status: dc.status
+            }
+          : null,
+        createdAt: row.createdAt.toISOString()
+      };
+    });
   }
 }

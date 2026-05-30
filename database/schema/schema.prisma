@@ -69,6 +69,7 @@ model User {
   // Stored separately from the employee FK so owner-closes don't need a
   // synthesised employee row.
   submittedCloses DailyClose[]   @relation("DailyCloseSubmittedBy")
+  uploadedReports UploadedReport[]
   notifications   Notification[]
   auditLogs       AuditLog[]
 
@@ -125,6 +126,7 @@ model Store {
   employees     Employee[]
   dailyCloses   DailyClose[]
   expenses      Expense[]
+  uploadedReports UploadedReport[]
   notifications Notification[]
   auditLogs     AuditLog[]
 
@@ -192,15 +194,22 @@ model Expense {
 }
 
 model UploadedReport {
-  id           String      @id @default(cuid())
-  dailyCloseId String?     @map("daily_close_id")
-  imageUrl     String      @map("image_url")
-  parsedJson   Json        @map("parsed_json")
-  parserType   String      @map("parser_type")
-  createdAt    DateTime    @default(now()) @map("created_at")
-  dailyClose   DailyClose? @relation(fields: [dailyCloseId], references: [id])
+  id                 String      @id @default(cuid())
+  dailyCloseId       String?     @map("daily_close_id")
+  storeId            String?     @map("store_id")
+  uploadedByUserId   String?     @map("uploaded_by_user_id")
+  imageUrl           String      @map("image_url")
+  parsedJson         Json        @map("parsed_json")
+  parserType         String      @map("parser_type")
+  createdAt          DateTime    @default(now()) @map("created_at")
+  dailyClose         DailyClose? @relation(fields: [dailyCloseId], references: [id])
+  store              Store?      @relation(fields: [storeId], references: [id])
+  uploadedBy         User?       @relation(fields: [uploadedByUserId], references: [id])
 
   @@index([dailyCloseId])
+  @@index([storeId])
+  @@index([uploadedByUserId])
+  @@index([createdAt(sort: Desc)])
   @@map("uploaded_reports")
 }
 

@@ -86,6 +86,27 @@ export class DailyCloseService {
     if (!imageForOcr) throw new BadRequestException("Report image is required.");
 
     const parsed = await this.scanReport({ imageUrl: imageForOcr, storeId: input.storeId });
+
+    // Persist the upload so the owner Receipts page can show it. The row is
+    // intentionally created BEFORE finishClosing — daily_close_id stays null
+    // until the close lands (it's never reverse-linked, but joining via
+    // store + created_at is enough for the Receipts UI).
+    try {
+      await this.prisma.uploadedReport.create({
+        data: {
+          imageUrl: imageUrl || "report-upload-not-stored",
+          parsedJson: parsed as any,
+          parserType: parsed.parserType || "UNKNOWN",
+          storeId: input.storeId,
+          uploadedByUserId: user.id
+        }
+      });
+    } catch (err: any) {
+      // The Receipts page is a read-only owner feature; failing to persist
+      // here must not block the employee's close. Log and move on.
+      this.logger.warn(`UploadedReport persist failed (non-fatal): ${err?.message || err}`);
+    }
+
     return { ...parsed, imageUrl } as ParsedPOSReport & { imageUrl: string };
   }
 
@@ -158,15 +179,32 @@ export class DailyCloseService {
     const existing = await this.repository.findByStoreAndRange(input.storeId, start, end);
     if (existing) throw new BadRequestException("This store is already closed for this date.");
 
-    const expectedCash = input.cashSales - input.refunds - input.expenses;
+    // When the client sends an itemized breakdown, the items are the source
+    // of truth and the cached `expenses` total is recomputed from them. This
+    // keeps the expense rows and the rolled-up Decimal on DailyClose
+    // consistent even if a stale `expenses` value is sent.
+    const items = input.expenseItems && input.expenseItems.length > 0 ? input.expenseItems : undefined;
+    const expensesTotal = items
+      ? items.reduce((sum, item) => sum + Number(item.amount || 0), 0)
+      : input.expenses;
+
+    const expectedCash = input.cashSales - input.refunds - expensesTotal;
     const difference = input.countedCash + input.safeDropAmount - expectedCash;
     const status = this.getStatus(difference);
 
     // safeDropAmount is part of the DTO for shortage math only — it is NOT a
     // column on DailyClose, so it must be stripped before the Prisma create.
-    const { safeDropAmount: _safeDropAmount, date: _date, employeeId: _eid, ...persisted } = input;
+    const {
+      safeDropAmount: _safeDropAmount,
+      date: _date,
+      employeeId: _eid,
+      expenseItems: _items,
+      expenses: _expenses,
+      ...persisted
+    } = input;
     const created = await this.repository.create({
       ...persisted,
+      expenses: expensesTotal,
       employeeId: resolvedEmployeeId,
       submittedByUserId,
       date: eventDate,
@@ -181,9 +219,10 @@ export class DailyCloseService {
         dailyCloseId: created.id,
         storeId: input.storeId,
         userId: user.id,
-        expenses: input.expenses,
+        expenses: expensesTotal,
         notes: input.notes,
-        difference
+        difference,
+        expenseItems: items
       });
     }
 

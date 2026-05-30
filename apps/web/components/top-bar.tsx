@@ -11,6 +11,7 @@ import { LanguageSelect, useLanguage } from "./language-provider";
 
 const NAV = [
   { href: "/owner", labelKey: "nav.owner", ownerOnly: true },
+  { href: "/owner/receipts", labelKey: "nav.receipts", ownerOnly: true },
   { href: "/employee", labelKey: "nav.employee" },
   { href: "/admin", labelKey: "nav.admin", ownerOnly: true },
   { href: "/billing", labelKey: "nav.billing", ownerOnly: true },
@@ -72,7 +73,7 @@ export function TopBar() {
           {signedIn ? (
             <>
               {navItems.map((item) => {
-                const active = pathname.startsWith(item.href);
+                const active = item.href === "/owner" ? pathname === "/owner" : pathname.startsWith(item.href);
                 return (
                   <Link
                     key={item.href}
@@ -145,7 +146,7 @@ export function TopBar() {
         <div className="border-t border-ink/10 bg-white md:hidden">
           <nav className="mx-auto flex w-full max-w-6xl flex-col gap-1 px-4 py-3 text-base font-black">
             {navItems.map((item) => {
-              const active = pathname.startsWith(item.href);
+              const active = item.href === "/owner" ? pathname === "/owner" : pathname.startsWith(item.href);
               return (
                 <Link
                   key={item.href}

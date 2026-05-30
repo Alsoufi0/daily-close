@@ -10,7 +10,9 @@ import {
   FileImage,
   Loader2,
   PencilLine,
+  Plus,
   Receipt,
+  Trash2,
   Upload
 } from "lucide-react";
 import { clsx } from "clsx";
@@ -24,6 +26,30 @@ import { MetricCard } from "./metric-card";
 import { useLanguage } from "./language-provider";
 
 type Step = "start" | "upload" | "sales" | "cash" | "expenses" | "finish" | "blocked";
+
+interface ExpenseRow {
+  id: string;
+  category: string;
+  amount: string;
+  description?: string;
+}
+
+const EXPENSE_CATEGORIES = [
+  { value: "Supplies", labelKey: "closing.expenseSupplies" },
+  { value: "Lottery payout", labelKey: "closing.expenseLottery" },
+  { value: "Repair", labelKey: "closing.expenseRepair" },
+  { value: "Refund", labelKey: "closing.expenseRefund" },
+  { value: "Cash paid out", labelKey: "closing.expenseCashPaidOut" },
+  { value: "Other", labelKey: "closing.expenseOther" }
+] as const;
+
+function newExpenseRow(): ExpenseRow {
+  const id =
+    typeof crypto !== "undefined" && (crypto as any).randomUUID
+      ? (crypto as any).randomUUID()
+      : `row-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  return { id, category: "Supplies", amount: "0" };
+}
 
 const STEPS: {
   key: Exclude<Step, "start" | "blocked">;
@@ -58,7 +84,7 @@ export function EmployeeClose() {
   const [refunds, setRefunds] = useState("0");
   const [cashCounted, setCashCounted] = useState("0");
   const [safeDrop, setSafeDrop] = useState("0");
-  const [expenses, setExpenses] = useState("0");
+  const [expenseItems, setExpenseItems] = useState<ExpenseRow[]>([]);
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -70,15 +96,20 @@ export function EmployeeClose() {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const libraryInputRef = useRef<HTMLInputElement>(null);
 
+  const expensesTotal = useMemo(
+    () => expenseItems.reduce((sum, item) => sum + toMoney(item.amount), 0),
+    [expenseItems]
+  );
+
   const result = useMemo(() => {
     // toMoney parses strings like "1,169.27" / "$1169" / "1 169" safely.
     // Pre-fix this used bare Number() which returns NaN on commas → falls
     // through `|| 0` and silently zeros the field, producing a fake
     // -$1,169 shortage when the register actually matched.
-    const expectedCash = toMoney(cashSales) - toMoney(refunds) - toMoney(expenses);
+    const expectedCash = toMoney(cashSales) - toMoney(refunds) - expensesTotal;
     const countedTotal = toMoney(cashCounted) + toMoney(safeDrop);
     return { expectedCash, difference: countedTotal - expectedCash };
-  }, [cashCounted, cashSales, expenses, refunds, safeDrop]);
+  }, [cashCounted, cashSales, expensesTotal, refunds, safeDrop]);
 
   const currentIndex = stepIndex(step);
   const availableStores = session.stores.length > 0
@@ -148,7 +179,14 @@ export function EmployeeClose() {
         discounts: scannedReport.discounts,
         countedCash: toMoney(cashCounted),
         safeDropAmount: toMoney(safeDrop),
-        expenses: toMoney(expenses),
+        expenses: expensesTotal,
+        expenseItems: expenseItems
+          .filter((item) => toMoney(item.amount) > 0 || item.category === "Other")
+          .map((item) => ({
+            category: item.category,
+            amount: toMoney(item.amount),
+            description: item.description?.trim() || undefined
+          })),
         notes
       });
       setStep("finish");
@@ -401,18 +439,100 @@ export function EmployeeClose() {
 
         {step === "expenses" ? (
           <div className="space-y-4 fade-in">
-            <MoneyInput label={t("closing.expenses")} value={expenses} onChange={setExpenses} />
-            <MetricCard
-              label={t("closing.netProfit")}
-              value={formatMoney(
-                netProfit({
-                  totalSales: toMoney(totalSales),
-                  tax: toMoney(tax),
-                  refunds: toMoney(refunds),
-                  expenses: toMoney(expenses)
-                })
-              )}
-            />
+            <div className="space-y-3">
+              {expenseItems.length === 0 ? (
+                <p className="rounded-lg border border-dashed border-ink/20 bg-smoke p-4 text-center text-sm font-bold text-ink/60">
+                  {t("closing.noExpenses")}
+                </p>
+              ) : null}
+              {expenseItems.map((item, idx) => (
+                <div key={item.id} className="rounded-xl border border-ink/10 bg-white p-3 shadow-sm">
+                  <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+                    <label className="block">
+                      <span className="text-xs font-black uppercase tracking-wide text-ink/55">
+                        {t("closing.expenseCategory")}
+                      </span>
+                      <select
+                        className="focus-ring mt-1 h-12 w-full rounded-lg border border-ink/15 bg-white px-3 text-base font-black"
+                        value={item.category}
+                        onChange={(event) => {
+                          const next = [...expenseItems];
+                          next[idx] = { ...item, category: event.target.value };
+                          setExpenseItems(next);
+                        }}
+                      >
+                        {EXPENSE_CATEGORIES.map((cat) => (
+                          <option key={cat.value} value={cat.value}>
+                            {t(cat.labelKey)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="block">
+                      <span className="text-xs font-black uppercase tracking-wide text-ink/55">
+                        {t("closing.expenseAmount")}
+                      </span>
+                      <input
+                        className="focus-ring mt-1 h-12 w-full rounded-lg border border-ink/15 px-3 text-xl font-black"
+                        inputMode="decimal"
+                        value={item.amount}
+                        onChange={(event) => {
+                          const next = [...expenseItems];
+                          next[idx] = { ...item, amount: event.target.value };
+                          setExpenseItems(next);
+                        }}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setExpenseItems(expenseItems.filter((_, i) => i !== idx))}
+                      aria-label={t("closing.removeExpense")}
+                      className="focus-ring flex h-12 w-12 items-center justify-center self-end rounded-lg border border-ink/15 text-ink/60 hover:bg-smoke"
+                    >
+                      <Trash2 size={18} aria-hidden />
+                    </button>
+                  </div>
+                  {item.category === "Other" ? (
+                    <label className="mt-2 block">
+                      <span className="text-xs font-black uppercase tracking-wide text-ink/55">
+                        {t("closing.expenseDescription")}
+                      </span>
+                      <input
+                        className="focus-ring mt-1 h-11 w-full rounded-lg border border-ink/15 px-3 text-base font-bold"
+                        value={item.description ?? ""}
+                        onChange={(event) => {
+                          const next = [...expenseItems];
+                          next[idx] = { ...item, description: event.target.value };
+                          setExpenseItems(next);
+                        }}
+                      />
+                    </label>
+                  ) : null}
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setExpenseItems([...expenseItems, newExpenseRow()])}
+                className="focus-ring flex h-12 w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-leaf/40 bg-leaf/5 px-4 font-black text-leaf hover:bg-leaf/10"
+              >
+                <Plus size={18} aria-hidden />
+                {t("closing.addExpense")}
+              </button>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <MetricCard label={t("closing.expensesTotal")} value={formatMoney(expensesTotal)} />
+              <MetricCard
+                label={t("closing.netProfit")}
+                value={formatMoney(
+                  netProfit({
+                    totalSales: toMoney(totalSales),
+                    tax: toMoney(tax),
+                    refunds: toMoney(refunds),
+                    expenses: expensesTotal
+                  })
+                )}
+              />
+            </div>
             <label className="block">
               <span className="text-base font-black">{t("closing.notes")}</span>
               <textarea

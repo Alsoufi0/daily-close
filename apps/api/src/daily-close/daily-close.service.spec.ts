@@ -42,6 +42,9 @@ function makeService(overrides: Partial<{
       }),
       create: jest.fn().mockResolvedValue({ id: "employee-new" }),
       update: jest.fn().mockResolvedValue({ id: "employee-existing", storeId: "store-1", deletedAt: null })
+    },
+    uploadedReport: {
+      create: jest.fn().mockResolvedValue({ id: "report-1" })
     }
   };
   const notifications = {
@@ -183,6 +186,49 @@ describe("DailyCloseService.finishClosing", () => {
     await service.finishClosing({ ...baseInput, expenses: 25 }, employeeUser);
     expect(repository.createExpenseAndAudit).toHaveBeenCalledWith(
       expect.objectContaining({ expenses: 25, storeId: "store-1", userId: "user-employee" })
+    );
+  });
+
+  it("uses expenseItems as the source of truth for the expenses total when provided", async () => {
+    const { service, repository } = makeService();
+    await service.finishClosing(
+      {
+        ...baseInput,
+        expenses: 999, // stale client value; must be overridden by items sum
+        expenseItems: [
+          { category: "Supplies", amount: 10 },
+          { category: "Lottery payout", amount: 15 },
+          { category: "Other", amount: 5, description: "tape" }
+        ]
+      } as any,
+      employeeUser
+    );
+    expect(repository.create).toHaveBeenCalledWith(
+      expect.objectContaining({ expenses: 30 })
+    );
+    expect(repository.createExpenseAndAudit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        expenses: 30,
+        expenseItems: [
+          { category: "Supplies", amount: 10 },
+          { category: "Lottery payout", amount: 15 },
+          { category: "Other", amount: 5, description: "tape" }
+        ]
+      })
+    );
+  });
+
+  it("falls back to the flat expenses field when expenseItems is empty", async () => {
+    const { service, repository } = makeService();
+    await service.finishClosing(
+      { ...baseInput, expenses: 25, expenseItems: [] } as any,
+      employeeUser
+    );
+    expect(repository.create).toHaveBeenCalledWith(
+      expect.objectContaining({ expenses: 25 })
+    );
+    expect(repository.createExpenseAndAudit).toHaveBeenCalledWith(
+      expect.objectContaining({ expenses: 25, expenseItems: undefined })
     );
   });
 

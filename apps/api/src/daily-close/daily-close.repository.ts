@@ -55,9 +55,24 @@ export class DailyCloseRepository {
     expenses: number;
     notes?: string;
     difference: number;
+    // When provided and non-empty, write one Expense row per item instead of
+    // the single rollup row. Each row keeps the close-id linkage so the
+    // owner can see "Lottery payout $40 + Repair $15" on the receipts page.
+    expenseItems?: Array<{ category: string; amount: number; description?: string }>;
   }) {
     await this.prisma.$transaction(async (tx) => {
-      if (input.expenses > 0) {
+      const items = input.expenseItems ?? [];
+      if (items.length > 0) {
+        await tx.expense.createMany({
+          data: items.map((item) => ({
+            storeId: input.storeId,
+            dailyCloseId: input.dailyCloseId,
+            amount: item.amount,
+            category: item.category,
+            description: item.description
+          }))
+        });
+      } else if (input.expenses > 0) {
         await tx.expense.create({
           data: {
             storeId: input.storeId,

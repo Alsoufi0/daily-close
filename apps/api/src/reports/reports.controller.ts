@@ -3,7 +3,9 @@ import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { RequestUser } from "../auth/request-user";
 import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
+import { SubscriptionGuard } from "../subscriptions/subscription.guard";
 import { ReportQueryDto } from "./dto/report-query.dto";
+import { ReceiptsQueryDto } from "./dto/receipts-query.dto";
 import { ReportsService } from "./reports.service";
 
 @ApiTags("Reports")
@@ -12,6 +14,12 @@ import { ReportsService } from "./reports.service";
 @UseGuards(SupabaseAuthGuard)
 export class ReportsController {
   constructor(private readonly reports: ReportsService) {}
+
+  @Get("receipts")
+  @UseGuards(SupabaseAuthGuard, SubscriptionGuard)
+  listReceipts(@CurrentUser() user: RequestUser, @Query() query: ReceiptsQueryDto) {
+    return this.reports.listReceipts(query, user);
+  }
 
   @Get("today.csv")
   @Header("Content-Type", "text/csv")

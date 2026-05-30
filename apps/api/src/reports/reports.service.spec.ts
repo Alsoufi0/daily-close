@@ -93,3 +93,77 @@ describe("ReportsService", () => {
     expect(pdf.byteLength).toBeGreaterThan(6_000);
   });
 });
+
+describe("ReportsService.listReceipts", () => {
+  const employee = {
+    id: "user-emp",
+    name: "Maya",
+    email: "maya@demo.com",
+    role: "EMPLOYEE" as const,
+    employeeId: "employee-1",
+    storeId: "store-1"
+  };
+
+  function makeReceiptsPrisma() {
+    return {
+      store: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: "store-1",
+          storeName: "Main Street Smoke Shop",
+          timezone: "America/New_York"
+        })
+      },
+      uploadedReport: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: "ur-1",
+            imageUrl: "https://storage.example/receipt.jpg",
+            parsedJson: { totalSales: 100 },
+            createdAt: new Date("2026-05-29T14:00:00Z"),
+            uploadedBy: { name: "Maya" },
+            dailyClose: {
+              id: "close-1",
+              date: new Date("2026-05-29T04:00:00Z"),
+              totalSales: 100,
+              cashSales: 60,
+              cardSales: 40,
+              difference: 0,
+              status: "CLOSED",
+              submittedBy: { name: "Maya" }
+            }
+          }
+        ])
+      }
+    };
+  }
+
+  it("returns receipts for an owner's store", async () => {
+    const prisma = makeReceiptsPrisma();
+    const service = new ReportsService({} as any, prisma as any);
+    const rows = await service.listReceipts(
+      { storeId: "store-1", from: "2026-05-25", to: "2026-05-30" },
+      owner
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0].storeName).toBe("Main Street Smoke Shop");
+    expect(rows[0].employeeName).toBe("Maya");
+    expect(rows[0].dailyClose?.totalSales).toBe(100);
+  });
+
+  it("forbids employees from listing receipts", async () => {
+    const prisma = makeReceiptsPrisma();
+    const service = new ReportsService({} as any, prisma as any);
+    await expect(
+      service.listReceipts({ storeId: "store-1" }, employee as any)
+    ).rejects.toThrow();
+  });
+
+  it("forbids owners from reading another owner's store", async () => {
+    const prisma = makeReceiptsPrisma();
+    prisma.store.findFirst.mockResolvedValueOnce(null);
+    const service = new ReportsService({} as any, prisma as any);
+    await expect(
+      service.listReceipts({ storeId: "store-other" }, owner)
+    ).rejects.toThrow();
+  });
+});

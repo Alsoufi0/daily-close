@@ -351,9 +351,15 @@ export function generateIdempotencyKey(): string {
   return `dc-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
 }
 
+export interface ExpenseItemInput {
+  category: string;
+  amount: number;
+  description?: string;
+}
+
 export async function finishDailyClose(
   token: string | undefined,
-  input: DailyCloseInput,
+  input: DailyCloseInput & { expenseItems?: ExpenseItemInput[] },
   idempotencyKey?: string
 ) {
   const key = idempotencyKey || generateIdempotencyKey();
@@ -362,6 +368,35 @@ export async function finishDailyClose(
     headers: { "Idempotency-Key": key },
     body: JSON.stringify(input)
   });
+}
+
+export interface ReceiptRow {
+  id: string;
+  imageUrl: string;
+  storeName: string;
+  closeDate: string;
+  employeeName: string;
+  parsedJson: any;
+  dailyClose: {
+    id: string;
+    totalSales: number;
+    cashSales: number;
+    cardSales: number;
+    difference: number;
+    status: "CLOSED" | "SHORT" | "OVER" | "PENDING";
+  } | null;
+  createdAt: string;
+}
+
+export async function listReceipts(
+  token: string | undefined,
+  filters: { storeId: string; from?: string; to?: string }
+): Promise<ReceiptRow[]> {
+  const params = new URLSearchParams();
+  params.set("storeId", filters.storeId);
+  if (filters.from) params.set("from", filters.from);
+  if (filters.to) params.set("to", filters.to);
+  return apiFetch<ReceiptRow[]>(`/reports/receipts?${params.toString()}`, requireToken(token));
 }
 
 export async function markNotificationRead(token: string, id: string): Promise<void> {
