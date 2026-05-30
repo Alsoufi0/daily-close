@@ -199,6 +199,10 @@ model UploadedReport {
   storeId            String?     @map("store_id")
   uploadedByUserId   String?     @map("uploaded_by_user_id")
   imageUrl           String      @map("image_url")
+  // Storage object path (bucket-relative) so the API can re-sign the URL
+  // on demand. image_url's signed URL expires after 7 days; storagePath
+  // never does. Nullable for rows uploaded before migration 009.
+  storagePath        String?     @map("storage_path")
   parsedJson         Json        @map("parsed_json")
   parserType         String      @map("parser_type")
   createdAt          DateTime    @default(now()) @map("created_at")

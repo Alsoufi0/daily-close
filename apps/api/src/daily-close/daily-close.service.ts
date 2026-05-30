@@ -67,13 +67,23 @@ export class DailyCloseService {
     await this.assertCanCloseStore(user, input.storeId);
 
     let imageUrl = input.imageUrl;
+    let storagePath: string | null = null;
     if (input.base64Data) {
       try {
-        imageUrl = await this.storage.uploadBase64(
+        const uploaded = await this.storage.uploadBase64(
             `${input.storeId}/${Date.now()}-${input.fileName}`,
             input.base64Data,
             input.contentType
           );
+        // Tests historically mocked uploadBase64() as returning a bare URL
+        // string; handle both the new {storagePath, signedUrl} object and
+        // the legacy string return so old fixtures keep passing.
+        if (typeof uploaded === "string") {
+          imageUrl = uploaded;
+        } else {
+          imageUrl = uploaded.signedUrl;
+          storagePath = uploaded.storagePath;
+        }
       } catch (err: any) {
         // Storage should not block closing. OCR can read the data URL directly,
         // and the employee can still confirm/edit the parsed numbers.
@@ -95,6 +105,7 @@ export class DailyCloseService {
       await this.prisma.uploadedReport.create({
         data: {
           imageUrl: imageUrl || "report-upload-not-stored",
+          storagePath,
           parsedJson: parsed as any,
           parserType: parsed.parserType || "UNKNOWN",
           storeId: input.storeId,

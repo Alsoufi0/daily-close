@@ -1,10 +1,11 @@
-import { ForbiddenException, Injectable } from "@nestjs/common";
+import { ForbiddenException, Injectable, NotFoundException, Optional } from "@nestjs/common";
 import { PDFDocument, rgb } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import { loadFontsForLang } from "./pdf-fonts";
 import { RequestUser } from "../auth/request-user";
 import { DashboardService } from "../dashboard/dashboard.service";
 import { PrismaService } from "../prisma/prisma.service";
+import { SupabaseStorageService } from "../supabase/supabase-storage.service";
 import { ReportQueryDto } from "./dto/report-query.dto";
 import { ReceiptsQueryDto } from "./dto/receipts-query.dto";
 import { netProfit } from "@shared/utils/money";
@@ -142,7 +143,11 @@ const labels: Record<ReportLang, Record<string, string>> = {
 export class ReportsService {
   constructor(
     private readonly dashboard: DashboardService,
-    private readonly prisma: PrismaService
+    private readonly prisma: PrismaService,
+    // Optional so the existing unit tests (`new ReportsService({} as any, prisma)`)
+    // keep working without supplying a storage mock — they don't exercise the
+    // signed-URL path.
+    @Optional() private readonly storage?: SupabaseStorageService
   ) {}
 
   private t(lang: ReportLang, key: string) {
@@ -453,13 +458,25 @@ export class ReportsService {
       take: 200
     });
 
-    return rows.map((row: any) => {
+    // Mint a fresh short-lived signed URL for any row that has a
+    // storagePath. The stored imageUrl is a 7-day signed URL and breaks
+    // once it expires; storagePath never does. Done in parallel to keep
+    // p95 acceptable even on large pages.
+    const signed = await Promise.all(
+      rows.map(async (row: any) =>
+        row.storagePath && this.storage
+          ? await this.storage.signPath(row.storagePath, 3600)
+          : null
+      )
+    );
+
+    return rows.map((row: any, idx: number) => {
       const dc = row.dailyClose;
       const employeeName = row.uploadedBy?.name ?? dc?.submittedBy?.name ?? "";
       const closeDate = dc ? this.localDate(tz, dc.date) : this.localDate(tz, row.createdAt);
       return {
         id: row.id,
-        imageUrl: row.imageUrl,
+        imageUrl: signed[idx] || row.imageUrl,
         storeName: store.storeName,
         closeDate,
         employeeName,
