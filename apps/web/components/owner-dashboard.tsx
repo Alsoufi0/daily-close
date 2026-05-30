@@ -159,16 +159,12 @@ export function OwnerDashboard() {
         <div>
           <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-black uppercase tracking-wide text-leaf sm:text-sm">
             <span>{t("dashboard.welcome")} {ownerName}</span>
-            <span className="inline-flex h-1.5 w-1.5 rounded-full bg-leaf/40" aria-hidden />
-            <span className="text-ink/55">{modeLabel}</span>
             {loading ? <Loader2 className="animate-spin text-ink/40" size={14} aria-hidden /> : null}
           </p>
           <h1 className="mt-1 text-2xl font-black tracking-tight text-ink sm:text-4xl">
             {t("dashboard.title")}
           </h1>
-          <p className="mt-1 text-sm font-bold text-ink/65 sm:text-base">
-            {today} · {t("dashboard.updatesEvery15")}
-          </p>
+          <p className="mt-1 text-sm font-bold text-ink/65 sm:text-base">{today}</p>
         </div>
         <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
           <button
@@ -217,7 +213,7 @@ export function OwnerDashboard() {
                 <span className="text-ink/45">{t("dashboard.grossSales")}</span>{" "}
                 <span className="text-ink">{formatMoney(summary.totalSales)}</span>
               </span>
-              <span className="text-ink/30">·</span>
+              <span className="hidden text-ink/30 sm:inline">·</span>
               <span>
                 <span className="text-ink/45">{t("dashboard.expenses")}</span>{" "}
                 <span className="text-ink">{formatMoney(summary.totalExpenses)}</span>

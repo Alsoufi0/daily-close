@@ -78,11 +78,7 @@ export function ProductionLogin() {
         <LanguageSelect />
       </div>
       <div className="mb-5 lg:hidden">
-        <span className="inline-flex items-center gap-2 rounded-full bg-leaf/10 px-3 py-1 text-xs font-black uppercase tracking-wide text-leaf">
-          <Store size={14} aria-hidden />
-          {t("brand.name")}
-        </span>
-        <h1 className="mt-3 text-2xl font-black leading-tight tracking-tight text-ink">
+        <h1 className="text-2xl font-black leading-tight tracking-tight text-ink">
           {t("home.mobileHero")}
         </h1>
       </div>

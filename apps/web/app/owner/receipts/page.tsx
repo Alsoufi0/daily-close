@@ -163,36 +163,31 @@ function ReceiptsView() {
           <p className="mt-3 font-black text-ink/70">{t("receipts.empty")}</p>
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 xl:grid-cols-5">
           {rows.map((row) => (
             <button
               key={row.id}
               type="button"
               onClick={() => setSelected(row)}
-              className="focus-ring overflow-hidden rounded-2xl border border-ink/10 bg-white text-left shadow-sm transition-transform hover:-translate-y-0.5"
+              className="focus-ring group overflow-hidden rounded-xl border border-ink/10 bg-white text-left shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md"
             >
-              <div className="aspect-[4/3] w-full overflow-hidden bg-smoke">
+              <div className="aspect-square w-full overflow-hidden bg-smoke">
                 <img
                   src={row.imageUrl}
                   alt={`${row.storeName} ${row.closeDate}`}
-                  className="h-full w-full object-cover"
+                  className="h-full w-full object-cover transition-transform group-hover:scale-[1.03]"
                   onError={(event) => {
                     (event.target as HTMLImageElement).style.opacity = "0.3";
                   }}
                 />
               </div>
-              <div className="space-y-1 p-3">
-                <p className="text-xs font-black uppercase tracking-wide text-ink/55">
-                  {row.closeDate}
-                </p>
-                <p className="text-base font-black text-ink">
+              <div className="space-y-0.5 p-2 sm:p-2.5">
+                <p className="truncate text-sm font-black text-ink sm:text-base">
                   {row.employeeName || activeStoreName || t("receipts.unknownEmployee")}
                 </p>
-                {row.dailyClose ? (
-                  <p className="text-sm font-bold text-ink/65">
-                    {t("receipts.totalSales")}: {formatMoney(row.dailyClose.totalSales)}
-                  </p>
-                ) : null}
+                <p className="text-[11px] font-black uppercase tracking-wide text-ink/55 sm:text-xs">
+                  {row.closeDate}
+                </p>
               </div>
             </button>
           ))}

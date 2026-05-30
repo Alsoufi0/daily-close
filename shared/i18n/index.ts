@@ -110,6 +110,7 @@ export const translations: Record<Language, Dictionary> = {
     "auth.signOut": "Sign Out"
     ,"nav.owner": "Owner",
     "nav.employee": "Employee",
+    "nav.close": "Close",
     "nav.admin": "Admin",
     "nav.billing": "Billing",
     "nav.password": "Password",
@@ -255,6 +256,7 @@ export const translations: Record<Language, Dictionary> = {
     "auth.signOut": "تسجيل الخروج"
     ,"nav.owner": "المالك",
     "nav.employee": "الموظف",
+    "nav.close": "إغلاق",
     "nav.admin": "الإدارة",
     "nav.billing": "الفواتير",
     "nav.password": "كلمة المرور",
@@ -387,6 +389,7 @@ export const translations: Record<Language, Dictionary> = {
     "auth.signOut": "Cerrar sesión"
     ,"nav.owner": "Dueño",
     "nav.employee": "Empleado",
+    "nav.close": "Cerrar",
     "nav.admin": "Admin",
     "nav.billing": "Facturación",
     "nav.password": "Contraseña",
@@ -519,6 +522,7 @@ export const translations: Record<Language, Dictionary> = {
     "auth.signOut": "साइन आउट"
     ,"nav.owner": "मालिक",
     "nav.employee": "कर्मचारी",
+    "nav.close": "क्लोज",
     "nav.admin": "एडमिन",
     "nav.billing": "बिलिंग",
     "nav.password": "पासवर्ड",

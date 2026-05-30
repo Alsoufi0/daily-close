@@ -40,7 +40,7 @@ export default function HomePage() {
           window.localStorage.setItem(TOKEN_KEY, token);
           const next = new URLSearchParams(window.location.search).get("next");
           // Keep the spinner up while the redirect navigates away.
-          window.location.replace(next || (profile.role === "EMPLOYEE" ? "/employee" : "/owner"));
+          window.location.replace(next || (profile.role === "EMPLOYEE" ? "/close" : "/owner"));
         } catch (err) {
           window.localStorage.removeItem(TOKEN_KEY);
           if (err instanceof ApiError && err.status === 401) {

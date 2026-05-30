@@ -12,7 +12,7 @@ import { LanguageSelect, useLanguage } from "./language-provider";
 const NAV = [
   { href: "/owner", labelKey: "nav.owner", ownerOnly: true },
   { href: "/owner/receipts", labelKey: "nav.receipts", ownerOnly: true },
-  { href: "/employee", labelKey: "nav.employee" },
+  { href: "/close", labelKey: "nav.close" },
   { href: "/admin", labelKey: "nav.admin", ownerOnly: true },
   { href: "/billing", labelKey: "nav.billing", ownerOnly: true },
   { href: "/account/whatsapp", labelKey: "nav.whatsapp", ownerOnly: true },
@@ -50,7 +50,7 @@ export function TopBar() {
 
   const showSignOut =
     pathname.startsWith("/owner") ||
-    pathname.startsWith("/employee") ||
+    pathname.startsWith("/close") ||
     pathname.startsWith("/admin") ||
     pathname.startsWith("/billing") ||
     pathname.startsWith("/account");

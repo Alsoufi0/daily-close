@@ -211,13 +211,7 @@ export function EmployeeClose() {
   return (
     <section className="space-y-5" dir={dir}>
       <div>
-        <p className="text-sm font-black uppercase tracking-wide text-leaf">
-          {session.profile?.name ? `${t("closing.hi")} ${session.profile.name}` : t("closing.employeeView")}
-        </p>
-        <h1 className="mt-1 text-3xl font-black tracking-tight text-ink sm:text-4xl">
-          {t("closing.closeStore")} {activeStore.storeName}
-        </h1>
-        <p className="mt-1 text-base font-bold text-ink/65">{t("closing.followSteps")}</p>
+        <p className="text-base font-bold text-ink/65">{t("closing.followSteps")}</p>
 
         {availableStores.length > 1 ? (
           <label className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-ink/70">

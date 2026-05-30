@@ -1,0 +1,837 @@
+{
+  "/home/casper/Desktop/DailyClose/daily-close/vercel.json": {
+    "mtime": 1779745265.4227831,
+    "ast_hash": "10205f2c37110599137a5b3325c64782",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/tsconfig.base.json": {
+    "mtime": 1779745265.4227831,
+    "ast_hash": "9aaa0d310d1eb05033b2bf5f6694f297",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/package.json": {
+    "mtime": 1779745265.4213035,
+    "ast_hash": "efdc241db871b3e7005029ab938d05b0",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/scripts/create-supabase-auth-users.js": {
+    "mtime": 1779745265.4213035,
+    "ast_hash": "ece14cc72b04f0c27c096b88a4792bc7",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/scripts/e2e-ocr-test.js": {
+    "mtime": 1779745265.4222908,
+    "ast_hash": "18922e37fa3a807a77d331f2bcbfab78",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/scripts/run-supabase-migration.js": {
+    "mtime": 1779745265.4222908,
+    "ast_hash": "bbb3f8673416241fdaf4d42c9cdc7fdf",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/shared/timezones.ts": {
+    "mtime": 1779745265.4223642,
+    "ast_hash": "fdb2d2b679ff22bcdd231c47c1abbbaa",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/shared/package.json": {
+    "mtime": 1779745265.4223642,
+    "ast_hash": "53426a924ba82b3f0e383c3e32695e58",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/shared/utils/money.ts": {
+    "mtime": 1779745265.4223642,
+    "ast_hash": "3e86fe8c56d0c3bbf16e5a8dcb0fcaad",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/shared/i18n/index.ts": {
+    "mtime": 1779745265.4223642,
+    "ast_hash": "e95326b4d45acea037cc084a5b8d51f3",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/shared/types/index.ts": {
+    "mtime": 1779745265.4223642,
+    "ast_hash": "e79cfc2e581801fe0d88df3c097cfa07",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/supabase/seed.sql": {
+    "mtime": 1779745265.4227831,
+    "ast_hash": "eac03e73dcc03279f12e55089627a357",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/supabase/COMBINED_BOOTSTRAP.sql": {
+    "mtime": 1779745265.4223642,
+    "ast_hash": "9b7014176d301ec57190b876074b522b",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/supabase/migrations/002_subscriptions.sql": {
+    "mtime": 1779745265.4227831,
+    "ast_hash": "6b18dd1166f8f4e60fba5c818af510ca",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/supabase/migrations/003_soft_delete.sql": {
+    "mtime": 1779745265.4227831,
+    "ast_hash": "efb33de2aea60474d38e2529333272c2",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/supabase/migrations/001_production_schema.sql": {
+    "mtime": 1779745265.4227524,
+    "ast_hash": "1895862b7549caf6cbb6dc6a20ce8846",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/supabase/migrations/004_whatsapp_preferences.sql": {
+    "mtime": 1779745265.4227831,
+    "ast_hash": "1ece0b2c937ef53603dca78069532873",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/mobile/eas.json": {
+    "mtime": 1779745265.4163036,
+    "ast_hash": "d12709a97329f64c180db4d7cba6849c",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/mobile/App.tsx": {
+    "mtime": 1779745265.4145792,
+    "ast_hash": "25e4913b5ad792a39f9913c206405ecc",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/mobile/app.json": {
+    "mtime": 1779745265.4147234,
+    "ast_hash": "5230481084722fa5c4b8eb58428fa7ce",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/mobile/package.json": {
+    "mtime": 1779745265.4163036,
+    "ast_hash": "3f7a660a2f4b559092917b7e9cf6b398",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/mobile/tsconfig.json": {
+    "mtime": 1779745265.4175606,
+    "ast_hash": "a6c35e6454bb0db7161e4046781f8c71",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/mobile/assets/generate.py": {
+    "mtime": 1779745265.414788,
+    "ast_hash": "a706d852ec62d711c5275b6a9a33e9af",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/mobile/src/theme.ts": {
+    "mtime": 1779745265.4175606,
+    "ast_hash": "8413caa25db815d0c09aa82b7a663020",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/mobile/src/api.ts": {
+    "mtime": 1779745265.4163036,
+    "ast_hash": "73e7f9193bea993eba4425e326322e23",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/mobile/src/use-session.ts": {
+    "mtime": 1779745265.4175606,
+    "ast_hash": "2f584840b6396feaaac9d94bde518677",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/mobile/src/supabase.ts": {
+    "mtime": 1779745265.4175606,
+    "ast_hash": "d2fe704e196a302a09ba1daffc174eb5",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/mobile/src/upload-pos-report.ts": {
+    "mtime": 1779745265.4175606,
+    "ast_hash": "0354e2917f09a7d28c89bb65833eea28",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/mobile/src/i18n.ts": {
+    "mtime": 1779745265.4174545,
+    "ast_hash": "e290daa88047ea2cbeeb69ffdc9d4dc8",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/mobile/src/screens/EmployeeScreen.tsx": {
+    "mtime": 1779745265.4174545,
+    "ast_hash": "8280a9d750f6047f69dae4c25a922274",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/mobile/src/screens/OwnerScreen.tsx": {
+    "mtime": 1779745265.4175606,
+    "ast_hash": "8d660fda811d0bc0e8c37e599caa7f1a",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/mobile/src/screens/LoginScreen.tsx": {
+    "mtime": 1779745265.4175606,
+    "ast_hash": "3ef14844ff77f60f6e2b5d77f326ca59",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/mobile/src/ui/index.tsx": {
+    "mtime": 1779745265.4175606,
+    "ast_hash": "efa780b802704bb54276f021e1654068",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/nest-cli.json": {
+    "mtime": 1779745265.4121356,
+    "ast_hash": "83723e4c72225b94471b75f63d1972e9",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/jest.config.js": {
+    "mtime": 1779745265.4121356,
+    "ast_hash": "ea56e0de262e188485450884f4feb2db",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/package.json": {
+    "mtime": 1779745265.4121356,
+    "ast_hash": "d9a171830803c0cf0bad5cd4f67ba47c",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/tsconfig.json": {
+    "mtime": 1779745265.4145792,
+    "ast_hash": "63238110416766a8db046f01c2030833",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/app.module.ts": {
+    "mtime": 1779745265.4121356,
+    "ast_hash": "f526f668f693cdeb56b89d7fb9412617",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/system.e2e.spec.ts": {
+    "mtime": 1779745265.4145792,
+    "ast_hash": "2df68a1bba2515c09e6ddfb68d87fd40",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/main.ts": {
+    "mtime": 1779745265.4131987,
+    "ast_hash": "8c91a538974b3b64af87c43d9427a762",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/notifications/weekly-summary.service.spec.ts": {
+    "mtime": 1779745265.4133024,
+    "ast_hash": "fdd3b84b9ed4c6a69156eb8346d01fa9",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/notifications/notifications.module.ts": {
+    "mtime": 1779745265.4133024,
+    "ast_hash": "af0bf87c6d2c3faeafa2264551d5fa99",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/notifications/notifications.service.spec.ts": {
+    "mtime": 1779745265.4133024,
+    "ast_hash": "3ce9e65add64bb6f79137443bfd1e46c",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/notifications/notifications.controller.ts": {
+    "mtime": 1779745265.4133024,
+    "ast_hash": "116e4596f556af64c00b25c93c31dc0e",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/notifications/whatsapp.service.ts": {
+    "mtime": 1779745265.4133024,
+    "ast_hash": "56fe1f35cbfd4050af5a020a9eb220be",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/notifications/missed-close.service.ts": {
+    "mtime": 1779745265.4131987,
+    "ast_hash": "bef2284d43c4e9d20f6b665d33361acd",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/notifications/notifications.service.ts": {
+    "mtime": 1779745265.4133024,
+    "ast_hash": "a02d7dc1dc88d10b2d28a3f530648a8a",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/notifications/weekly-summary.service.ts": {
+    "mtime": 1779745265.4133024,
+    "ast_hash": "b1c0e28269821ee28213541e3dc0d639",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/prisma/prisma.service.ts": {
+    "mtime": 1779745265.4139988,
+    "ast_hash": "79a4e21910070508ccc651438a1e1841",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/prisma/prisma.module.ts": {
+    "mtime": 1779745265.4137595,
+    "ast_hash": "c43472201ed5c697aa4a3abf5e9c0909",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/supabase/supabase-storage.service.ts": {
+    "mtime": 1779745265.4144294,
+    "ast_hash": "fff5c249b0043ae71ee9d6f710be1c81",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/supabase/supabase.module.ts": {
+    "mtime": 1779745265.4145792,
+    "ast_hash": "d7f057a9308365278d13b41226b4a314",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/employees/employees.module.ts": {
+    "mtime": 1779745265.4129825,
+    "ast_hash": "681b0f940686d31beac87ae61149c221",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/employees/employees.controller.ts": {
+    "mtime": 1779745265.4129825,
+    "ast_hash": "e34e6d06c5392ae27f405b9e7fef8e71",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/employees/employees.service.spec.ts": {
+    "mtime": 1779745265.4129825,
+    "ast_hash": "882a2d8b01a151e28200ffb655b1946a",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/employees/employees.service.ts": {
+    "mtime": 1779745265.4129825,
+    "ast_hash": "3176fcb34930ea1b3c42fc10c4a09acf",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/employees/dto/invite-employee.dto.ts": {
+    "mtime": 1779745265.4129825,
+    "ast_hash": "88c119086cc1574f6e7fe8025a96800d",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/auth/supabase-auth.guard.ts": {
+    "mtime": 1779745265.4122877,
+    "ast_hash": "94d0deafeb1c6ad347afe75fdae73871",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/auth/current-user.decorator.ts": {
+    "mtime": 1779745265.4122877,
+    "ast_hash": "e83f9266597db4f5720864ca2757b1f5",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/auth/auth.module.ts": {
+    "mtime": 1779745265.4122877,
+    "ast_hash": "98af1d1104a374d9c9ec61e72e2a0e03",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/auth/supabase-auth.guard.spec.ts": {
+    "mtime": 1779745265.4122877,
+    "ast_hash": "ca46a498f4b40751933d871b801c858f",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/auth/supabase-auth.service.ts": {
+    "mtime": 1779745265.4122877,
+    "ast_hash": "83eafbaca30dcfb16d8d5bdcecdcf7c0",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/auth/auth.controller.ts": {
+    "mtime": 1779745265.412246,
+    "ast_hash": "1118374431a9f8625c907f07a62e9da0",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/auth/request-user.ts": {
+    "mtime": 1779745265.4122877,
+    "ast_hash": "f62e400c7713a8bc3b020c1331e90382",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/health/health.controller.ts": {
+    "mtime": 1779745265.4129825,
+    "ast_hash": "df80f33065f6af0d92faf1d659b17234",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/health/health.module.ts": {
+    "mtime": 1779745265.4131987,
+    "ast_hash": "e16415881108a92fa6e3a4f44f24f30d",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/stores/stores.service.ts": {
+    "mtime": 1779745265.414275,
+    "ast_hash": "16918b5b0296f88b6ab6565b3abe1a3b",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/stores/stores.module.ts": {
+    "mtime": 1779745265.414275,
+    "ast_hash": "c03e57c578a81f200765dcab9cec3403",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/stores/stores.controller.ts": {
+    "mtime": 1779745265.414275,
+    "ast_hash": "1cf7429caef1bb1d8819b96542353399",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/stores/stores.service.spec.ts": {
+    "mtime": 1779745265.414275,
+    "ast_hash": "b5a15d1f8d2444fd6c3ca32d2a1bdb74",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/stores/dto/create-store.dto.ts": {
+    "mtime": 1779745265.414235,
+    "ast_hash": "b6bb9f594c91bf695f609db5a80ff68a",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/stores/dto/update-store.dto.ts": {
+    "mtime": 1779745265.414275,
+    "ast_hash": "8710f839d2dca99fea89640db40d6acb",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/dashboard/dashboard.service.spec.ts": {
+    "mtime": 1779745265.4128091,
+    "ast_hash": "5677a88eb304365304c6dfed882165ef",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/dashboard/dashboard.controller.spec.ts": {
+    "mtime": 1779745265.4127116,
+    "ast_hash": "bff369e6abbcf4acdb474c67ee92534d",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/dashboard/dashboard.controller.ts": {
+    "mtime": 1779745265.4128091,
+    "ast_hash": "d5a93be8b548cdfa1702b953ae643752",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/dashboard/dashboard.service.ts": {
+    "mtime": 1779745265.4128091,
+    "ast_hash": "08c72cf10a2a4bf78d33c48a3f71c382",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/dashboard/dashboard.module.ts": {
+    "mtime": 1779745265.4128091,
+    "ast_hash": "86cc3373f7d5ff9c52873701e773b163",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/subscriptions/subscription.guard.ts": {
+    "mtime": 1779745265.414275,
+    "ast_hash": "72daf503145fe03a13809e5adf4d90fc",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/subscriptions/subscriptions.module.ts": {
+    "mtime": 1779745265.4144294,
+    "ast_hash": "8f5c0c51b3bf2611b0308d59503f6783",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/subscriptions/subscriptions.service.spec.ts": {
+    "mtime": 1779745265.4144294,
+    "ast_hash": "975d69c7d35ed49fa12c091f60ac9302",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/subscriptions/subscriptions.controller.ts": {
+    "mtime": 1779745265.4144294,
+    "ast_hash": "019b08f96a1920e0cebc75b135ed4972",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/subscriptions/subscriptions.service.ts": {
+    "mtime": 1779745265.4144294,
+    "ast_hash": "6dd020f0be58aa79084aac0b8502f6a2",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/reports/reports.service.ts": {
+    "mtime": 1779745265.4140427,
+    "ast_hash": "9fac36b2d111fe5ab68c1ddd60ad60cf",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/reports/reports.controller.ts": {
+    "mtime": 1779745265.4140427,
+    "ast_hash": "31bb42f9888e8d6498b9687512e4f914",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/reports/reports.module.ts": {
+    "mtime": 1779745265.4140427,
+    "ast_hash": "47352bdb3dcec54919a46c31473b9647",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/reports/reports.service.spec.ts": {
+    "mtime": 1779745265.4140427,
+    "ast_hash": "e610676f837fa288eb3347bccd5b6fc9",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/reports/dto/report-query.dto.ts": {
+    "mtime": 1779745265.4140427,
+    "ast_hash": "1b119e0af4c556d2c14476eb331ae8ed",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/pos-parsers/terminal-report.parser.ts": {
+    "mtime": 1779745265.4137595,
+    "ast_hash": "76b73374b455281af9687ba65672d40a",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/pos-parsers/clover.parser.ts": {
+    "mtime": 1779745265.4135883,
+    "ast_hash": "a521ed23d88bafa93c8895b454e12182",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/pos-parsers/pos-parsers.module.ts": {
+    "mtime": 1779745265.4137595,
+    "ast_hash": "629621477a7297382e5d68044c91ffc6",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/pos-parsers/parser-utils.ts": {
+    "mtime": 1779745265.4137595,
+    "ast_hash": "05ef1801004b0b7adc4db04ee5b7b94e",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/pos-parsers/pos-parser.service.spec.ts": {
+    "mtime": 1779745265.4137595,
+    "ast_hash": "466dc87a93e41eb85e4075d3ec563d59",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/pos-parsers/pos-parser.interface.ts": {
+    "mtime": 1779745265.4137595,
+    "ast_hash": "69a67b2ad47a036e0fc429821bc48688",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/pos-parsers/nrs.parser.ts": {
+    "mtime": 1779745265.4137595,
+    "ast_hash": "c2feb0d6d02cb28575448b3a4a7826bd",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/pos-parsers/generic.parser.ts": {
+    "mtime": 1779745265.4137595,
+    "ast_hash": "414e26fd0dcf5a998bfe07910a230840",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/pos-parsers/pos-parser.service.ts": {
+    "mtime": 1779745265.4137595,
+    "ast_hash": "500fbd223852b8d5cbf26df178a71f50",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/ocr/ocr-space.service.ts": {
+    "mtime": 1779745265.4135883,
+    "ast_hash": "b4b624fb48b0b84304bc5ed5bee4ac61",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/ocr/google-vision.service.ts": {
+    "mtime": 1779745265.4133024,
+    "ast_hash": "55364abb1bfe2184e7546e89f2d3f011",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/ocr/ocr.module.ts": {
+    "mtime": 1779745265.4135883,
+    "ast_hash": "ee1d9e672f1dac06d865e55c4cce7382",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/ocr/ocr-quality.ts": {
+    "mtime": 1779745265.4135883,
+    "ast_hash": "2eb74bd838117055a4c3776fd025aa83",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/ocr/ocr.service.ts": {
+    "mtime": 1779745265.4135883,
+    "ast_hash": "143b5201da61ad48417bd34552c62a8e",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/daily-close/daily-close.service.spec.ts": {
+    "mtime": 1779745265.4124997,
+    "ast_hash": "13f0e81a5d23a7767147bb951bdbff78",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/daily-close/daily-close.controller.ts": {
+    "mtime": 1779745265.4122877,
+    "ast_hash": "cf2e192794756e9b7e0aaf7adebb24bf",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/daily-close/daily-close.service.ts": {
+    "mtime": 1779745265.4124997,
+    "ast_hash": "800b3b0f17c88c0602c6557fac4e0728",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/daily-close/daily-close.repository.ts": {
+    "mtime": 1779745265.4124997,
+    "ast_hash": "914f26c38b35f03f8d83acd19aba83db",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/daily-close/daily-close.module.ts": {
+    "mtime": 1779745265.4124997,
+    "ast_hash": "386ac62f7b1a5846cdd0a74574db5bdf",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/daily-close/dto/edit-daily-close.dto.ts": {
+    "mtime": 1779745265.4127116,
+    "ast_hash": "655cdf11f503400c1d007c4ea679bb70",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/daily-close/dto/scan-report.dto.ts": {
+    "mtime": 1779745265.4127116,
+    "ast_hash": "46617855eef30441e8724d65cd26c792",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/daily-close/dto/create-daily-close.dto.ts": {
+    "mtime": 1779745265.4124997,
+    "ast_hash": "a81a0f752634aecf92f8ce47ab8a2756",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/api/src/daily-close/dto/upload-report.dto.ts": {
+    "mtime": 1779745265.4127116,
+    "ast_hash": "f54f6d2e31e5c2533ae2b4f2804c7a99",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/next.config.mjs": {
+    "mtime": 1779745265.419412,
+    "ast_hash": "f398a1f3aa8294d98e4adefb374a3558",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/next-env.d.ts": {
+    "mtime": 1779745265.419412,
+    "ast_hash": "b5ed9dd8b4c5ba8e5ab8e6a379c15838",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/package.json": {
+    "mtime": 1779745265.419412,
+    "ast_hash": "6b0d06c8065aaa8b09dbc869c67c4870",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/tsconfig.json": {
+    "mtime": 1779745265.4201038,
+    "ast_hash": "787987c6d600b2c2325c6f76935a7f8d",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/postcss.config.js": {
+    "mtime": 1779745265.419412,
+    "ast_hash": "86e9e20e4c60281535291ad9a3b993f6",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/tailwind.config.ts": {
+    "mtime": 1779745265.4201038,
+    "ast_hash": "ef13286a5267ab3c88a5040f4ac214e7",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/lib/mock-data.ts": {
+    "mtime": 1779745265.419412,
+    "ast_hash": "2996da1fef632f9383102e7ed304f194",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/lib/use-session.ts": {
+    "mtime": 1779745265.419412,
+    "ast_hash": "bad9e635c966729fbfdf74e5b5810604",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/lib/upload-pos-report.ts": {
+    "mtime": 1779745265.419412,
+    "ast_hash": "cebb4d4f1be7ab06ff294d2d5c0f457e",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/lib/preprocess-image.ts": {
+    "mtime": 1779745265.419412,
+    "ast_hash": "4a3e8dddc3070e007e861f1a2399ae1b",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/lib/api-client.ts": {
+    "mtime": 1779745265.4183037,
+    "ast_hash": "775aaab353b96b5a8982060649c4402e",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/lib/supabase-browser.ts": {
+    "mtime": 1779745265.419412,
+    "ast_hash": "426be23e2708b4788b47e503b334a2ce",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/app/not-found.tsx": {
+    "mtime": 1779745265.4180388,
+    "ast_hash": "b67b510e71dd3564fc355399a5c87747",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/app/error.tsx": {
+    "mtime": 1779745265.4180388,
+    "ast_hash": "7865d9fad7b7c18d52a16fd241b6f368",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/app/page.tsx": {
+    "mtime": 1779745265.4180388,
+    "ast_hash": "9207f30e9e115a72bd2ab678e6841b03",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/app/layout.tsx": {
+    "mtime": 1779745265.4180388,
+    "ast_hash": "99e722a02803e844b52a5df28a6e02d1",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/app/employee/page.tsx": {
+    "mtime": 1779745265.4180388,
+    "ast_hash": "d9350e7ad32b7c2e59fb8625b97de402",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/app/forgot-password/page.tsx": {
+    "mtime": 1779745265.4180388,
+    "ast_hash": "1e67b3c4cbf5ab313de315bbdeb120b0",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/app/signup/page.tsx": {
+    "mtime": 1779745265.4180388,
+    "ast_hash": "de7725b40fa566a0cb66161327b26e50",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/app/billing/page.tsx": {
+    "mtime": 1779745265.4180388,
+    "ast_hash": "72b29d76268a41251e97e35b77f8f019",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/app/terms/page.tsx": {
+    "mtime": 1779745265.4180388,
+    "ast_hash": "7b3d30e3376027d5229cf5c77366d07d",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/app/privacy/page.tsx": {
+    "mtime": 1779745265.4180388,
+    "ast_hash": "f121affc506140cb5d49b4190e8c66ab",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/app/demo/page.tsx": {
+    "mtime": 1779745265.4180388,
+    "ast_hash": "e30b7728240b33a40b55820939ca2bf1",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/app/account/password/page.tsx": {
+    "mtime": 1779745265.4178805,
+    "ast_hash": "f4b8dc74ca4a7ba565f399353c80c37f",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/app/account/whatsapp/page.tsx": {
+    "mtime": 1779745265.4178805,
+    "ast_hash": "250fbe589d252e1e3b2ce247a9553d11",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/app/setup/page.tsx": {
+    "mtime": 1779745265.4180388,
+    "ast_hash": "9f74c71cf4af0ac5d679615715acebe2",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/app/owner/page.tsx": {
+    "mtime": 1779745265.4180388,
+    "ast_hash": "7fac1233f87e0339338b9313d1c19afe",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/app/admin/page.tsx": {
+    "mtime": 1779745265.4180388,
+    "ast_hash": "5a5a55e8babb3b9c4482b5dae3931cad",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/app/admin/layout.tsx": {
+    "mtime": 1779745265.4180388,
+    "ast_hash": "dd720df1b7481314daba576fb59e8026",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/app/admin/employees/page.tsx": {
+    "mtime": 1779745265.4180388,
+    "ast_hash": "0a4d982526edf1e8b743b2d317387cc5",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/app/admin/stores/page.tsx": {
+    "mtime": 1779745265.4180388,
+    "ast_hash": "87406e3091050e5c677e07b536cc836e",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/components/login-demo.tsx": {
+    "mtime": 1779745265.4183037,
+    "ast_hash": "d8e5b7b7e6704673267e11fa98c40d29",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/components/employee-close.tsx": {
+    "mtime": 1779745265.4183037,
+    "ast_hash": "2f31a1adb3291b9426ca3df1f4edcfdc",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/components/sentry-init.tsx": {
+    "mtime": 1779745265.4183037,
+    "ast_hash": "8c0a2f7967f2ac8adcc96c795f0487ad",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/components/export-report-modal.tsx": {
+    "mtime": 1779745265.4183037,
+    "ast_hash": "69fd64d0ecfee96b66df49fd01e8c118",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/components/top-bar.tsx": {
+    "mtime": 1779745265.4183037,
+    "ast_hash": "7287f1378814a2217c9c0c4027a04c3a",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/components/require-auth.tsx": {
+    "mtime": 1779745265.4183037,
+    "ast_hash": "ba45efef2922409464a0130934479c95",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/components/production-login.tsx": {
+    "mtime": 1779745265.4183037,
+    "ast_hash": "ecae424fb11948a282126110ba453c30",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/components/footer.tsx": {
+    "mtime": 1779745265.4183037,
+    "ast_hash": "b7b9e010debf67289d8b74d620d07ba7",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/components/edit-close-modal.tsx": {
+    "mtime": 1779745265.4183037,
+    "ast_hash": "f3cd08e00495da81bce37b39f461b578",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/components/auth-bootstrap.tsx": {
+    "mtime": 1779745265.4180388,
+    "ast_hash": "5361c75ab212942f10f90a21f8f96c38",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/components/history-panel.tsx": {
+    "mtime": 1779745265.4183037,
+    "ast_hash": "1113b3721fce7f5ce5f257ea6c9493ff",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/components/metric-card.tsx": {
+    "mtime": 1779745265.4183037,
+    "ast_hash": "ab4818b9b954e52bdb16a606b3dd9be5",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/components/owner-dashboard.tsx": {
+    "mtime": 1779745265.4183037,
+    "ast_hash": "bca3bce49c495b48428016b8e5fc5370",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/components/language-provider.tsx": {
+    "mtime": 1779745265.4183037,
+    "ast_hash": "f62aa5951a9e1f49e443f3d3f4260dcf",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/README.md": {
+    "mtime": 1779745265.4115925,
+    "ast_hash": "f69e55b458451a09427a51d7e2d32321",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/render.yaml": {
+    "mtime": 1779745265.4213035,
+    "ast_hash": "977bc55ae78f2acfb00e6dfe53240bbf",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/docs/APP_STORE_READINESS.md": {
+    "mtime": 1779745265.4203236,
+    "ast_hash": "9a8e1a464cd59160f306746a0677e3a9",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/docs/production-runbook.md": {
+    "mtime": 1779745265.4204319,
+    "ast_hash": "0b57ff08016988cf5141c0bd08c08431",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/mobile/assets/README.md": {
+    "mtime": 1779745265.4147234,
+    "ast_hash": "b28a8d8b18e851de48ccbc6956a0a0ec",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/mobile/assets/favicon.png": {
+    "mtime": 1779745265.414788,
+    "ast_hash": "ecc5e951e88e6c16a4a76b146eacf8e6",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/mobile/assets/adaptive-icon.png": {
+    "mtime": 1779745265.414788,
+    "ast_hash": "5eb688cdb46e4572a941d7c5e44b90eb",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/mobile/assets/splash.png": {
+    "mtime": 1779745265.4163036,
+    "ast_hash": "accba7be0e9ea5cf7a46f07ef171f845",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/mobile/assets/icon.png": {
+    "mtime": 1779745265.4153037,
+    "ast_hash": "8f9495ed4aaa3d21ffc1f91c79e93bba",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/mobile/assets/source.jpg": {
+    "mtime": 1779745265.4153037,
+    "ast_hash": "bea17db7e7d9d0373990272e6b3d66c2",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/public/favicon.png": {
+    "mtime": 1779745265.4201038,
+    "ast_hash": "ecc5e951e88e6c16a4a76b146eacf8e6",
+    "semantic_hash": ""
+  },
+  "/home/casper/Desktop/DailyClose/daily-close/apps/web/public/apple-touch-icon.png": {
+    "mtime": 1779745265.419412,
+    "ast_hash": "8f9495ed4aaa3d21ffc1f91c79e93bba",
+    "semantic_hash": ""
+  }
+}

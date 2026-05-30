@@ -60,7 +60,7 @@ export function RequireAuth({
       try {
         const profile = await getProfile(token);
         if (allowedRoles?.length && !allowedRoles.includes(profile.role)) {
-          window.location.replace(profile.role === "EMPLOYEE" ? "/employee" : "/owner");
+          window.location.replace(profile.role === "EMPLOYEE" ? "/close" : "/owner");
           return;
         }
       } catch (err) {
