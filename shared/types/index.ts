@@ -56,6 +56,12 @@ export interface ParsedPOSReport {
   confidence: number;
 }
 
+export interface ExpenseItemInput {
+  category: string;
+  amount: number;
+  description?: string;
+}
+
 export interface DailyCloseInput {
   storeId: string;
   employeeId: string;
@@ -71,6 +77,7 @@ export interface DailyCloseInput {
   safeDropAmount: number;
   expenses: number;
   notes?: string;
+  expenseItems?: ExpenseItemInput[];
 }
 
 export interface DailyCloseResult {

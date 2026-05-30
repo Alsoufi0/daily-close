@@ -21,14 +21,23 @@ const KEY = "dailyclose:close-in-progress";
 
 export type Step = "start" | "upload" | "sales" | "cash" | "expenses" | "done" | "blocked";
 
+export interface PersistedExpenseRow {
+  id: string;
+  category: string;
+  amount: string;
+  description?: string;
+}
+
 export interface PersistedCloseDraft {
-  schemaVersion: 1;
+  schemaVersion: 2;
   step: Step;
   storeId: string;
   report: ParsedPOSReport;
   cashCounted: string;
   safeDrop: string;
-  expenses: string;
+  // Itemized expenses (multi-line). Old v1 drafts with a flat `expenses`
+  // string are dropped on read (loadDraft returns null for any non-v2 row).
+  expenseItems: PersistedExpenseRow[];
   notes: string;
   // Same idempotency key the in-flight finishClose call uses, so a
   // resumed-and-resubmitted close hits the server's dedup correctly.
@@ -41,7 +50,7 @@ const STALE_DRAFT_MS = 1000 * 60 * 60 * 24; // 24h — drafts older than a day a
 export async function saveDraft(draft: Omit<PersistedCloseDraft, "schemaVersion" | "savedAt">): Promise<void> {
   try {
     const payload: PersistedCloseDraft = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       ...draft,
       savedAt: Date.now()
     };
@@ -56,7 +65,12 @@ export async function loadDraft(): Promise<PersistedCloseDraft | null> {
     const raw = await AsyncStorage.getItem(KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as PersistedCloseDraft;
-    if (parsed.schemaVersion !== 1) return null;
+    if (parsed.schemaVersion !== 2) {
+      // Old (or future) schema — drop it so the live UI starts fresh and
+      // never tries to interpret a foreign shape.
+      await clearDraft();
+      return null;
+    }
     if (Date.now() - parsed.savedAt > STALE_DRAFT_MS) {
       // Drop stale drafts; the close window has long passed.
       await clearDraft();

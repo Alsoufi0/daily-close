@@ -28,6 +28,30 @@ import { t } from "../i18n";
 
 type Step = "start" | "upload" | "sales" | "cash" | "expenses" | "done" | "blocked";
 
+interface ExpenseRow {
+  id: string;
+  category: string;
+  amount: string;
+  description?: string;
+}
+
+const EXPENSE_CATEGORIES = [
+  { value: "Supplies", labelKey: "closing.expenseSupplies" },
+  { value: "Lottery payout", labelKey: "closing.expenseLottery" },
+  { value: "Repair", labelKey: "closing.expenseRepair" },
+  { value: "Refund", labelKey: "closing.expenseRefund" },
+  { value: "Cash paid out", labelKey: "closing.expenseCashPaidOut" },
+  { value: "Other", labelKey: "closing.expenseOther" }
+] as const;
+
+function newExpenseRow(): ExpenseRow {
+  const g: any = globalThis as any;
+  const id = g.crypto?.randomUUID
+    ? g.crypto.randomUUID()
+    : `row-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  return { id, category: "Supplies", amount: "0" };
+}
+
 // STEPS + STEP_TITLES hold translation KEYS, not English. Labels are resolved
 // via t() at render time so a language switch re-renders without rebuilding
 // these module-level constants.
@@ -68,8 +92,13 @@ export function EmployeeScreen({ onBack }: { onBack: () => void }) {
   const [report, setReport] = useState<ParsedPOSReport>(initialReport);
   const [cashCounted, setCashCounted] = useState("2390");
   const [safeDrop, setSafeDrop] = useState("0");
-  const [expenses, setExpenses] = useState("0");
+  const [expenseItems, setExpenseItems] = useState<ExpenseRow[]>([]);
   const [notes, setNotes] = useState("");
+
+  const expensesTotal = useMemo(
+    () => expenseItems.reduce((sum, item) => sum + toMoney(item.amount), 0),
+    [expenseItems]
+  );
 
   // One idempotency key per CLOSE ATTEMPT, not per submit call. Persists
   // across re-renders, network retries, and the user tapping Submit again
@@ -96,10 +125,10 @@ export function EmployeeScreen({ onBack }: { onBack: () => void }) {
     // silently collapse to 0 and turn a matched close into a massive
     // fake shortage (the bug behind the "Difference -$1,169 when counted
     // = 1169" report).
-    const expectedCash = report.cashSales - report.refunds - toMoney(expenses);
+    const expectedCash = report.cashSales - report.refunds - expensesTotal;
     const difference = toMoney(cashCounted) + toMoney(safeDrop) - expectedCash;
     return { expectedCash, difference };
-  }, [cashCounted, expenses, report.cashSales, report.refunds, safeDrop]);
+  }, [cashCounted, expensesTotal, report.cashSales, report.refunds, safeDrop]);
 
   const currentIndex = step === "start" || step === "blocked"
     ? -1
@@ -164,7 +193,7 @@ export function EmployeeScreen({ onBack }: { onBack: () => void }) {
       setReport(draft.report);
       setCashCounted(draft.cashCounted);
       setSafeDrop(draft.safeDrop);
-      setExpenses(draft.expenses);
+      setExpenseItems(draft.expenseItems || []);
       setNotes(draft.notes);
       idempotencyKey.current = draft.idempotencyKey;
       setRestored(true);
@@ -189,11 +218,11 @@ export function EmployeeScreen({ onBack }: { onBack: () => void }) {
       report,
       cashCounted,
       safeDrop,
-      expenses,
+      expenseItems,
       notes,
       idempotencyKey: idempotencyKey.current
     });
-  }, [step, activeStore.id, report, cashCounted, safeDrop, expenses, notes]);
+  }, [step, activeStore.id, report, cashCounted, safeDrop, expenseItems, notes]);
 
   async function pickImage(source: "camera" | "library") {
     setLoading(true);
@@ -265,7 +294,14 @@ export function EmployeeScreen({ onBack }: { onBack: () => void }) {
           discounts: report.discounts,
           countedCash: toMoney(cashCounted),
           safeDropAmount: toMoney(safeDrop),
-          expenses: toMoney(expenses),
+          expenses: expensesTotal,
+          expenseItems: expenseItems
+            .filter((item) => toMoney(item.amount) > 0 || item.category === "Other")
+            .map((item) => ({
+              category: item.category,
+              amount: toMoney(item.amount),
+              description: item.description?.trim() || undefined
+            })),
           notes
         },
         idempotencyKey.current
@@ -301,7 +337,7 @@ export function EmployeeScreen({ onBack }: { onBack: () => void }) {
     setReport(initialReport);
     setCashCounted("2390");
     setSafeDrop("0");
-    setExpenses("0");
+    setExpenseItems([]);
     setNotes("");
     // Fresh key for the next close attempt — otherwise the server would
     // return the previous close on the first submit of the new one.
@@ -442,7 +478,78 @@ export function EmployeeScreen({ onBack }: { onBack: () => void }) {
 
           {step === "expenses" ? (
             <>
-              <MoneyInput label={t("closing.expenses")} value={expenses} onChange={setExpenses} />
+              {expenseItems.length === 0 ? (
+                <Text style={s.helper}>{t("closing.noExpenses")}</Text>
+              ) : null}
+              {expenseItems.map((item, idx) => (
+                <View key={item.id} style={s.expenseRow}>
+                  <Text style={s.inputLabel}>{t("closing.expenseCategory")}</Text>
+                  <View style={s.categoryWrap}>
+                    {EXPENSE_CATEGORIES.map((cat) => {
+                      const selected = item.category === cat.value;
+                      return (
+                        <TouchableOpacity
+                          key={cat.value}
+                          onPress={() => {
+                            const next = [...expenseItems];
+                            next[idx] = { ...item, category: cat.value };
+                            setExpenseItems(next);
+                          }}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected }}
+                          style={[s.categoryChip, selected && s.categoryChipSelected]}
+                        >
+                          <Text style={[s.categoryChipText, selected && s.categoryChipTextSelected]}>
+                            {t(cat.labelKey)}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                  <MoneyInput
+                    label={t("closing.expenseAmount")}
+                    value={item.amount}
+                    onChange={(value) => {
+                      const next = [...expenseItems];
+                      next[idx] = { ...item, amount: value };
+                      setExpenseItems(next);
+                    }}
+                  />
+                  {item.category === "Other" ? (
+                    <>
+                      <Text style={s.inputLabel}>{t("closing.expenseDescription")}</Text>
+                      <TextInput
+                        style={s.notes}
+                        value={item.description || ""}
+                        onChangeText={(value) => {
+                          const next = [...expenseItems];
+                          next[idx] = { ...item, description: value };
+                          setExpenseItems(next);
+                        }}
+                        placeholder={t("common.optional")}
+                        placeholderTextColor={colors.inkMuted}
+                      />
+                    </>
+                  ) : null}
+                  <TouchableOpacity
+                    onPress={() => setExpenseItems(expenseItems.filter((_, i) => i !== idx))}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("closing.removeExpense")}
+                    style={s.removeBtn}
+                  >
+                    <Text style={s.removeBtnText}>− {t("closing.removeExpense")}</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+              <Button
+                title={t("closing.addExpense")}
+                icon="＋"
+                onPress={() => setExpenseItems([...expenseItems, newExpenseRow()])}
+              />
+              <MetricCard
+                label={t("closing.expensesTotal")}
+                value={formatMoneyExact(expensesTotal)}
+              />
               <MetricCard
                 label={t("closing.netProfit")}
                 value={formatMoney(
@@ -450,7 +557,7 @@ export function EmployeeScreen({ onBack }: { onBack: () => void }) {
                     totalSales: report.totalSales,
                     tax: report.tax,
                     refunds: report.refunds,
-                    expenses: toMoney(expenses)
+                    expenses: expensesTotal
                   })
                 )}
               />
@@ -559,6 +666,32 @@ const s = StyleSheet.create({
     marginTop: 6,
     textAlignVertical: "top"
   },
+  expenseRow: {
+    gap: spacing.sm,
+    padding: spacing.md,
+    backgroundColor: colors.white,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.inputBorder
+  },
+  categoryWrap: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  categoryChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.inputBorder,
+    backgroundColor: colors.smoke
+  },
+  categoryChipSelected: { borderColor: colors.leaf, backgroundColor: colors.leafSoft },
+  categoryChipText: { color: colors.ink, fontWeight: font.bold, fontSize: 12 },
+  categoryChipTextSelected: { color: colors.leaf, fontWeight: font.black },
+  removeBtn: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 10,
+    paddingVertical: 6
+  },
+  removeBtnText: { color: colors.warning ?? "#b42318", fontWeight: font.black, fontSize: 13 },
   doneIcon: { fontSize: 56 },
   doneTitle: { color: colors.ink, fontWeight: font.black, fontSize: 22, textAlign: "center" },
 
