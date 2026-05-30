@@ -6,18 +6,24 @@ import {
   Get,
   Headers,
   HttpCode,
+  Logger,
   Post,
+  Req,
   UseGuards
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
+import type { Request } from "express";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { RequestUser } from "../auth/request-user";
 import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
+import { StripeSignatureError, verifyStripeSignature } from "./stripe-signature";
 import { SubscriptionsService } from "./subscriptions.service";
 
 @ApiTags("Subscriptions")
 @Controller("subscriptions")
 export class SubscriptionsController {
+  private readonly logger = new Logger(SubscriptionsController.name);
+
   constructor(private readonly subscriptions: SubscriptionsService) {}
 
   @Get("me")
@@ -45,20 +51,45 @@ export class SubscriptionsController {
     }
   }
 
-  // Stripe webhook. Validate the signature when STRIPE_WEBHOOK_SECRET is set.
+  // Stripe webhook. The signature is verified against the raw request body
+  // (captured in main.ts) using STRIPE_WEBHOOK_SECRET. A forged POST here can
+  // otherwise flip an owner to ACTIVE without paying, so we FAIL CLOSED in
+  // production when the secret is missing, and only accept-but-warn in dev.
   @Post("webhook")
   @HttpCode(200)
   async webhook(
+    @Req() req: Request,
     @Body() payload: any,
     @Headers("stripe-signature") signature: string | undefined
   ) {
     const secret = process.env.STRIPE_WEBHOOK_SECRET;
-    if (secret && !signature) {
-      throw new BadRequestException("Missing Stripe signature.");
+
+    if (secret) {
+      try {
+        verifyStripeSignature({
+          rawBody: (req as Request & { rawBody?: Buffer }).rawBody,
+          signatureHeader: signature,
+          secret
+        });
+      } catch (err) {
+        const reason = err instanceof StripeSignatureError ? err.message : "verification error";
+        this.logger.warn(`Rejected Stripe webhook: ${reason}`);
+        throw new BadRequestException("Invalid Stripe signature.");
+      }
+    } else if (process.env.NODE_ENV === "production") {
+      // No secret in prod = we cannot verify = we must not trust the caller.
+      this.logger.error(
+        "Rejected Stripe webhook: STRIPE_WEBHOOK_SECRET is not set in production."
+      );
+      throw new BadRequestException("Webhook signature verification is not configured.");
+    } else {
+      this.logger.warn(
+        `Accepting Stripe webhook WITHOUT signature verification (NODE_ENV=${
+          process.env.NODE_ENV || "development"
+        }). Set STRIPE_WEBHOOK_SECRET to enable.`
+      );
     }
-    // We don't ship a full Stripe SDK by default; the webhook accepts the
-    // event payload (already-verified by the proxy/edge function) and updates
-    // owner subscription state.
+
     const type: string | undefined = payload?.type;
     const customerId: string | undefined = payload?.data?.object?.customer;
     const subscriptionId: string | undefined = payload?.data?.object?.id;

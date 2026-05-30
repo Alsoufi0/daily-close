@@ -1,5 +1,22 @@
 # Audit Backlog
 
+## Session — 2026-05-30 (Stripe webhook signature — CRITICAL #1 fixed)
+
+Shipped:
+- **Stripe webhook signature verification** (audit #1, was the last open CRITICAL).
+  `/subscriptions/webhook` now verifies the `Stripe-Signature` header against the
+  raw request body using `STRIPE_WEBHOOK_SECRET` (HMAC-SHA256, constant-time
+  compare, 300s replay window) — dependency-free, in `subscriptions/stripe-signature.ts`,
+  mirroring the existing Twilio verifier. `main.ts` now captures the raw body for
+  the webhook path only (the global `express.json()` was discarding it). **Fails
+  closed in production** when the secret is unset; accepts-but-warns in dev.
+  8 new unit tests (valid / forged-secret / tampered-body / replay / malformed /
+  missing-header / missing-raw-body). API suite now 110/110, typecheck clean.
+- **Partner action:** set `STRIPE_WEBHOOK_SECRET` (`whsec_…`) on Render before
+  promoting to prod, or the webhook will reject every event by design.
+
+---
+
 ## Session — 2026-05-30 (receipts + audit pass)
 
 Shipped (this session):

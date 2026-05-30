@@ -93,10 +93,27 @@ async function bootstrap() {
   const logger = new Logger("Bootstrap");
 
   const express = require("express") as {
-    json: (options: { limit: string }) => unknown;
+    json: (options: {
+      limit: string;
+      verify?: (req: { url?: string; rawBody?: Buffer }, res: unknown, buf: Buffer) => void;
+    }) => unknown;
     urlencoded: (options: { extended: boolean; limit: string }) => unknown;
   };
-  app.use(express.json({ limit: process.env.REQUEST_BODY_LIMIT || "25mb" }));
+  // Stripe webhook signature verification needs the EXACT bytes Stripe signed;
+  // express.json() otherwise parses + discards them. We stash the raw buffer,
+  // but ONLY for the webhook path — capturing it for every request would pin
+  // the 25mb upload buffers in memory after parsing. See
+  // subscriptions/stripe-signature.ts and subscriptions.controller.ts.
+  app.use(
+    express.json({
+      limit: process.env.REQUEST_BODY_LIMIT || "25mb",
+      verify: (req, _res, buf) => {
+        if (buf?.length && (req.url || "").startsWith("/subscriptions/webhook")) {
+          req.rawBody = Buffer.from(buf);
+        }
+      }
+    })
+  );
   app.use(express.urlencoded({ extended: true, limit: process.env.REQUEST_BODY_LIMIT || "25mb" }));
   app.use(securityHeaders);
   app.enableCors({
