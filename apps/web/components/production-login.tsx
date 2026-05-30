@@ -233,17 +233,10 @@ export function ProductionLogin() {
             </Link>
           </div>
 
-          <div className="mt-4 flex items-center justify-between text-xs font-bold">
+          <div className="mt-4 text-center text-xs font-bold sm:text-left">
             <Link href="/forgot-password" className="text-ink/65 hover:text-ink underline">
               {t("auth.forgotPassword")}
             </Link>
-            <span className="text-ink/55">
-              <Link href="/terms" className="underline">{t("legal.terms")}</Link>
-              <span className="mx-1">·</span>
-              <Link href="/privacy" className="underline">{t("legal.privacy")}</Link>
-              <span className="mx-1">·</span>
-              <Link href="/demo" className="underline">{t("nav.demo")}</Link>
-            </span>
           </div>
         </div>
       </section>
