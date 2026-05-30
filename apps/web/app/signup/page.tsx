@@ -2,15 +2,26 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, Loader2, Sparkles, UserPlus } from "lucide-react";
+import {
+  ArrowRight,
+  CheckCircle2,
+  Loader2,
+  Mail,
+  Phone,
+  Sparkles,
+  UserPlus
+} from "lucide-react";
 import { createBrowserSupabase } from "../../lib/supabase-browser";
 import { ApiError, bootstrapOwner, signupOwner } from "../../lib/api-client";
 
 type Status = "idle" | "loading" | "needs_confirm" | "done" | "error";
+type SignupMode = "email" | "phone";
 
 export default function SignupPage() {
+  const [mode, setMode] = useState<SignupMode>("email");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState<string | null>(null);
@@ -33,15 +44,32 @@ export default function SignupPage() {
       return;
     }
 
+    const trimmedEmail = email.trim();
+    const trimmedPhone = phone.trim();
+    if (mode === "email" && !trimmedEmail) {
+      setStatus("error");
+      setMessage("Enter your email.");
+      return;
+    }
+    if (mode === "phone" && !trimmedPhone) {
+      setStatus("error");
+      setMessage("Enter your phone number with country code.");
+      return;
+    }
+
     let data;
     let error;
     try {
-      // Always provision through the server. The previous code branched on
-      // hasProductionApi() and fell through to a direct Supabase signup when
-      // the API URL was missing — which silently shipped an alternate auth
-      // path in any misconfigured build. There is now only one path.
-      await signupOwner({ name, email, password });
-      const signIn = await supabase.auth.signInWithPassword({ email, password });
+      await signupOwner({
+        name,
+        email: mode === "email" ? trimmedEmail : undefined,
+        phone: mode === "phone" ? trimmedPhone : undefined,
+        password
+      });
+      const signIn =
+        mode === "email"
+          ? await supabase.auth.signInWithPassword({ email: trimmedEmail, password })
+          : await supabase.auth.signInWithPassword({ phone: trimmedPhone, password });
       data = signIn.data;
       error = signIn.error;
     } catch (err) {
@@ -56,7 +84,6 @@ export default function SignupPage() {
       return;
     }
 
-    // If Supabase requires email confirmation, session is null. Otherwise we get a session.
     if (!data.session) {
       setStatus("needs_confirm");
       return;
@@ -128,17 +155,61 @@ export default function SignupPage() {
               onChange={(e) => setName(e.target.value)}
             />
           </label>
-          <label className="block">
-            <span className="text-sm font-black">Email</span>
-            <input
-              required
-              type="email"
-              autoComplete="email"
-              className="focus-ring mt-2 h-12 w-full rounded-lg border border-ink/15 px-4 font-bold"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </label>
+
+          <div className="grid grid-cols-2 gap-2 rounded-xl bg-stone p-1">
+            <button
+              type="button"
+              onClick={() => setMode("email")}
+              className={`focus-ring flex h-11 items-center justify-center gap-2 rounded-lg text-sm font-black ${
+                mode === "email" ? "bg-white text-ink shadow-sm" : "text-ink/60"
+              }`}
+            >
+              <Mail size={16} aria-hidden />
+              Email
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("phone")}
+              className={`focus-ring flex h-11 items-center justify-center gap-2 rounded-lg text-sm font-black ${
+                mode === "phone" ? "bg-white text-ink shadow-sm" : "text-ink/60"
+              }`}
+            >
+              <Phone size={16} aria-hidden />
+              Phone
+            </button>
+          </div>
+
+          {mode === "email" ? (
+            <label className="block">
+              <span className="text-sm font-black">Email</span>
+              <input
+                required
+                type="email"
+                autoComplete="email"
+                className="focus-ring mt-2 h-12 w-full rounded-lg border border-ink/15 px-4 font-bold"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </label>
+          ) : (
+            <label className="block">
+              <span className="text-sm font-black">Phone number</span>
+              <input
+                required
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                placeholder="+15551234567"
+                className="focus-ring mt-2 h-12 w-full rounded-lg border border-ink/15 px-4 font-bold"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+              />
+              <span className="mt-1 block text-xs font-bold text-ink/55">
+                Include the country code, like +1 for the US.
+              </span>
+            </label>
+          )}
+
           <label className="block">
             <span className="text-sm font-black">Password</span>
             <input
@@ -167,7 +238,7 @@ export default function SignupPage() {
             ) : (
               <ArrowRight size={20} aria-hidden />
             )}
-            {status === "loading" ? "Creating account…" : "Create my account"}
+            {status === "loading" ? "Creating account..." : "Create my account"}
           </button>
         </form>
 

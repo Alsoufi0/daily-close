@@ -65,12 +65,13 @@ export class AuthController {
   // 5 signups per IP per minute — generous enough for a real user retrying
   // a typo'd password, tight enough to block enumeration scripts.
   @Throttle({ default: { ttl: 60_000, limit: 5 } })
-  async signupOwner(@Body() body: { email?: string; name?: string; password?: string }) {
-    if (!body?.email) throw new BadRequestException("Email is required.");
+  async signupOwner(@Body() body: { email?: string; phone?: string; name?: string; password?: string }) {
+    if (!body?.email && !body?.phone) throw new BadRequestException("Email or phone is required.");
     if (!body?.name) throw new BadRequestException("Name is required.");
     if (!body?.password) throw new BadRequestException("Password is required.");
     return this.auth.signupOwner({
       email: body.email,
+      phone: body.phone,
       name: body.name,
       password: body.password
     });

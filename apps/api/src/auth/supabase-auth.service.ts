@@ -36,11 +36,14 @@ export class SupabaseAuthService {
     }
 
     const { data, error } = await this.supabase.auth.getUser(token);
-    if (error || !data.user.email) throw new UnauthorizedException("Invalid session.");
+    if (error || !data.user) throw new UnauthorizedException("Invalid session.");
+
+    const identityEmails = this.emailsForAuthUser(data.user);
+    if (identityEmails.length === 0) throw new UnauthorizedException("Invalid session.");
 
     const user = await this.prisma.user.findFirst({
       where: {
-        OR: [{ authUserId: data.user.id }, { email: data.user.email }]
+        OR: [{ authUserId: data.user.id }, ...identityEmails.map((email) => ({ email }))]
       },
       include: {
         owner: true,
@@ -99,10 +102,11 @@ export class SupabaseAuthService {
   async bootstrapOwnerFromToken(token: string, fallbackName?: string): Promise<RequestUser> {
     if (!this.supabase) throw new UnauthorizedException("Supabase is not configured.");
     const { data, error } = await this.supabase.auth.getUser(token);
-    if (error || !data.user.email) throw new UnauthorizedException("Invalid session.");
+    if (error || !data.user) throw new UnauthorizedException("Invalid session.");
 
     const authId = data.user.id;
-    const email = data.user.email;
+    const email = this.primaryEmailForAuthUser(data.user);
+    if (!email) throw new UnauthorizedException("Invalid session.");
     const name =
       fallbackName ||
       (data.user.user_metadata as any)?.name ||
@@ -261,27 +265,42 @@ export class SupabaseAuthService {
   }
 
   async signupOwner(input: {
-    email: string;
+    email?: string;
+    phone?: string;
     name: string;
     password: string;
-  }): Promise<{ email: string; name: string; ownerId: string }> {
+  }): Promise<{ email: string; phone: string | null; name: string; ownerId: string }> {
     if (!this.supabase) throw new UnauthorizedException("Supabase is not configured.");
 
-    const email = input.email.trim().toLowerCase();
+    const phone = input.phone ? this.normalizePhone(input.phone) : undefined;
+    const email = input.email?.trim().toLowerCase() || (phone ? this.syntheticPhoneEmail(phone, "owners") : "");
     const name = input.name.trim();
-    if (!email.includes("@")) throw new BadRequestException("Enter a valid email.");
+    if (!email && !phone) throw new BadRequestException("Enter an email or phone number.");
+    if (input.email && !email.includes("@")) throw new BadRequestException("Enter a valid email.");
     if (!name) throw new BadRequestException("Name is required.");
     if (input.password.length < 8) throw new BadRequestException("Password must be at least 8 characters.");
 
     const existing = await this.prisma.user.findUnique({ where: { email } });
-    if (existing) throw new ConflictException("An account with this email already exists. Please sign in.");
+    if (existing) {
+      throw new ConflictException(
+        phone ? "An account with this phone already exists. Please sign in." : "An account with this email already exists. Please sign in."
+      );
+    }
 
-    const { data, error } = await this.supabase.auth.admin.createUser({
-      email,
-      password: input.password,
-      email_confirm: true,
-      user_metadata: { name, role: "STORE_OWNER" }
-    });
+    const createInput = phone
+      ? {
+          phone,
+          password: input.password,
+          phone_confirm: true,
+          user_metadata: { name, role: "STORE_OWNER", signup_channel: "phone" }
+        }
+      : {
+          email,
+          password: input.password,
+          email_confirm: true,
+          user_metadata: { name, role: "STORE_OWNER", signup_channel: "email" }
+        };
+    const { data, error } = await this.supabase.auth.admin.createUser(createInput);
     if (error || !data.user) {
       throw new BadRequestException(error?.message || "Could not create account.");
     }
@@ -304,6 +323,33 @@ export class SupabaseAuthService {
       include: { owner: true }
     });
 
-    return { email, name, ownerId: user.owner!.id };
+    return { email, phone: phone ?? null, name, ownerId: user.owner!.id };
+  }
+
+  private primaryEmailForAuthUser(user: { email?: string | null; phone?: string | null }): string | null {
+    return this.emailsForAuthUser(user)[0] || null;
+  }
+
+  private emailsForAuthUser(user: { email?: string | null; phone?: string | null }): string[] {
+    const emails: string[] = [];
+    if (user.email) emails.push(user.email.toLowerCase());
+    if (user.phone) {
+      const phone = this.normalizePhone(user.phone);
+      emails.push(this.syntheticPhoneEmail(phone, "owners"));
+      emails.push(this.syntheticPhoneEmail(phone, "invites"));
+    }
+    return Array.from(new Set(emails));
+  }
+
+  private syntheticPhoneEmail(phone: string, namespace: "owners" | "invites"): string {
+    return `phone_${phone.replace(/\D/g, "")}@${namespace}.dailyclose.local`;
+  }
+
+  private normalizePhone(input: string): string {
+    const clean = input.trim().replace(/[^\d+]/g, "");
+    if (!/^\+[1-9]\d{7,14}$/.test(clean)) {
+      throw new BadRequestException("Enter the phone number with country code, like +15551234567.");
+    }
+    return clean;
   }
 }

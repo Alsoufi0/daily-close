@@ -87,9 +87,10 @@ export async function bootstrapOwner(token: string, name?: string): Promise<Sess
 
 export async function signupOwner(input: {
   name: string;
-  email: string;
+  email?: string;
+  phone?: string;
   password: string;
-}): Promise<{ email: string; name: string; ownerId: string }> {
+}): Promise<{ email: string; phone: string | null; name: string; ownerId: string }> {
   return apiFetch("/auth/signup-owner", undefined, {
     method: "POST",
     body: JSON.stringify(input)
