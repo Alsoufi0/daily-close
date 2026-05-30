@@ -13,11 +13,13 @@ import {
 } from "lucide-react";
 import { createBrowserSupabase } from "../../lib/supabase-browser";
 import { ApiError, bootstrapOwner, signupOwner } from "../../lib/api-client";
+import { useLanguage } from "../../components/language-provider";
 
 type Status = "idle" | "loading" | "needs_confirm" | "done" | "error";
 type SignupMode = "email" | "phone";
 
 export default function SignupPage() {
+  const { t } = useLanguage();
   const [mode, setMode] = useState<SignupMode>("email");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -127,26 +129,26 @@ export default function SignupPage() {
             <UserPlus size={22} aria-hidden />
           </span>
           <div>
-            <h1 className="text-2xl font-black">Start your free trial</h1>
-            <p className="text-sm font-semibold text-ink/60">14 days, no card required.</p>
+            <h1 className="text-2xl font-black">{t("auth.startTrial")}</h1>
+            <p className="text-sm font-semibold text-ink/60">{t("auth.trialNoCard")}</p>
           </div>
         </div>
 
         <ul className="mt-4 space-y-1.5 text-sm font-bold text-ink/70">
           <li className="flex items-center gap-2">
-            <Sparkles size={14} className="text-leaf" /> Multi-store dashboard
+            <Sparkles size={14} className="text-leaf" /> {t("billing.multiStoreDashboard")}
           </li>
           <li className="flex items-center gap-2">
-            <Sparkles size={14} className="text-leaf" /> Daily close from any phone
+            <Sparkles size={14} className="text-leaf" /> {t("auth.dailyCloseAnyPhone")}
           </li>
           <li className="flex items-center gap-2">
-            <Sparkles size={14} className="text-leaf" /> CSV export + missed-close alerts
+            <Sparkles size={14} className="text-leaf" /> {t("auth.csvMissedAlerts")}
           </li>
         </ul>
 
         <form onSubmit={submit} className="mt-6 space-y-3">
           <label className="block">
-            <span className="text-sm font-black">Your name</span>
+            <span className="text-sm font-black">{t("auth.yourName")}</span>
             <input
               required
               autoFocus
@@ -165,7 +167,7 @@ export default function SignupPage() {
               }`}
             >
               <Mail size={16} aria-hidden />
-              Email
+              {t("auth.email")}
             </button>
             <button
               type="button"
@@ -175,13 +177,13 @@ export default function SignupPage() {
               }`}
             >
               <Phone size={16} aria-hidden />
-              Phone
+              {t("auth.phone")}
             </button>
           </div>
 
           {mode === "email" ? (
             <label className="block">
-              <span className="text-sm font-black">Email</span>
+              <span className="text-sm font-black">{t("auth.email")}</span>
               <input
                 required
                 type="email"
@@ -193,7 +195,7 @@ export default function SignupPage() {
             </label>
           ) : (
             <label className="block">
-              <span className="text-sm font-black">Phone number</span>
+              <span className="text-sm font-black">{t("auth.phoneNumber")}</span>
               <input
                 required
                 type="tel"
@@ -205,13 +207,13 @@ export default function SignupPage() {
                 onChange={(e) => setPhone(e.target.value)}
               />
               <span className="mt-1 block text-xs font-bold text-ink/55">
-                Include the country code, like +1 for the US.
+                {t("auth.phoneCountryHelp")}
               </span>
             </label>
           )}
 
           <label className="block">
-            <span className="text-sm font-black">Password</span>
+            <span className="text-sm font-black">{t("auth.password")}</span>
             <input
               required
               type="password"
@@ -221,7 +223,7 @@ export default function SignupPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
-            <span className="mt-1 block text-xs font-bold text-ink/55">At least 8 characters.</span>
+            <span className="mt-1 block text-xs font-bold text-ink/55">{t("auth.atLeast8CharsShort")}</span>
           </label>
 
           {status === "error" && message ? (
@@ -238,18 +240,18 @@ export default function SignupPage() {
             ) : (
               <ArrowRight size={20} aria-hidden />
             )}
-            {status === "loading" ? "Creating account..." : "Create my account"}
+            {status === "loading" ? t("auth.creatingAccount") : t("auth.createMyAccount")}
           </button>
         </form>
 
         <p className="mt-4 text-center text-sm font-bold text-ink/65">
-          Already have an account?{" "}
+          {t("auth.alreadyHaveAccount")}{" "}
           <Link href="/" className="text-leaf underline">
-            Sign in
+            {t("auth.signIn")}
           </Link>
         </p>
         <p className="mt-2 text-center text-xs font-bold text-ink/55">
-          By creating an account you agree to our{" "}
+          {t("auth.byCreatingAgree")}{" "}
           <Link href="/terms" className="underline">Terms</Link> and{" "}
           <Link href="/privacy" className="underline">Privacy</Link>.
         </p>

@@ -96,6 +96,16 @@ const phraseKeys: Record<string, string> = {
   "Creating account...": "auth.creatingAccount",
   "Owner or employee account": "auth.ownerEmployeeAccount",
   "Email": "auth.email",
+  "Phone": "auth.phone",
+  "Phone number": "auth.phoneNumber",
+  "Your name": "auth.yourName",
+  "Start your free trial": "auth.startTrial",
+  "14 days, no card required.": "auth.trialNoCard",
+  "Daily close from any phone": "auth.dailyCloseAnyPhone",
+  "CSV export + missed-close alerts": "auth.csvMissedAlerts",
+  "Include the country code, like +1 for the US.": "auth.phoneCountryHelp",
+  "Already have an account?": "auth.alreadyHaveAccount",
+  "By creating an account you agree to our": "auth.byCreatingAgree",
   "New password": "auth.newPassword",
   "Confirm new password": "auth.confirmPassword",
   "Update password": "auth.updatePassword",
@@ -345,8 +355,18 @@ function localizeDom(
   const nodes: Text[] = [];
   while (walker.nextNode()) nodes.push(walker.currentNode as Text);
   nodes.forEach((node) => {
-    const original = originalText.get(node) || node.textContent || "";
-    if (!originalText.has(node)) originalText.set(node, original);
+    const current = node.textContent || "";
+    let original = originalText.get(node);
+    if (!original) {
+      original = current;
+      originalText.set(node, original);
+    } else {
+      const translatedOriginal = translatePhrase(original, lang);
+      if (current !== original && current !== translatedOriginal) {
+        original = current;
+        originalText.set(node, original);
+      }
+    }
     const next = translatePhrase(original, lang);
     if (next !== node.textContent) node.textContent = next;
   });
@@ -356,8 +376,17 @@ function localizeDom(
     ["placeholder", "aria-label", "title"].forEach((attr) => {
       const current = el.getAttribute(attr);
       if (!current) return;
-      const original = stored[attr] || current;
-      stored[attr] = original;
+      let original = stored[attr];
+      if (!original) {
+        original = current;
+        stored[attr] = original;
+      } else {
+        const translatedOriginal = translatePhrase(original, lang);
+        if (current !== original && current !== translatedOriginal) {
+          original = current;
+          stored[attr] = original;
+        }
+      }
       const next = translatePhrase(original, lang);
       if (next !== current) el.setAttribute(attr, next);
     });
