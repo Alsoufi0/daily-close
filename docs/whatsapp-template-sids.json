@@ -1,0 +1,27 @@
+[
+  {
+    "name": "daily_close_employee_welcome",
+    "sid": "HX24a0822e987c868b0c0b762bfb5354fb",
+    "category": "UTILITY"
+  },
+  {
+    "name": "daily_close_missed_close",
+    "sid": "HXf7edd8be728231c90d42962bd03b0bf0",
+    "category": "UTILITY"
+  },
+  {
+    "name": "daily_close_completed",
+    "sid": "HX6a5d49e0888766737b9e943825cf40de",
+    "category": "UTILITY"
+  },
+  {
+    "name": "daily_close_weekly_summary",
+    "sid": "HX0b83190d8ad4ee505efa090e1e733009",
+    "category": "UTILITY"
+  },
+  {
+    "name": "daily_close_monthly_summary",
+    "sid": "HXb8e2d3886bdbd0accc792a2cbff0fe77",
+    "category": "UTILITY"
+  }
+]
