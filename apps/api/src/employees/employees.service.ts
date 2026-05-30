@@ -9,13 +9,17 @@ import { randomBytes } from "crypto";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { PrismaService } from "../prisma/prisma.service";
 import { RequestUser } from "../auth/request-user";
+import { SmsService } from "../notifications/sms.service";
 import { InviteEmployeeDto } from "./dto/invite-employee.dto";
 
 @Injectable()
 export class EmployeesService {
   private readonly supabase?: SupabaseClient;
 
-  constructor(private readonly prisma: PrismaService) {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly sms: SmsService
+  ) {
     const url = process.env.SUPABASE_URL;
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (url && key) {
@@ -119,6 +123,24 @@ export class EmployeesService {
       include: { employees: true }
     });
 
+    // Best-effort welcome SMS for phone invites. We never block the invite on
+    // SMS — Twilio could be misconfigured, the carrier could reject, the owner
+    // could still hand off the temp password manually. The response includes
+    // `smsSent` + an optional `smsError` so the admin UI can either say "Sent
+    // via SMS" or fall back to the share-this-password modal.
+    let smsSent = false;
+    let smsError: string | undefined;
+    if (phone) {
+      const result = await this.sms.sendEmployeeWelcome({
+        phone,
+        name: input.name,
+        storeName: store.storeName,
+        tempPassword
+      });
+      smsSent = result.sent;
+      smsError = result.error;
+    }
+
     return {
       id: created.id,
       employeeId: created.employees[0]?.id,
@@ -127,7 +149,9 @@ export class EmployeesService {
       name: created.name,
       storeId: input.storeId,
       tempPassword,
-      invitedViaSupabase: Boolean(this.supabase)
+      invitedViaSupabase: Boolean(this.supabase),
+      smsSent,
+      smsError: smsError ?? null
     };
   }
 

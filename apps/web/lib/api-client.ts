@@ -253,6 +253,11 @@ export async function inviteEmployee(
   storeId: string;
   tempPassword: string;
   invitedViaSupabase: boolean;
+  // True only when phone was supplied AND the welcome SMS was sent. When false
+  // (no phone, or carrier/Twilio failure), the owner should share tempPassword
+  // manually — smsError carries the reason for failure cases.
+  smsSent: boolean;
+  smsError: string | null;
 }> {
   return apiFetch("/employees/invite", token, {
     method: "POST",

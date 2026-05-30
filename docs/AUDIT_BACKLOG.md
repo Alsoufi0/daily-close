@@ -211,7 +211,13 @@ The partner shipped multi-line expenses (categories + add-button + mobile parity
 1. **OCR_SPACE_API_KEY** — get free registered key at `https://ocr.space/ocrapi/freekey` (60 sec, no credit card). Add to Render staging env. Replaces public `helloworld` key (which throttles aggressively).
 2. **SENTRY_DSN** — create `daily-close-staging` Sentry project (free tier), add DSN to Render staging env, then flip `NODE_ENV` from `staging` back to `production` so staging mirrors prod behavior.
 3. **Supabase PITR** — enable Point-in-Time Recovery on staging Supabase project (~$10/mo). Required for any meaningful disaster-recovery story.
-4. **(When ready for prod)** the same three on the production Render service, plus a separate prod Sentry project.
+4. **Twilio (for phone-invite welcome SMS)** — set on Render staging env:
+   - `TWILIO_ACCOUNT_SID` (`AC…`)
+   - `TWILIO_AUTH_TOKEN` (secret)
+   - `TWILIO_MESSAGING_SERVICE_SID` (`MG…`, preferred) **OR** `TWILIO_FROM_NUMBER` (`+1…`)
+   - `APP_URL` — base URL the SMS links to, e.g. `https://daily-close-git-staging-alsoufi0s-projects.vercel.app`
+   Use the SAME Twilio account already configured in Supabase Phone Auth. Without these, phone invites still create the user but `smsSent=false` is returned and the owner shares the temp password manually (see admin UI fallback).
+5. **(When ready for prod)** the same five on the production Render service, plus a separate prod Sentry project, and `APP_URL` pointing at the prod web URL.
 
 ---
 

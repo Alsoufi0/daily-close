@@ -223,15 +223,26 @@ export default function EmployeesAdminPage() {
           ? { name, email, storeId }
           : { name, phone, storeId };
       const result = await inviteEmployee(session.token, payload);
-      // Display whichever contact channel was used (email for email-invites,
-      // phone for phone-invites) so the share modal still has something to
-      // label the credentials with.
       const contactDisplay = result.email || result.phone || "";
       setEmployees((prev) => [
         ...prev,
         { id: result.id, user: { name, email: contactDisplay }, storeId }
       ]);
-      setResetResult({ email: contactDisplay, tempPassword: result.tempPassword });
+
+      // When the welcome SMS was sent we skip the share-this-password modal —
+      // the employee already has everything they need. The owner just gets a
+      // brief confirmation. When SMS was attempted but failed (or the invite
+      // was email-based to begin with), fall back to the manual share modal so
+      // the password is still recoverable.
+      if (result.smsSent) {
+        setInfo(`Welcome SMS sent to ${result.phone}. The employee can sign in now.`);
+      } else {
+        setResetResult({ email: contactDisplay, tempPassword: result.tempPassword });
+        if (contactType === "phone" && result.smsError) {
+          setInfo(`SMS could not be sent (${result.smsError}). Share the password below manually.`);
+        }
+      }
+
       setName("");
       setEmail("");
       setPhone("");
