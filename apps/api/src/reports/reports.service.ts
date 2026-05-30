@@ -413,6 +413,112 @@ export class ReportsService {
     return pdf.save();
   }
 
+  private sanitizeFilenameSegment(value: string): string {
+    return value.replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "receipt";
+  }
+
+  private guessExt(imageUrl: string, storagePath: string | null): string {
+    const source = storagePath || imageUrl || "";
+    const match = source.match(/\.([a-zA-Z0-9]{2,5})(?:\?|$)/);
+    if (match) return match[1].toLowerCase();
+    return "jpg";
+  }
+
+  /**
+   * Owner-only single-receipt download. Returns a Buffer + filename so the
+   * controller can stream it as an attachment. Falls back to a redirect URL
+   * (the live signed URL) when the file can't be fetched directly — for
+   * example when SUPABASE creds aren't configured in the env.
+   */
+  async downloadReceipt(id: string, user: RequestUser): Promise<{
+    filename: string;
+    buffer: Buffer | null;
+    redirectUrl: string | null;
+    contentType: string;
+  }> {
+    if (user.role !== "STORE_OWNER" || !user.ownerId) {
+      throw new ForbiddenException("Only owners can download receipts.");
+    }
+    const row = await this.prisma.uploadedReport.findFirst({
+      where: { id, store: { ownerId: user.ownerId, deletedAt: null } },
+      include: { store: true, dailyClose: true }
+    });
+    if (!row || !row.store) throw new NotFoundException("Receipt not found.");
+
+    const tz = row.store.timezone || "America/New_York";
+    const dateStr = row.dailyClose
+      ? this.localDate(tz, row.dailyClose.date)
+      : this.localDate(tz, row.createdAt);
+    const ext = this.guessExt(row.imageUrl, row.storagePath);
+    const filename = `receipt-${this.sanitizeFilenameSegment(row.store.storeName)}-${dateStr}-${row.id}.${ext}`;
+    const contentType = ext === "png" ? "image/png" : ext === "pdf" ? "application/pdf" : "image/jpeg";
+
+    if (row.storagePath && this.storage) {
+      const buf = await this.storage.download(row.storagePath);
+      if (buf) return { filename, buffer: buf, redirectUrl: null, contentType };
+      // Storage configured but fetch failed — fall through to redirect.
+      const fresh = await this.storage.signPath(row.storagePath, 300);
+      if (fresh) return { filename, buffer: null, redirectUrl: fresh, contentType };
+    }
+    // No storage path / no storage configured: 302 to the stored URL.
+    return { filename, buffer: null, redirectUrl: row.imageUrl, contentType };
+  }
+
+  /**
+   * Owner-only bulk receipt download. Returns the list of objects to zip;
+   * the controller streams them via archiver. Returns receipts within the
+   * same filter window as listReceipts.
+   */
+  async listReceiptsForDownload(query: ReceiptsQueryDto, user: RequestUser): Promise<{
+    storeName: string;
+    items: Array<{ filename: string; storagePath: string | null; imageUrl: string }>;
+  }> {
+    if (user.role !== "STORE_OWNER" || !user.ownerId) {
+      throw new ForbiddenException("Only owners can download receipts.");
+    }
+    const store = await this.prisma.store.findFirst({
+      where: { id: query.storeId, ownerId: user.ownerId, deletedAt: null },
+      select: { id: true, storeName: true, timezone: true }
+    });
+    if (!store) throw new ForbiddenException("This store is not yours.");
+
+    const tz = store.timezone || "America/New_York";
+    const today = DashboardService.formatLocalDate(new Date(), tz);
+    const fromStr = query.from || (() => {
+      const d = new Date();
+      d.setUTCDate(d.getUTCDate() - 7);
+      return DashboardService.formatLocalDate(d, tz);
+    })();
+    const toStr = query.to || today;
+    const fromRange = DashboardService.storeLocalDayRange(tz, new Date(`${fromStr}T12:00:00Z`));
+    const toRange = DashboardService.storeLocalDayRange(tz, new Date(`${toStr}T12:00:00Z`));
+
+    const rows = await this.prisma.uploadedReport.findMany({
+      where: {
+        OR: [
+          { storeId: store.id, createdAt: { gte: fromRange.start, lte: toRange.end } },
+          { dailyClose: { storeId: store.id, date: { gte: fromRange.start, lte: toRange.end } } }
+        ]
+      },
+      include: { dailyClose: true },
+      orderBy: { createdAt: "desc" },
+      take: 200
+    });
+
+    const items = rows.map((row: any) => {
+      const dateStr = row.dailyClose
+        ? this.localDate(tz, row.dailyClose.date)
+        : this.localDate(tz, row.createdAt);
+      const ext = this.guessExt(row.imageUrl, row.storagePath);
+      return {
+        filename: `receipt-${this.sanitizeFilenameSegment(store.storeName)}-${dateStr}-${row.id}.${ext}`,
+        storagePath: row.storagePath,
+        imageUrl: row.imageUrl
+      };
+    });
+    return { storeName: store.storeName, items };
+  }
+
   /**
    * Owner-only: list POS-report uploads for one of the owner's stores within
    * a date range. Employees cannot call this — they only see their own close

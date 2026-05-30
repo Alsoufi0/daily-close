@@ -2,9 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, ImageIcon, Loader2, X } from "lucide-react";
+import { ArrowLeft, Download, ImageIcon, Loader2, X } from "lucide-react";
 import { formatMoney, formatMoneyExact } from "@smokeshop/shared/utils/money";
-import { ApiError, listReceipts, ReceiptRow } from "../../../lib/api-client";
+import {
+  ApiError,
+  downloadAllReceipts,
+  downloadReceipt,
+  listReceipts,
+  ReceiptRow
+} from "../../../lib/api-client";
 import { useSession } from "../../../lib/use-session";
 import { useLanguage } from "../../../components/language-provider";
 import { RequireAuth } from "../../../components/require-auth";
@@ -25,8 +31,22 @@ function ReceiptsView() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<ReceiptRow | null>(null);
+  const [downloadingAll, setDownloadingAll] = useState(false);
 
   const stores = session.stores;
+
+  async function onDownloadAll() {
+    if (!session.token || !storeId) return;
+    setDownloadingAll(true);
+    setError(null);
+    try {
+      await downloadAllReceipts(session.token, { storeId, from, to });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("receipts.loadFailed"));
+    } finally {
+      setDownloadingAll(false);
+    }
+  }
 
   useEffect(() => {
     if (!storeId && stores.length > 0) setStoreId(stores[0].id);
@@ -74,6 +94,15 @@ function ReceiptsView() {
             {t("receipts.title")}
           </h1>
         </div>
+        <button
+          type="button"
+          onClick={onDownloadAll}
+          disabled={!storeId || downloadingAll || rows.length === 0}
+          className="focus-ring inline-flex items-center gap-2 rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm font-black text-ink disabled:opacity-50"
+        >
+          {downloadingAll ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Download size={16} aria-hidden />}
+          {t("receipts.downloadAll")}
+        </button>
       </div>
 
       <div className="grid gap-3 rounded-2xl border border-ink/10 bg-white p-4 shadow-sm sm:grid-cols-3">
@@ -171,15 +200,40 @@ function ReceiptsView() {
       )}
 
       {selected ? (
-        <ReceiptDetail receipt={selected} onClose={() => setSelected(null)} />
+        <ReceiptDetail
+          receipt={selected}
+          token={session.token}
+          onClose={() => setSelected(null)}
+        />
       ) : null}
     </section>
   );
 }
 
-function ReceiptDetail({ receipt, onClose }: { receipt: ReceiptRow; onClose: () => void }) {
+function ReceiptDetail({
+  receipt,
+  token,
+  onClose
+}: {
+  receipt: ReceiptRow;
+  token: string | undefined;
+  onClose: () => void;
+}) {
   const { t } = useLanguage();
   const dc = receipt.dailyClose;
+  const [downloading, setDownloading] = useState(false);
+  async function onDownload() {
+    setDownloading(true);
+    try {
+      await downloadReceipt(token, receipt.id);
+    } catch {
+      // No-op — the detail modal already shows the image, the user can
+      // right-click → Save As as a fallback. Keeping this quiet avoids a
+      // toast for a feature they only just discovered.
+    } finally {
+      setDownloading(false);
+    }
+  }
   return (
     <div
       role="dialog"
@@ -203,14 +257,25 @@ function ReceiptDetail({ receipt, onClose }: { receipt: ReceiptRow; onClose: () 
               </p>
             ) : null}
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={t("common.cancel")}
-            className="focus-ring flex h-10 w-10 items-center justify-center rounded-lg border border-ink/15 text-ink/70 hover:bg-smoke"
-          >
-            <X size={18} aria-hidden />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onDownload}
+              disabled={downloading}
+              className="focus-ring inline-flex items-center gap-2 rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm font-black text-ink disabled:opacity-50"
+            >
+              {downloading ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Download size={16} aria-hidden />}
+              {t("receipts.download")}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label={t("common.cancel")}
+              className="focus-ring flex h-10 w-10 items-center justify-center rounded-lg border border-ink/15 text-ink/70 hover:bg-smoke"
+            >
+              <X size={18} aria-hidden />
+            </button>
+          </div>
         </div>
         <img
           src={receipt.imageUrl}

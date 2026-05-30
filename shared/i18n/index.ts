@@ -140,6 +140,8 @@ export const translations: Record<Language, Dictionary> = {
     "receipts.viewDetails": "View Details",
     "receipts.totalSales": "Total Sales",
     "receipts.loadFailed": "Could not load receipts.",
+    "receipts.download": "Download",
+    "receipts.downloadAll": "Download all",
     "nav.receipts": "Receipts"
   },
   ar: {

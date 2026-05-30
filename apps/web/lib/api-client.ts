@@ -399,6 +399,65 @@ export async function listReceipts(
   return apiFetch<ReceiptRow[]>(`/reports/receipts?${params.toString()}`, requireToken(token));
 }
 
+/**
+ * Trigger a browser download for a single receipt. Uses fetch + Blob so the
+ * Authorization header is sent (a plain `<a href>` cannot attach headers).
+ * If the API responds with 302 we follow it transparently — the redirect
+ * target is a short-lived public signed URL, so the resulting download still
+ * lands on the user's machine with no extra hop.
+ */
+export async function downloadReceipt(token: string | undefined, id: string): Promise<void> {
+  requireToken(token);
+  if (!apiUrl) throw new ApiError(0, "API URL is not configured.");
+  const response = await fetch(`${apiUrl}/reports/receipts/${id}/download`, {
+    headers: { Authorization: `Bearer ${token!}` }
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new ApiError(response.status, extractApiErrorMessage(text, response.statusText));
+  }
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const disposition = response.headers.get("content-disposition") || "";
+  const match = disposition.match(/filename="?([^"]+)"?/i);
+  const filename = match?.[1] || `receipt-${id}.jpg`;
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+export async function downloadAllReceipts(
+  token: string | undefined,
+  filters: { storeId: string; from?: string; to?: string }
+): Promise<void> {
+  requireToken(token);
+  if (!apiUrl) throw new ApiError(0, "API URL is not configured.");
+  const params = new URLSearchParams();
+  params.set("storeId", filters.storeId);
+  if (filters.from) params.set("from", filters.from);
+  if (filters.to) params.set("to", filters.to);
+  const response = await fetch(`${apiUrl}/reports/receipts/download?${params.toString()}`, {
+    headers: { Authorization: `Bearer ${token!}` }
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new ApiError(response.status, extractApiErrorMessage(text, response.statusText));
+  }
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `receipts-${filters.storeId}-${filters.from || "start"}-${filters.to || "today"}.zip`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 export async function markNotificationRead(token: string, id: string): Promise<void> {
   await apiFetch(`/notifications/${id}/read`, token, { method: "PATCH" });
 }
