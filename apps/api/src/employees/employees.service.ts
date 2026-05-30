@@ -10,6 +10,7 @@ import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { PrismaService } from "../prisma/prisma.service";
 import { RequestUser } from "../auth/request-user";
 import { SmsService } from "../notifications/sms.service";
+import { EmailService } from "../notifications/email.service";
 import { InviteEmployeeDto } from "./dto/invite-employee.dto";
 
 @Injectable()
@@ -18,7 +19,8 @@ export class EmployeesService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly sms: SmsService
+    private readonly sms: SmsService,
+    private readonly email: EmailService
   ) {
     const url = process.env.SUPABASE_URL;
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -169,6 +171,22 @@ export class EmployeesService {
       smsError = result.error;
     }
 
+    // Best-effort branded welcome email for email invites — delivers the temp
+    // password + sign-in link so the owner doesn't have to share it manually.
+    // Never blocks the invite (same contract as the SMS path).
+    let emailSent = false;
+    let emailError: string | undefined;
+    if (email) {
+      const result = await this.email.sendEmployeeWelcome({
+        email,
+        name: input.name,
+        storeName: store.storeName,
+        tempPassword
+      });
+      emailSent = result.sent;
+      emailError = result.error;
+    }
+
     return {
       id: created.id,
       employeeId: created.employees[0]?.id,
@@ -179,7 +197,9 @@ export class EmployeesService {
       tempPassword,
       invitedViaSupabase: Boolean(this.supabase),
       smsSent,
-      smsError: smsError ?? null
+      smsError: smsError ?? null,
+      emailSent,
+      emailError: emailError ?? null
     };
   }
 

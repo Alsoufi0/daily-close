@@ -50,7 +50,8 @@ function build(prismaOverrides: Record<string, any> = {}) {
   // SMS isn't exercised by these tests; the stub keeps the constructor honest
   // without pulling in env vars or hitting the network.
   const sms = { sendEmployeeWelcome: jest.fn().mockResolvedValue({ sent: false }) } as any;
-  return { service: new EmployeesService(prisma, sms), prisma };
+  const email = { sendEmployeeWelcome: jest.fn().mockResolvedValue({ sent: false }) } as any;
+  return { service: new EmployeesService(prisma, sms, email), prisma };
 }
 
 describe("EmployeesService", () => {
