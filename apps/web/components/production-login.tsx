@@ -74,7 +74,11 @@ export function ProductionLogin() {
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-14 lg:px-8" dir={dir}>
-      <div className="mb-5 flex justify-end">
+      {/* Mobile-only: the TopBar shows the Language picker on desktop already,
+          but on mobile it collapses into the hamburger menu — so we surface it
+          inline on the sign-in page so users can pick a language before any
+          authenticated route is reachable. */}
+      <div className="mb-5 flex justify-end lg:hidden">
         <LanguageSelect />
       </div>
       <div className="mb-5 lg:hidden">
@@ -151,11 +155,14 @@ export function ProductionLogin() {
           </div>
 
           <div className="space-y-3">
-            <label className="block">
-              <span className="text-sm font-black">
-                {authMode === "email" ? t("auth.email") : t("auth.phone")}
-              </span>
-              {authMode === "email" ? (
+            {/* Render each mode as its own labelled block (with a distinct key)
+                so React swaps the DOM nodes wholesale when the tab changes.
+                Reusing a single <span> just to flip its text triggers the
+                language MutationObserver's cached-original-text override,
+                which is why the label used to stick on "Email". */}
+            {authMode === "email" ? (
+              <label key="email-field" className="block">
+                <span className="text-sm font-black">{t("auth.email")}</span>
                 <input
                   className="focus-ring mt-2 h-12 w-full rounded-lg border border-ink/15 px-4 font-bold"
                   value={email}
@@ -163,7 +170,10 @@ export function ProductionLogin() {
                   autoComplete="email"
                   type="email"
                 />
-              ) : (
+              </label>
+            ) : (
+              <label key="phone-field" className="block">
+                <span className="text-sm font-black">{t("auth.phoneNumber")}</span>
                 <input
                   className="focus-ring mt-2 h-12 w-full rounded-lg border border-ink/15 px-4 font-bold"
                   value={phone}
@@ -172,8 +182,8 @@ export function ProductionLogin() {
                   autoComplete="tel"
                   placeholder="+15551234567"
                 />
-              )}
-            </label>
+              </label>
+            )}
             <label className="block">
               <span className="text-sm font-black">{t("nav.password")}</span>
               <div className="relative mt-2">
