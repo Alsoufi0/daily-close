@@ -51,3 +51,7 @@ scripts/*.local.json
 
 .commitmsg.txt
 
+
+# local artifacts
+graphify-out/
+supabase/.temp/
