@@ -32,7 +32,7 @@
       },
       "permissions": ["CAMERA", "READ_MEDIA_IMAGES"]
     },
-    "plugins": ["expo-image-picker", "expo-secure-store"],
+    "plugins": ["expo-image-picker", "expo-secure-store", "@sentry/react-native/expo"],
     "extra": {
       "eas": {
         "projectId": "replace-after-eas-init"

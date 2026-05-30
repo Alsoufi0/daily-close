@@ -123,6 +123,52 @@ export function useSession(): Session {
     };
   }, []);
 
+  // Keep `token` in sync with Supabase's auto-refresh. Without this, useSession
+  // captures the access_token on mount and the React state never updates when
+  // Supabase rotates it (~every hour). Polls that fire on a stale token then
+  // 401 and the user sees "Invalid session" after an idle period. Subscribing
+  // to onAuthStateChange picks up TOKEN_REFRESHED, SIGNED_OUT, and similar
+  // events so the in-memory token always matches the cookie-backed session.
+  useEffect(() => {
+    const supabase = createBrowserSupabase();
+    if (!supabase) return;
+    const { data } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      if (
+        (event === "TOKEN_REFRESHED" || event === "SIGNED_IN" || event === "USER_UPDATED") &&
+        nextSession?.access_token
+      ) {
+        setToken(nextSession.access_token);
+      } else if (event === "SIGNED_OUT") {
+        setToken(undefined);
+        setProfile(undefined);
+        setMode("demo");
+      }
+    });
+    return () => {
+      data.subscription.unsubscribe();
+    };
+  }, []);
+
+  // Browsers throttle timers in background tabs, so Supabase's auto-refresh
+  // can miss the rotation window. When the tab regains focus, force a fresh
+  // read from the cookie-backed session — Supabase will refresh on demand
+  // inside getSession() if the token is close to expiry.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      readSessionToken().then((latest) => {
+        if (latest) setToken(latest);
+      });
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+    };
+  }, []);
+
   async function signOut() {
     const supabase = createBrowserSupabase();
     if (supabase) {
