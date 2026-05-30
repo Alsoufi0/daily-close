@@ -235,15 +235,15 @@ export default function EmployeesAdminPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
           <h1 className="text-2xl font-black">Employees</h1>
           <p className="text-sm font-bold text-ink/65">Invite the people who close your stores at night.</p>
         </div>
         {!showForm ? (
           <button
             onClick={() => setShowForm(true)}
-            className="focus-ring inline-flex h-11 items-center gap-2 rounded-lg bg-leaf px-4 font-black text-white"
+            className="focus-ring inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-leaf px-4 font-black text-white sm:w-auto"
           >
             <Plus size={16} /> Invite
           </button>
@@ -267,7 +267,7 @@ export default function EmployeesAdminPage() {
             <input
               required
               autoFocus
-              className="focus-ring h-12 w-full rounded-lg border border-ink/15 px-4 font-bold"
+              className="focus-ring h-12 w-full rounded-lg border border-ink/15 px-4 text-base font-bold"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
@@ -276,7 +276,7 @@ export default function EmployeesAdminPage() {
             <input
               required
               type="email"
-              className="focus-ring h-12 w-full rounded-lg border border-ink/15 px-4 font-bold"
+              className="focus-ring h-12 w-full rounded-lg border border-ink/15 px-4 text-base font-bold"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
@@ -284,7 +284,7 @@ export default function EmployeesAdminPage() {
           <Field label="Store">
             <select
               required
-              className="focus-ring h-12 w-full rounded-lg border border-ink/15 px-3 font-bold"
+              className="focus-ring h-12 w-full rounded-lg border border-ink/15 px-3 text-base font-bold"
               value={storeId}
               onChange={(e) => setStoreId(e.target.value)}
             >

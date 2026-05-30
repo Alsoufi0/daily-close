@@ -69,15 +69,15 @@ export default function StoresAdminPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3">
-        <div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
           <h1 className="text-2xl font-black">{t("admin.stores")}</h1>
           <p className="text-sm font-bold text-ink/65">{t("admin.storesHelp")}</p>
         </div>
         {!showCreate ? (
           <button
             onClick={() => setShowCreate(true)}
-            className="focus-ring inline-flex h-11 items-center gap-2 rounded-lg bg-leaf px-4 font-black text-white"
+            className="focus-ring inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-leaf px-4 font-black text-white sm:w-auto"
           >
             <Plus size={16} /> {t("admin.newStore")}
           </button>
@@ -128,8 +128,8 @@ export default function StoresAdminPage() {
                 <Store size={18} aria-hidden />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="font-black">{s.storeName}</p>
-                <p className="truncate text-xs font-bold text-ink/55">
+                <p className="truncate font-black">{s.storeName}</p>
+                <p className="break-words text-xs font-bold text-ink/55">
                   {t("dashboard.closesAt")} {s.closeTime ?? "23:30"}
                   {s.timezone ? ` · ${s.timezone}` : ""}
                   {s.address ? ` · ${s.address}` : ""}
@@ -215,14 +215,14 @@ function StoreForm({
         <input
           required
           autoFocus
-          className="focus-ring h-12 w-full rounded-lg border border-ink/15 px-4 font-bold"
+          className="focus-ring h-12 w-full rounded-lg border border-ink/15 px-4 text-base font-bold"
           value={storeName}
           onChange={(e) => setStoreName(e.target.value)}
         />
       </Field>
       <Field label={t("admin.addressOptional")}>
         <input
-          className="focus-ring h-12 w-full rounded-lg border border-ink/15 px-4 font-bold"
+          className="focus-ring h-12 w-full rounded-lg border border-ink/15 px-4 text-base font-bold"
           value={address ?? ""}
           onChange={(e) => setAddress(e.target.value)}
         />
@@ -230,14 +230,14 @@ function StoreForm({
       <Field label={t("admin.dailyCloseTime")}>
         <input
           type="time"
-          className="focus-ring h-12 w-44 rounded-lg border border-ink/15 px-4 font-bold"
+          className="focus-ring h-12 w-full rounded-lg border border-ink/15 px-4 text-base font-bold sm:w-44"
           value={closeTime}
           onChange={(e) => setCloseTime(e.target.value)}
         />
       </Field>
       <Field label={t("admin.timezone")}>
         <select
-          className="focus-ring h-12 w-full rounded-lg border border-ink/15 px-4 font-bold"
+          className="focus-ring h-12 w-full rounded-lg border border-ink/15 px-4 text-base font-bold"
           value={timezone}
           onChange={(e) => setTimezone(e.target.value)}
         >
