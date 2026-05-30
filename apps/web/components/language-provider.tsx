@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { languageDir, languages, normalizeLanguage, translate, type Language } from "@smokeshop/shared/i18n";
 
 interface LanguageContextValue {
@@ -262,27 +262,36 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     setLangState(normalizeLanguage(stored || navigator.language));
   }, []);
 
-  const setLang = (next: Language) => {
+  // setLang is stable across renders so consumer effects with [setLang] deps
+  // don't re-fire. State change drives the actual re-render of every consumer
+  // because `value` (below) is keyed on `lang`.
+  const setLang = useCallback((next: Language) => {
     setLangState(next);
-    window.localStorage.setItem("dailyclose-lang", next);
-    document.documentElement.lang = next;
-    document.documentElement.dir = languageDir(next);
-    window.dispatchEvent(new CustomEvent("dailyclose:language-changed", { detail: next }));
-  };
+  }, []);
 
   const value = useMemo(
     () => ({
       lang,
       dir: languageDir(lang),
       setLang,
+      // Rebuilt every time `lang` changes, so consumers calling t() always
+      // resolve against the current language — no stale closure.
       t: (key: string) => translate(lang, key)
     }),
-    [lang]
+    [lang, setLang]
   );
 
+  // Persist + reflect lang to <html> attrs whenever lang changes.
   useEffect(() => {
+    if (typeof document === "undefined") return;
     document.documentElement.lang = lang;
     document.documentElement.dir = languageDir(lang);
+    try {
+      window.localStorage.setItem("dailyclose-lang", lang);
+    } catch {
+      // localStorage may be unavailable (Safari private mode); ignore.
+    }
+    window.dispatchEvent(new CustomEvent("dailyclose:language-changed", { detail: lang }));
   }, [lang]);
 
   useEffect(() => {
