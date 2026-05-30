@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
   Headers,
@@ -21,6 +22,19 @@ import { SupabaseAuthService } from "./supabase-auth.service";
 @Controller("auth")
 export class AuthController {
   constructor(private readonly auth: SupabaseAuthService) {}
+
+  // Apple Guideline 5.1.1(v) requires in-app account deletion for any app
+  // that allows sign-up. Cancels Stripe sub, cascades user data, soft-deletes
+  // owned stores, anonymizes the user row (the daily_close FK pins it), and
+  // deletes the Supabase auth user. Throttled — destructive endpoint, but a
+  // legitimate user retrying after a network blip is normal.
+  @Delete("me")
+  @ApiBearerAuth()
+  @UseGuards(SupabaseAuthGuard)
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  deleteMe(@CurrentUser() user: RequestUser) {
+    return this.auth.deleteAccount(user);
+  }
 
   @Get("profile")
   @ApiBearerAuth()

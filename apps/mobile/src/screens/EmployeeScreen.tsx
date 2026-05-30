@@ -19,6 +19,7 @@ import { ApiError, finishClose, generateIdempotencyKey, uploadReport } from "../
 import { suggestBusinessDate, storeLocalDateToUtcNoon } from "@smokeshop/shared/timezones";
 import { QueuedForRetryError } from "../outbox";
 import { clearDraft, loadDraft, loadSelectedStoreId, saveDraft, saveSelectedStoreId } from "../persistence";
+import { AccountFooter } from "../components/AccountFooter";
 import { OfflineBanner } from "../components/OfflineBanner";
 import { uploadMobilePosReport } from "../upload-pos-report";
 import { useSession } from "../use-session";
@@ -593,6 +594,7 @@ export function EmployeeScreen({ onBack }: { onBack: () => void }) {
             </View>
           ) : null}
         </Card>
+        <AccountFooter role="employee" onSignOut={onBack} />
       </ScrollView>
 
       {/* Store picker sheet — surfaces when the user taps the

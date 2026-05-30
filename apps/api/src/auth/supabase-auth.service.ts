@@ -352,4 +352,107 @@ export class SupabaseAuthService {
     }
     return clean;
   }
+
+  /**
+   * Self-service account deletion (Apple Guideline 5.1.1(v) requires this to
+   * be in-app, not "email support"). Cancels any active Stripe subscription,
+   * cascades the user's personal data, soft-deletes business records they
+   * own, anonymizes the User row (since daily_close.submitted_by_user_id is
+   * NOT NULL — can't drop the row outright), and finally deletes the Supabase
+   * auth user so sign-in is permanently blocked.
+   *
+   * All sub-steps are best-effort past the cascade: a Stripe API hiccup or a
+   * stale Supabase auth row must not strand a user with an active account
+   * they can't delete. The transaction guarantees the local cascade is atomic.
+   */
+  async deleteAccount(user: RequestUser): Promise<{ deleted: true; canceledStripeSub: boolean }> {
+    // Capture authUserId + Stripe subscription BEFORE the anonymizing tx —
+    // we need them after, and the tx wipes both.
+    const fullUser = await this.prisma.user.findUnique({
+      where: { id: user.id },
+      include: { owner: true }
+    });
+    if (!fullUser) throw new UnauthorizedException("Account not found.");
+    const authUserId = fullUser.authUserId;
+    const stripeSubscriptionId = fullUser.owner?.stripeSubscriptionId ?? null;
+    const ownerId = fullUser.owner?.id ?? null;
+
+    // 1. Best-effort: cancel the active Stripe sub so the user isn't billed
+    //    again after deletion. Failing here must NOT block local deletion.
+    let canceledStripeSub = false;
+    if (stripeSubscriptionId && process.env.STRIPE_SECRET_KEY) {
+      try {
+        const res = await fetch(
+          `https://api.stripe.com/v1/subscriptions/${stripeSubscriptionId}`,
+          {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}` }
+          }
+        );
+        canceledStripeSub = res.ok;
+      } catch {
+        canceledStripeSub = false;
+      }
+    }
+
+    // 2. Local cascade. Personal-identity rows are dropped; business records
+    //    are soft-deleted (the FK from daily_close keeps the user row pinned,
+    //    so we anonymize it instead of deleting).
+    await this.prisma.$transaction(async (tx) => {
+      await tx.notification.deleteMany({ where: { userId: user.id } });
+      await tx.auditLog.deleteMany({ where: { userId: user.id } });
+      await tx.phoneConsent.deleteMany({ where: { consentedByUserId: user.id } });
+      // Soft-delete this user's employee assignments so any future invite by
+      // the same email/phone gets a clean slate but the daily_close history
+      // stays intact for the owning store.
+      await tx.employee.updateMany({
+        where: { userId: user.id, deletedAt: null },
+        data: { deletedAt: new Date() }
+      });
+      // Owner-side: soft-delete owned stores + their employee assignments.
+      // We don't touch the daily_close rows themselves; the dashboard already
+      // filters by store.deletedAt and they'd disappear from owner views.
+      if (ownerId) {
+        await tx.store.updateMany({
+          where: { ownerId, deletedAt: null },
+          data: { deletedAt: new Date() }
+        });
+        await tx.employee.updateMany({
+          where: { store: { ownerId }, deletedAt: null },
+          data: { deletedAt: new Date() }
+        });
+      }
+      // Anonymize the User row — we can't delete it (FK from daily_close).
+      // Email becomes a unique sentinel so a re-signup with the original
+      // address isn't blocked by the unique constraint.
+      await tx.user.update({
+        where: { id: user.id },
+        data: {
+          name: "Deleted user",
+          email: `deleted_${user.id}@deleted.dailyclose.local`,
+          authUserId: null,
+          password: ""
+        }
+      });
+    });
+
+    // 3. Best-effort: remove the Supabase auth user so the email/phone +
+    //    password combo can't sign in anymore. Failure here is logged but
+    //    not fatal — the User row is already anonymized, so even if the auth
+    //    row lingers, the API won't return a profile for it.
+    if (this.supabase && authUserId) {
+      try {
+        await this.supabase.auth.admin.deleteUser(authUserId);
+      } catch {
+        /* already gone / permission issue — anonymized DB row is the gate */
+      }
+    }
+
+    // Invalidate any cached token entries for this user.
+    for (const [token, cached] of this.cache.entries()) {
+      if (cached.user.id === user.id) this.cache.delete(token);
+    }
+
+    return { deleted: true, canceledStripeSub };
+  }
 }

@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2, Eye, EyeOff, Loader2, ShieldCheck } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Eye, EyeOff, Loader2, ShieldCheck, Trash2 } from "lucide-react";
 import { createBrowserSupabase } from "../../../lib/supabase-browser";
+import { deleteMyAccount } from "../../../lib/api-client";
+import { useSession } from "../../../lib/use-session";
 import { RequireAuth } from "../../../components/require-auth";
 
 export default function ChangePasswordPage() {
@@ -124,7 +126,105 @@ function ChangePasswordPageInner() {
           </form>
         )}
       </div>
+
+      <DeleteAccountSection />
     </main>
+  );
+}
+
+// Apple Guideline 5.1.1(v) requires in-app account deletion. Two-step: an
+// open-the-form button, then a typed confirmation ("DELETE") before the actual
+// API call, so a stray tap can't wipe an account.
+function DeleteAccountSection() {
+  const session = useSession();
+  const [open, setOpen] = useState(false);
+  const [confirm, setConfirm] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function runDelete() {
+    setError(null);
+    setBusy(true);
+    try {
+      await deleteMyAccount(session.token);
+      // Sign out locally + bounce to the home page. The Supabase auth user is
+      // already gone server-side, so the next call would 401 anyway.
+      try {
+        const supabase = createBrowserSupabase();
+        await supabase?.auth.signOut();
+      } catch {
+        /* ignore */
+      }
+      window.localStorage.removeItem("dailyclose-token");
+      window.location.replace("/?deleted=1");
+    } catch (err: any) {
+      setBusy(false);
+      setError(err?.message || "Could not delete account.");
+    }
+  }
+
+  return (
+    <div className="mt-6 rounded-2xl border border-warning/30 bg-red-50 p-6">
+      <div className="flex items-center gap-3">
+        <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-warning/15 text-warning">
+          <Trash2 size={22} aria-hidden />
+        </span>
+        <div>
+          <h2 className="text-xl font-black text-warning">Delete account</h2>
+          <p className="text-sm font-semibold text-ink/70">
+            Permanently removes your sign-in, cancels any active subscription, and detaches
+            your stores. This can't be undone.
+          </p>
+        </div>
+      </div>
+
+      {!open ? (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="focus-ring mt-4 inline-flex h-11 items-center gap-2 rounded-lg border-2 border-warning bg-white px-5 font-black text-warning hover:bg-warning/5"
+        >
+          <Trash2 size={16} aria-hidden /> Delete my account
+        </button>
+      ) : (
+        <div className="mt-4 space-y-3">
+          <label className="block text-sm font-black text-ink">
+            Type <span className="rounded bg-white px-1 font-mono">DELETE</span> to confirm
+            <input
+              autoFocus
+              className="focus-ring mt-2 h-12 w-full rounded-lg border border-ink/15 bg-white px-4 font-bold tracking-widest"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              placeholder="DELETE"
+            />
+          </label>
+          {error ? <p className="text-sm font-bold text-warning">{error}</p> : null}
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                setConfirm("");
+                setError(null);
+              }}
+              disabled={busy}
+              className="focus-ring h-11 flex-1 rounded-lg border-2 border-ink/15 bg-white font-black text-ink hover:bg-smoke disabled:opacity-60"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={runDelete}
+              disabled={busy || confirm !== "DELETE"}
+              className="focus-ring flex h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-warning font-black text-white disabled:opacity-50"
+            >
+              {busy ? <Loader2 className="animate-spin" size={16} aria-hidden /> : null}
+              {busy ? "Deleting…" : "Permanently delete"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

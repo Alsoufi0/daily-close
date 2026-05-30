@@ -79,6 +79,13 @@ export async function getProfile(): Promise<SessionProfile> {
   return apiFetch<SessionProfile>("/auth/profile");
 }
 
+// Apple Guideline 5.1.1(v): the mobile app must support in-app account
+// deletion. Cancels Stripe sub (for owners), cascades local data, and removes
+// the Supabase auth user so sign-in is permanently blocked.
+export async function deleteMyAccount(): Promise<{ deleted: true; canceledStripeSub: boolean }> {
+  return apiFetch("/auth/me", { method: "DELETE" });
+}
+
 export async function listStores(): Promise<StoreRecord[]> {
   return apiFetch<StoreRecord[]>("/stores");
 }

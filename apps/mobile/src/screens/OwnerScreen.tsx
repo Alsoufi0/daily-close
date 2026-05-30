@@ -4,6 +4,7 @@ import { formatMoney, formatMoneyExact } from "@smokeshop/shared/utils/money";
 import type { OwnerDashboardSummary } from "@smokeshop/shared/types";
 import { getOwnerDashboard } from "../api";
 import { useSession } from "../use-session";
+import { AccountFooter } from "../components/AccountFooter";
 import { Banner, Card, Header, MetricCard, Pill } from "../ui";
 import { colors, font, radius, spacing } from "../theme";
 import { t } from "../i18n";
@@ -167,6 +168,7 @@ export function OwnerScreen({ onBack }: { onBack: () => void }) {
             </Card>
           );
         })}
+        <AccountFooter role="owner" onSignOut={onBack} />
       </ScrollView>
     </View>
   );

@@ -479,6 +479,15 @@ export async function markNotificationRead(token: string, id: string): Promise<v
   await apiFetch(`/notifications/${id}/read`, token, { method: "PATCH" });
 }
 
+// Self-service account deletion (Apple Guideline 5.1.1(v)). Returns whether
+// the Stripe subscription was actively canceled — the caller can use that to
+// reassure the user their billing is stopped.
+export async function deleteMyAccount(
+  token: string | undefined
+): Promise<{ deleted: true; canceledStripeSub: boolean }> {
+  return apiFetch("/auth/me", requireToken(token), { method: "DELETE" });
+}
+
 export async function downloadTodayCsv(token: string | undefined): Promise<Blob> {
   requireToken(token);
   if (!apiUrl) throw new ApiError(0, "API URL is not configured.");
