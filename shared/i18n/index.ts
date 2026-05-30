@@ -142,6 +142,7 @@ export const translations: Record<Language, Dictionary> = {
     "receipts.loadFailed": "Could not load receipts.",
     "receipts.download": "Download",
     "receipts.downloadAll": "Download all",
+    "receipts.unknownEmployee": "Unknown employee",
     "nav.receipts": "Receipts"
   },
   ar: {
@@ -250,7 +251,21 @@ export const translations: Record<Language, Dictionary> = {
     "settings.closeAlerts": "\u062a\u0646\u0628\u064a\u0647\u0627\u062a \u0639\u0646\u062f \u0625\u063a\u0644\u0627\u0642 \u0627\u0644\u0645\u062a\u062c\u0631",
     "settings.sendTest": "\u0625\u0631\u0633\u0627\u0644 \u0627\u062e\u062a\u0628\u0627\u0631 \u0648\u0627\u062a\u0633\u0627\u0628",
     "settings.testSent": "\u062a\u0645 \u0625\u0631\u0633\u0627\u0644 \u0631\u0633\u0627\u0644\u0629 \u0627\u062e\u062a\u0628\u0627\u0631 \u0648\u0627\u062a\u0633\u0627\u0628.",
-    "settings.testFailed": "\u0644\u0645 \u064a\u062a\u0645 \u0625\u0631\u0633\u0627\u0644 \u0627\u062e\u062a\u0628\u0627\u0631 \u0648\u0627\u062a\u0633\u0627\u0628."
+    "settings.testFailed": "\u0644\u0645 \u064a\u062a\u0645 \u0625\u0631\u0633\u0627\u0644 \u0627\u062e\u062a\u0628\u0627\u0631 \u0648\u0627\u062a\u0633\u0627\u0628.",
+    "receipts.title": "\u0627\u0644\u0625\u064a\u0635\u0627\u0644\u0627\u062a",
+    "receipts.store": "\u0627\u0644\u0645\u062a\u062c\u0631",
+    "receipts.from": "\u0645\u0646",
+    "receipts.to": "\u0625\u0644\u0649",
+    "receipts.employee": "\u0627\u0644\u0645\u0648\u0638\u0641",
+    "receipts.date": "\u0627\u0644\u062a\u0627\u0631\u064a\u062e",
+    "receipts.empty": "\u0644\u0627 \u062a\u0648\u062c\u062f \u0625\u064a\u0635\u0627\u0644\u0627\u062a \u0641\u064a \u0647\u0630\u0647 \u0627\u0644\u0641\u062a\u0631\u0629.",
+    "receipts.viewDetails": "\u0639\u0631\u0636 \u0627\u0644\u062a\u0641\u0627\u0635\u064a\u0644",
+    "receipts.totalSales": "\u0625\u062c\u0645\u0627\u0644\u064a \u0627\u0644\u0645\u0628\u064a\u0639\u0627\u062a",
+    "receipts.loadFailed": "\u062a\u0639\u0630\u0631 \u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u0625\u064a\u0635\u0627\u0644\u0627\u062a.",
+    "receipts.download": "\u062a\u062d\u0645\u064a\u0644",
+    "receipts.downloadAll": "\u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u0643\u0644",
+    "receipts.unknownEmployee": "\u0645\u0648\u0638\u0641 \u063a\u064a\u0631 \u0645\u0639\u0631\u0648\u0641",
+    "nav.receipts": "\u0627\u0644\u0625\u064a\u0635\u0627\u0644\u0627\u062a"
   },
   es: {
     "common.export": "Exportar",
@@ -358,7 +373,21 @@ export const translations: Record<Language, Dictionary> = {
     "settings.closeAlerts": "Alertas cuando una tienda cierra",
     "settings.sendTest": "Enviar prueba de WhatsApp",
     "settings.testSent": "Mensaje de prueba enviado por WhatsApp.",
-    "settings.testFailed": "La prueba de WhatsApp no se envió."
+    "settings.testFailed": "La prueba de WhatsApp no se envió.",
+    "receipts.title": "Recibos",
+    "receipts.store": "Tienda",
+    "receipts.from": "Desde",
+    "receipts.to": "Hasta",
+    "receipts.employee": "Empleado",
+    "receipts.date": "Fecha",
+    "receipts.empty": "No hay recibos en este rango.",
+    "receipts.viewDetails": "Ver detalles",
+    "receipts.totalSales": "Ventas totales",
+    "receipts.loadFailed": "No se pudieron cargar los recibos.",
+    "receipts.download": "Descargar",
+    "receipts.downloadAll": "Descargar todo",
+    "receipts.unknownEmployee": "Empleado desconocido",
+    "nav.receipts": "Recibos"
   },
   hi: {
     "common.export": "एक्सपोर्ट",
@@ -466,7 +495,21 @@ export const translations: Record<Language, Dictionary> = {
     "settings.closeAlerts": "\u0938\u094d\u091f\u094b\u0930 \u092c\u0902\u0926 \u0939\u094b\u0928\u0947 \u0915\u0947 \u0905\u0932\u0930\u094d\u091f",
     "settings.sendTest": "WhatsApp \u091f\u0947\u0938\u094d\u091f \u092d\u0947\u091c\u0947\u0902",
     "settings.testSent": "WhatsApp \u091f\u0947\u0938\u094d\u091f \u092e\u0948\u0938\u0947\u091c \u092d\u0947\u091c\u093e \u0917\u092f\u093e.",
-    "settings.testFailed": "WhatsApp \u091f\u0947\u0938\u094d\u091f \u0928\u0939\u0940\u0902 \u092d\u0947\u091c\u093e."
+    "settings.testFailed": "WhatsApp \u091f\u0947\u0938\u094d\u091f \u0928\u0939\u0940\u0902 \u092d\u0947\u091c\u093e.",
+    "receipts.title": "\u0930\u0938\u0940\u0926\u0947\u0902",
+    "receipts.store": "\u0938\u094d\u091f\u094b\u0930",
+    "receipts.from": "\u0938\u0947",
+    "receipts.to": "\u0924\u0915",
+    "receipts.employee": "\u0915\u0930\u094d\u092e\u091a\u093e\u0930\u0940",
+    "receipts.date": "\u0924\u093e\u0930\u0940\u0916",
+    "receipts.empty": "\u0907\u0938 \u0930\u0947\u0902\u091c \u092e\u0947\u0902 \u0915\u094b\u0908 \u0930\u0938\u0940\u0926 \u0928\u0939\u0940\u0902.",
+    "receipts.viewDetails": "\u0935\u093f\u0935\u0930\u0923 \u0926\u0947\u0916\u0947\u0902",
+    "receipts.totalSales": "\u0915\u0941\u0932 \u092c\u093f\u0915\u094d\u0930\u0940",
+    "receipts.loadFailed": "\u0930\u0938\u0940\u0926\u0947\u0902 \u0932\u094b\u0921 \u0928\u0939\u0940\u0902 \u0939\u094b \u0938\u0915\u0940\u0902.",
+    "receipts.download": "\u0921\u093e\u0909\u0928\u0932\u094b\u0921",
+    "receipts.downloadAll": "\u0938\u092c \u0921\u093e\u0909\u0928\u0932\u094b\u0921 \u0915\u0930\u0947\u0902",
+    "receipts.unknownEmployee": "\u0905\u091c\u094d\u091e\u093e\u0924 \u0915\u0930\u094d\u092e\u091a\u093e\u0930\u0940",
+    "nav.receipts": "\u0930\u0938\u0940\u0926\u0947\u0902"
   }
 };
 

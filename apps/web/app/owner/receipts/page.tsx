@@ -81,7 +81,7 @@ function ReceiptsView() {
 
   return (
     <section className="space-y-5" dir={dir}>
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <Link
             href="/owner"
@@ -98,7 +98,7 @@ function ReceiptsView() {
           type="button"
           onClick={onDownloadAll}
           disabled={!storeId || downloadingAll || rows.length === 0}
-          className="focus-ring inline-flex items-center gap-2 rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm font-black text-ink disabled:opacity-50"
+          className="focus-ring inline-flex w-full items-center justify-center gap-2 rounded-lg border border-ink/15 bg-white px-3 py-3 text-sm font-black text-ink disabled:opacity-50 sm:w-auto sm:py-2"
         >
           {downloadingAll ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Download size={16} aria-hidden />}
           {t("receipts.downloadAll")}
@@ -186,7 +186,7 @@ function ReceiptsView() {
                   {row.closeDate}
                 </p>
                 <p className="text-base font-black text-ink">
-                  {row.employeeName || activeStoreName}
+                  {row.employeeName || activeStoreName || t("receipts.unknownEmployee")}
                 </p>
                 {row.dailyClose ? (
                   <p className="text-sm font-bold text-ink/65">
@@ -292,7 +292,7 @@ function ReceiptDetail({
               value={formatMoneyExact(dc.difference)}
               tone={dc.difference < 0 ? "bad" : "good"}
             />
-            <DetailRow label={t("dashboard.closed")} value={dc.status} />
+            <DetailRow label={t("common.status")} value={dc.status} />
           </div>
         ) : null}
       </div>
