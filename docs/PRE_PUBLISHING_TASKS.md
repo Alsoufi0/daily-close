@@ -19,7 +19,7 @@ Apple requires apps that let users sign in to also offer **in-app** account dele
 - Update privacy policy to describe the in-app path.
 
 ### [ ] 2. Subscription billing model vs. Apple IAP (Guideline 3.1.1 / 3.1.3)
-`apps/web/app/terms/page.tsx` advertises **$29 USD per store per month**. If the iOS app surfaces this paid functionality, Apple requires IAP (and takes 30%). Stripe checkout from inside an iOS app gets rejected unless the app qualifies for the B2B exemption.
+`apps/web/app/terms/page.tsx` advertises **$49.99 USD per store per month**. If the iOS app surfaces this paid functionality, Apple requires IAP (and takes 30%). Stripe checkout from inside an iOS app gets rejected unless the app qualifies for the B2B exemption.
 
 **Decision needed (pick one):**
 - B2B / Custom App path via Apple Business Manager (narrow, requires the buyer's org on roster).

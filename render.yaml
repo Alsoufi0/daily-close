@@ -34,7 +34,7 @@ services:
       - key: STRIPE_SECRET_KEY
         sync: false # sk_live_... or sk_test_...
       - key: STRIPE_PRICE_ID
-        sync: false # price_... for the $29/store/month plan
+        sync: false # price_... for the $49.99/store/month plan
       - key: STRIPE_WEBHOOK_SECRET
         sync: false
       - key: STRIPE_PORTAL_URL

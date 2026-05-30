@@ -85,7 +85,7 @@ Alternative: Supabase scheduled function via `pg_cron`.
 The app ships with a `subscriptionStatus` and `trialEndsAt` on every owner (default: 14-day TRIALING). Write endpoints (`POST /stores`, `POST /employees/invite`) are gated by `SubscriptionGuard`, which returns HTTP 402 when an owner's trial expires and they have no active plan.
 
 To enable real billing:
-1. Create a Stripe product + price ($29/store/month suggested).
+1. Create a Stripe product + price ($49.99/store/month suggested).
 2. In Stripe Dashboard → Customer Portal, enable cancel/update payment.
 3. Set in Render:
    - `STRIPE_CHECKOUT_URL` → the Stripe-hosted checkout link for the price.

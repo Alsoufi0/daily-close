@@ -16,7 +16,7 @@ export default function TermsPage() {
           cash differences identified by the application.
         </p>
         <p>
-          <strong>Subscription.</strong> Billing is $29 USD per store per
+          <strong>Subscription.</strong> Billing is $49.99 USD per store per
           month, charged in advance, after a 14-day free trial. You can cancel
           at any time from the Billing page. Refunds are at our discretion for
           partial months.

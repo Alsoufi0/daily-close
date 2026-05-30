@@ -82,7 +82,7 @@ function BillingPageInner() {
         <p className="text-sm font-black uppercase tracking-wide text-leaf">Billing</p>
         <h1 className="mt-1 text-3xl font-black tracking-tight">Your subscription</h1>
         <p className="mt-1 text-base font-bold text-ink/65">
-          $29 per store, per month. Billed monthly. Cancel anytime.
+          $49.99 per store, per month. Billed monthly. Cancel anytime.
         </p>
       </header>
 
