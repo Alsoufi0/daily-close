@@ -217,3 +217,56 @@ Re-reviewed current state, ranked what's left by severity, ran a security pass.
 - `main` branch is intentionally untouched — staging is the integration branch. Promote to main only after end-to-end smoke testing.
 - Two GitHub PATs (`ghp_zrNRe2L…`, `ghp_f12Jk41…`, `ghp_cd9pGKK…`) were shared in chat during this work — they should all be revoked at GitHub Settings → Developer settings → PATs.
 - The full pre-audit `docs/PRE_PUBLISHING_TASKS.md` (separate file) still tracks App Store / Play Store readiness items; that document is older and orthogonal to this audit backlog.
+
+---
+
+## 🔍 Readiness audit — 2026-05-30 (staging snapshot)
+
+Triggered by: i18n reactivity fix + receipts page i18n + mobile-layout sweep. Run after `npm test --workspace apps/api` (80/80 ✓) and typecheck of api/web/mobile (clean).
+
+### A) Production readiness — **7 / 10**
+
+Strong: auth (Supabase), role guards, store isolation, daily-close idempotency (m005), receipt storage path + signed re-sign, multi-line expenses, CSV/PDF reports + tests, timezone-aware close windows, i18n EN/AR/ES/HI with reactive provider.
+
+Top blockers:
+1. OCR_SPACE_API_KEY still uses public `helloworld` — heavy throttling under load. Fix: registered key in Render staging+prod env.
+2. SENTRY_DSN not set on Render staging. Fix: provision `daily-close-staging` Sentry project + DSN env.
+3. Supabase PITR not enabled. Fix: enable PITR on staging+prod Supabase projects (~$10/mo each).
+4. Admin/employees page still has hardcoded English (no `t()` usage) — partial i18n debt. Fix: route copy through `useLanguage().t()` and add `admin.*` keys.
+5. No structured request-log retention / no audit table for destructive ops (employee remove, store remove). Fix: add audit row write in `EmployeesService.remove` and `StoresService.delete`.
+
+### B) Apple App Store readiness — **5 / 10**
+
+Strong: RN/Expo build, signed-in flow, camera-based POS upload, employee close parity with web.
+
+Top blockers:
+1. No published Privacy Policy URL reachable from store listing. Fix: deploy `/legal/privacy` to a stable prod domain and link it in App Store Connect.
+2. No app icon / splash assets committed for mobile. Fix: add 1024-px icon + adaptive splash to `apps/mobile/assets` and wire in `app.json`.
+3. EAS production build not yet attempted. Fix: `eas build --platform ios --profile production`, resolve provisioning, archive for TestFlight.
+4. Camera/photo permission strings not localized in `Info.plist`. Fix: add `NSCameraUsageDescription`/`NSPhotoLibraryUsageDescription` with user-facing copy in `app.json`.
+5. No crash reporter on mobile (only API has Sentry plumbing). Fix: add Sentry Expo SDK + DSN.
+
+### C) Google Play readiness — **5 / 10**
+
+Top blockers:
+1. Privacy Policy URL (same as Apple). Fix: same — link `/legal/privacy` in Play Console Data safety form.
+2. App icon / adaptive icon + monochrome layer missing. Fix: add `adaptive-icon` foreground/background in `app.json`.
+3. EAS Android release build not yet built. Fix: `eas build --platform android --profile production`, upload AAB to internal testing track.
+4. Data safety declaration not filled (camera, account info, financial info). Fix: complete Play Console Data safety questionnaire.
+5. Camera permission rationale missing. Fix: add user-facing `expo-camera` permission copy + in-app rationale before first capture.
+
+### Top blockers before paid pilot
+1. OCR_SPACE_API_KEY registered key (throttling risk under real load).
+2. SENTRY_DSN on Render staging+prod (no visibility on prod errors today).
+3. Supabase PITR (no DR story).
+4. Audit log for destructive ops (employee/store remove).
+5. Smoke-test multi-store close + receipts download with at least 2 owners.
+
+### Top blockers before public app-store launch
+1. Privacy Policy + Terms reachable from a stable prod domain, linked from store listings.
+2. App icon + splash + adaptive icon assets for iOS + Android.
+3. EAS production builds (iOS TestFlight + Android internal track) + crash reporting wired.
+4. Localized permission usage strings (camera, photos) in `Info.plist` and Android manifest equivalents.
+5. Finish i18n debt on admin pages (employees still hardcoded English).
+6. App Store Connect + Play Console Data Safety / Privacy questionnaires.
+
