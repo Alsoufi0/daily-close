@@ -79,25 +79,25 @@ export function HistoryPanel({ token }: { token?: string }) {
       </div>
 
       <div className="rounded-xl border border-ink/10 bg-white shadow-sm">
-        <div className="grid grid-cols-2 gap-px overflow-hidden rounded-t-xl bg-ink/10 sm:grid-cols-3">
-          <div className="bg-white p-4">
-            <p className="text-xs font-black uppercase tracking-wide text-ink/55">{t("dashboard.totalSales")}</p>
-            <p className="mt-1 text-2xl font-black">{formatMoney(totalSales)}</p>
+        <div className="grid grid-cols-3 gap-px overflow-hidden rounded-t-xl bg-ink/10">
+          <div className="bg-white p-3 sm:p-4">
+            <p className="text-[10px] font-black uppercase tracking-wide text-ink/55 sm:text-xs">{t("dashboard.totalSales")}</p>
+            <p className="mt-1 text-lg font-black sm:text-2xl">{formatMoney(totalSales)}</p>
           </div>
-          <div className="bg-white p-4">
-            <p className="text-xs font-black uppercase tracking-wide text-ink/55">{t("dashboard.shortages")}</p>
+          <div className="bg-white p-3 sm:p-4">
+            <p className="text-[10px] font-black uppercase tracking-wide text-ink/55 sm:text-xs">{t("dashboard.shortages")}</p>
             <p
               className={clsx(
-                "mt-1 text-2xl font-black",
+                "mt-1 text-lg font-black sm:text-2xl",
                 totalShortage < 0 ? "text-warning" : "text-leaf"
               )}
             >
               {formatMoney(totalShortage)}
             </p>
           </div>
-          <div className="bg-white p-4">
-            <p className="text-xs font-black uppercase tracking-wide text-ink/55">{t("dashboard.closes")}</p>
-            <p className="mt-1 text-2xl font-black">{rows.length}</p>
+          <div className="bg-white p-3 sm:p-4">
+            <p className="text-[10px] font-black uppercase tracking-wide text-ink/55 sm:text-xs">{t("dashboard.closes")}</p>
+            <p className="mt-1 text-lg font-black sm:text-2xl">{rows.length}</p>
           </div>
         </div>
 
@@ -165,40 +165,42 @@ export function HistoryPanel({ token }: { token?: string }) {
           </div>
           <div className="divide-y divide-ink/5 sm:hidden">
             {rows.map((r) => (
-              <div
-                key={r.id}
-                className="focus-ring block w-full p-4 text-left"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-sm font-black text-ink">{r.storeName}</p>
-                    <p className="mt-0.5 text-xs font-bold text-ink/55">{r.date}</p>
+              <div key={r.id} className="flex items-center gap-2 px-3 py-2.5">
+                <div className="min-w-0 flex-1">
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <p className="truncate text-sm font-black text-ink">{r.storeName}</p>
+                    <span className="shrink-0">
+                      <StatusPill status={r.status} />
+                    </span>
                   </div>
-                  <StatusPill status={r.status} />
+                  <p className="mt-0.5 text-xs font-bold text-ink/55">{r.date}</p>
                 </div>
-                <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-                  <div className="rounded-lg bg-smoke p-3">
-                    <p className="text-xs font-black uppercase text-ink/55">{t("common.sales")}</p>
-                    <p className="text-lg font-black">{formatMoney(r.totalSales)}</p>
-                  </div>
-                  <div className="rounded-lg bg-smoke p-3">
-                    <p className="text-xs font-black uppercase text-ink/55">{t("closing.difference")}</p>
-                    <p
-                      className={clsx(
-                        "text-lg font-black",
-                        r.difference < 0 ? "text-warning" : r.difference > 0 ? "text-leaf" : "text-ink/55"
-                      )}
-                    >
-                      {formatMoneyExact(r.difference)}
-                    </p>
-                  </div>
+                <div className="shrink-0 text-right leading-tight">
+                  <p className="text-sm font-black text-ink">{formatMoney(r.totalSales)}</p>
+                  <p
+                    className={clsx(
+                      "text-xs font-black",
+                      r.difference < 0 ? "text-warning" : r.difference > 0 ? "text-leaf" : "text-ink/55"
+                    )}
+                  >
+                    {formatMoneyExact(r.difference)}
+                  </p>
                 </div>
-                <div className="mt-3 flex gap-2">
-                  <button onClick={() => setEditing(r)} className="focus-ring flex-1 rounded-lg bg-ink px-3 py-2 text-sm font-black text-white">
-                    Edit
+                <div className="flex shrink-0 items-center">
+                  <button
+                    onClick={() => setEditing(r)}
+                    aria-label={t("history.editClose")}
+                    className="focus-ring rounded-lg p-2 text-ink/60 hover:bg-smoke hover:text-ink"
+                  >
+                    <Pencil size={15} />
                   </button>
-                  <button onClick={() => requestDelete(r)} disabled={deleting === r.id} className="focus-ring flex-1 rounded-lg bg-red-50 px-3 py-2 text-sm font-black text-warning disabled:opacity-50">
-                    Delete
+                  <button
+                    onClick={() => requestDelete(r)}
+                    disabled={deleting === r.id}
+                    aria-label={t("history.deleteClose")}
+                    className="focus-ring rounded-lg p-2 text-warning/70 hover:bg-red-50 hover:text-warning disabled:opacity-50"
+                  >
+                    {deleting === r.id ? <Loader2 className="animate-spin" size={15} /> : <Trash2 size={15} />}
                   </button>
                 </div>
               </div>

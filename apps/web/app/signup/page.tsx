@@ -106,9 +106,21 @@ export default function SignupPage() {
       <main className="mx-auto w-full max-w-md px-4 py-12 sm:px-6">
         <div className="rounded-2xl border border-leaf/30 bg-leaf/5 p-6 text-center shadow-sm">
           <CheckCircle2 className="mx-auto text-leaf" size={48} aria-hidden />
-          <h1 className="mt-3 text-2xl font-black">Check your email</h1>
+          <h1 className="mt-3 text-2xl font-black">
+            {mode === "phone" ? "Confirm your number" : "Check your email"}
+          </h1>
           <p className="mt-2 text-base font-bold text-ink/65">
-            We sent a confirmation link to <strong>{email}</strong>. Click it to finish creating your account.
+            {mode === "phone" ? (
+              <>
+                We sent a confirmation code to <strong>{phone}</strong>. Confirm it, then sign in
+                with your phone number and password.
+              </>
+            ) : (
+              <>
+                We sent a confirmation link to <strong>{email}</strong>. Click it to finish creating
+                your account.
+              </>
+            )}
           </p>
           <Link
             href="/"
