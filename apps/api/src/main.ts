@@ -116,6 +116,29 @@ async function bootstrap() {
   );
   app.use(express.urlencoded({ extended: true, limit: process.env.REQUEST_BODY_LIMIT || "25mb" }));
   app.use(securityHeaders);
+
+  // Fail-closed in production if ALLOWED_ORIGINS contains "*". A wildcard
+  // tells originChecker to accept every Origin, which negates the CSRF
+  // defence in origin-check.middleware.ts. The staging env keeps it as "*"
+  // for convenience; production must be a comma-separated allowlist.
+  // Matches the existing pattern from STRIPE_WEBHOOK_SECRET / SENTRY_DSN
+  // / CRON_SECRET — prod-only gates that refuse to boot when misconfigured,
+  // catching env drift loudly instead of silently relaxing security.
+  if (process.env.NODE_ENV === "production") {
+    const containsWildcard = (process.env.ALLOWED_ORIGINS || "")
+      .split(",")
+      .map((origin) => origin.trim())
+      .includes("*");
+    if (containsWildcard) {
+      logger.error(
+        'ALLOWED_ORIGINS contains "*" in production. Refusing to boot — set a ' +
+          'comma-separated allowlist (e.g. "https://dailyclose.us,https://www.dailyclose.us") ' +
+          "and redeploy."
+      );
+      process.exit(1);
+    }
+  }
+
   app.enableCors({
     origin: originChecker(process.env.ALLOWED_ORIGINS),
     credentials: true,
