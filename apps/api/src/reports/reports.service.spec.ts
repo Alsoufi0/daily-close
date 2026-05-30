@@ -39,14 +39,24 @@ describe("ReportsService", () => {
   });
 
   it("exports escaped UTF-8 CSV with localized headers and currency", async () => {
-    const service = new ReportsService({} as any, prisma as any);
-    const csv = await service.buildFilteredCsv(owner, { quick: "last-week", lang: "en" });
+    // resolveRange("last-week") computes the window from `new Date()`. Without
+    // pinning the clock the fixture's 2026-05-23 close drifts out of the
+    // last-7-days window as wall time advances (test was passing in May 2026,
+    // failing by month-end). Lock the clock to a moment that includes the
+    // fixture date and restore it after.
+    jest.useFakeTimers().setSystemTime(new Date("2026-05-29T12:00:00Z"));
+    try {
+      const service = new ReportsService({} as any, prisma as any);
+      const csv = await service.buildFilteredCsv(owner, { quick: "last-week", lang: "en" });
 
-    expect(csv.charCodeAt(0)).toBe(0xfeff);
-    expect(csv).toContain("\"Store\"");
-    expect(csv).toContain("\"Main Street Smoke Shop\"");
-    expect(csv).toContain("\"$5,000.00\"");
-    expect(csv).toContain("\"Register was short, needs review\"");
+      expect(csv.charCodeAt(0)).toBe(0xfeff);
+      expect(csv).toContain("\"Store\"");
+      expect(csv).toContain("\"Main Street Smoke Shop\"");
+      expect(csv).toContain("\"$5,000.00\"");
+      expect(csv).toContain("\"Register was short, needs review\"");
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it("filters close rows using the store local date", async () => {

@@ -1,5 +1,39 @@
 # Audit Backlog
 
+## Session — 2026-05-30 (receipts + audit pass)
+
+Shipped (this session):
+- **Mobile multi-line expenses** — EmployeeScreen now collects {category,
+  amount, description?} rows matching the web close UI. Backend already
+  accepted `expenseItems[]`. Draft persistence bumped to schemaVersion 2.
+- **Receipt URL expiry fix** — migration 009 adds `uploaded_reports.storage_path`;
+  storage service returns it on upload and re-signs at read time on the
+  Receipts page (1h TTL). Fixes the "old receipts show broken images" bug.
+- **Receipt download** — `GET /reports/receipts/:id/download` and
+  `GET /reports/receipts/download` (zip via `archiver`). Web Receipts page
+  gets per-row "Download" and a top-bar "Download all".
+- **Pre-existing CSV test fix (Task E)** — pinned `jest.useFakeTimers()` to
+  2026-05-29 so the `last-week` window includes the fixture date. All 80/80
+  api tests now green.
+
+Audit pass findings (rapid sweep):
+- ✅ No `console.log` left in `apps/api/src`.
+- ✅ No TODO/FIXME comments in `apps/api` or `apps/web` source.
+- ⚠️ **P2** `subscriptions.controller.ts:52` uses `@Body() payload: any` for
+  the Stripe webhook. Loose typing is intentional (Stripe events vary) but
+  noteworthy alongside the unverified signature in #1. Will be addressed
+  alongside the Stripe webhook signature fix.
+- (No new P0/P1 items.)
+
+Migration status: **009 NOT applied** — local Supabase CLI is not linked to
+the staging project. User must run:
+`npx supabase link --project-ref <ref> && npx supabase db push` (or apply
+008 + 009 manually in the SQL editor).
+
+---
+
+
+
 Single source of truth for the architectural audit performed 2026-05-26
 and everything that's happened against it since. Update this file
 whenever an item ships, gets paused, or is added.
