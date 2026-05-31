@@ -176,11 +176,7 @@ class InMemoryPrisma {
 
 function makeSystem() {
   const prisma = new InMemoryPrisma();
-  const subscriptions = {
-    ensureActiveForOwner: jest.fn().mockResolvedValue(undefined),
-    syncStoreQuantityForOwner: jest.fn().mockResolvedValue({ synced: false, quantity: 1 })
-  };
-  const stores = new StoresService(prisma as any, subscriptions as any);
+  const stores = new StoresService(prisma as any);
   const dashboard = new DashboardService(prisma as any);
   const reports = new ReportsService(dashboard, prisma as any);
   const repository = new DailyCloseRepository(prisma as any);

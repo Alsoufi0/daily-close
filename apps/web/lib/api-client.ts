@@ -296,10 +296,6 @@ export interface SubscriptionView {
   trialEndsAt: string | null;
   daysLeftInTrial: number | null;
   active: boolean;
-  activeStoreCount: number;
-  billedStoreQuantity: number;
-  unitAmountCents: number;
-  priceId: string | null;
   checkoutUrl: string | null;
   portalUrl: string | null;
 }

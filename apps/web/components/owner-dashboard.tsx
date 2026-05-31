@@ -24,8 +24,6 @@ import { MetricCard } from "./metric-card";
 import { HistoryPanel } from "./history-panel";
 import { ExportReportModal } from "./export-report-modal";
 import { useLanguage } from "./language-provider";
-import { useShowMore } from "../lib/use-show-more";
-import { ListRevealControls } from "./show-more-button";
 
 export function OwnerDashboard() {
   const session = useSession();
@@ -114,15 +112,6 @@ export function OwnerDashboard() {
     () => Math.max(1, ...(summary?.stores.map((s) => (s.closedToday ? s.totalSales : 0)) ?? [])),
     [summary]
   );
-  const storeList = summary?.stores ?? [];
-  const {
-    visible: visibleStores,
-    hasMore: hasMoreStores,
-    remaining: remainingStores,
-    canShowLess: canShowLessStores,
-    showMore: showMoreStores,
-    showLess: showLessStores
-  } = useShowMore(storeList, 3);
   const visibleAlerts = summary?.alerts.filter((a) => a.status !== "READ") ?? [];
 
   async function dismissAlert(id: string) {
@@ -307,7 +296,7 @@ export function OwnerDashboard() {
           </div>
         ) : (
           <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:snap-none sm:grid-cols-2 sm:overflow-visible sm:px-0 xl:grid-cols-3">
-            {visibleStores.map((store) => {
+            {summary.stores.slice(0, 3).map((store) => {
               const barWidth = store.closedToday ? Math.max(6, (store.totalSales / maxSales) * 100) : 0;
               const pastClose = Boolean(store.pastCloseTime);
               const needsClosing = !store.closedToday && pastClose;
@@ -400,15 +389,15 @@ export function OwnerDashboard() {
             })}
           </div>
         )}
-        <ListRevealControls
-          hasMore={hasMoreStores}
-          canShowLess={canShowLessStores}
-          remaining={remainingStores}
-          onShowMore={showMoreStores}
-          onShowLess={showLessStores}
-          showMoreLabel={t("common.showMore")}
-          showLessLabel={t("common.showLess")}
-        />
+        {summary.stores.length > 3 ? (
+          <a
+            href="/stores"
+            className="focus-ring mt-3 flex items-center justify-between gap-3 rounded-xl border border-ink/10 bg-white p-4 font-black text-ink hover:bg-smoke"
+          >
+            <span>{t("dashboard.viewAllStores")}</span>
+            <span className="text-leaf">{summary.totalStores} →</span>
+          </a>
+        ) : null}
         {summary.stores.length === 1 ? (
           <a
             href="/admin/stores"

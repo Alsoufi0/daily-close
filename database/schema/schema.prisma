@@ -84,8 +84,7 @@ model Owner {
   subscriptionStatus   String    @default("TRIALING") @map("subscription_status")
   trialEndsAt          DateTime? @map("trial_ends_at")
   stripeCustomerId     String?   @unique @map("stripe_customer_id")
-  stripeSubscriptionId     String?   @unique @map("stripe_subscription_id")
-  stripeSubscriptionItemId String?   @map("stripe_subscription_item_id")
+  stripeSubscriptionId String?   @unique @map("stripe_subscription_id")
   user                 User      @relation(fields: [userId], references: [id])
   stores               Store[]
 

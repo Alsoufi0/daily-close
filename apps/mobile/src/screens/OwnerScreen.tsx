@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   RefreshControl,
@@ -48,7 +48,6 @@ export function OwnerScreen({ onSignOut }: { onSignOut: () => void }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [storeLimit, setStoreLimit] = useState(3);
 
   const load = useCallback(async (initial: boolean) => {
     if (initial) setLoading(true);
@@ -67,10 +66,6 @@ export function OwnerScreen({ onSignOut }: { onSignOut: () => void }) {
     load(true);
   }, [load]);
 
-  useEffect(() => {
-    setStoreLimit(3);
-  }, [summary.totalStores]);
-
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await load(false);
@@ -86,11 +81,10 @@ export function OwnerScreen({ onSignOut }: { onSignOut: () => void }) {
 
   const ownerName = session.profile?.name || t("dashboard.fallbackName");
   const netColor = summary.totalNet < 0 ? colors.warning : colors.ink;
-  const visibleStores = summary.stores.slice(0, storeLimit);
-  const moreStores = Math.max(0, summary.stores.length - storeLimit);
-  const canShowLessStores = storeLimit > 3 && summary.stores.length > 3;
+  const visibleStores = summary.stores.slice(0, 3);
+  const moreStores = summary.stores.length > 3 ? summary.stores.length - 3 : 0;
 
-  // First-run setup: signed-in owner with zero stores â†’ show the setup
+  // First-run setup: signed-in owner with zero stores → show the setup
   // wizard instead of an empty dashboard. Once they create a store, the
   // wizard's onComplete reloads the dashboard data.
   const isOwner = session.profile?.role === "STORE_OWNER" || session.profile?.role === "SUPER_ADMIN";
@@ -106,7 +100,7 @@ export function OwnerScreen({ onSignOut }: { onSignOut: () => void }) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.leaf} />}
       >
         {/* Welcome line + manual refresh button (drawer header gives us the
-            menu/title â€” this is just the in-content greeting). */}
+            menu/title — this is just the in-content greeting). */}
         <View style={s.welcomeRow}>
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={s.welcome} numberOfLines={1}>
@@ -120,14 +114,14 @@ export function OwnerScreen({ onSignOut }: { onSignOut: () => void }) {
             style={[s.refreshBtn, refreshing && { opacity: 0.5 }]}
             accessibilityLabel="Refresh"
           >
-            {refreshing ? <ActivityIndicator size="small" color={colors.ink} /> : <Text style={s.refreshIcon}>âں³</Text>}
+            {refreshing ? <ActivityIndicator size="small" color={colors.ink} /> : <Text style={s.refreshIcon}>⟳</Text>}
           </TouchableOpacity>
         </View>
 
-        {/* Primary CTA â€” anyone (owner or employee) can close a store */}
-        <Button title={t("nav.closeStore")} icon="ًں§¾" onPress={() => navigation.navigate("CloseStore")} />
+        {/* Primary CTA — anyone (owner or employee) can close a store */}
+        <Button title={t("nav.closeStore")} icon="🧾" onPress={() => navigation.navigate("CloseStore")} />
 
-        {/* Secondary action row â€” quick jump to admin/store creation, owner-only */}
+        {/* Secondary action row — quick jump to admin/store creation, owner-only */}
         {isOwner ? (
           <View style={s.quickActions}>
             <TouchableOpacity
@@ -135,7 +129,7 @@ export function OwnerScreen({ onSignOut }: { onSignOut: () => void }) {
               style={s.quickActionBtn}
               accessibilityLabel={t("admin.newStore")}
             >
-              <Text style={s.quickActionIcon}>ًںڈھ</Text>
+              <Text style={s.quickActionIcon}>🏪</Text>
               <Text style={s.quickActionLabel}>+ {t("admin.newStore")}</Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -143,7 +137,7 @@ export function OwnerScreen({ onSignOut }: { onSignOut: () => void }) {
               style={s.quickActionBtn}
               accessibilityLabel={t("admin.invite")}
             >
-              <Text style={s.quickActionIcon}>ًں‘¥</Text>
+              <Text style={s.quickActionIcon}>👥</Text>
               <Text style={s.quickActionLabel}>+ {t("admin.invite")}</Text>
             </TouchableOpacity>
           </View>
@@ -170,7 +164,7 @@ export function OwnerScreen({ onSignOut }: { onSignOut: () => void }) {
                   <Text style={s.heroSubLabel}>{t("dashboard.grossSales")} </Text>
                   <Text style={s.heroSubValue}>{formatMoney(summary.totalSales)}</Text>
                 </Text>
-                <Text style={s.heroDot}> آ· </Text>
+                <Text style={s.heroDot}> · </Text>
                 <Text style={s.heroSubItem}>
                   <Text style={s.heroSubLabel}>{t("dashboard.expenses")} </Text>
                   <Text style={s.heroSubValue}>{formatMoney(summary.totalExpenses)}</Text>
@@ -197,7 +191,7 @@ export function OwnerScreen({ onSignOut }: { onSignOut: () => void }) {
           </View>
         </Card>
 
-        {/* Conditional alerts â€” only render when there's a real problem.
+        {/* Conditional alerts — only render when there's a real problem.
             Web does the same to save vertical space when everything's fine. */}
         {summary.alerts.length > 0 ? (
           <Banner tone="warn" title={summary.alerts[0].message} body={t("dashboard.callStore")} />
@@ -245,7 +239,7 @@ export function OwnerScreen({ onSignOut }: { onSignOut: () => void }) {
 
                 <View style={{ marginTop: spacing.md }}>
                   <Text style={s.kicker}>{t("dashboard.salesToday")}</Text>
-                  <Text style={s.bigNumber}>{store.closedToday ? formatMoney(store.totalSales) : "â€”"}</Text>
+                  <Text style={s.bigNumber}>{store.closedToday ? formatMoney(store.totalSales) : "—"}</Text>
                   <View style={s.bar}>
                     <View style={[s.barFill, { width: `${barWidth}%` }]} />
                   </View>
@@ -254,11 +248,11 @@ export function OwnerScreen({ onSignOut }: { onSignOut: () => void }) {
                 <View style={s.miniRow}>
                   <View style={s.miniCell}>
                     <Text style={s.miniLabel}>{t("common.cash")}</Text>
-                    <Text style={s.miniValue}>{store.closedToday ? formatMoney(store.cashSales) : "â€”"}</Text>
+                    <Text style={s.miniValue}>{store.closedToday ? formatMoney(store.cashSales) : "—"}</Text>
                   </View>
                   <View style={s.miniCell}>
                     <Text style={s.miniLabel}>{t("common.card")}</Text>
-                    <Text style={s.miniValue}>{store.closedToday ? formatMoney(store.cardSales) : "â€”"}</Text>
+                    <Text style={s.miniValue}>{store.closedToday ? formatMoney(store.cardSales) : "—"}</Text>
                   </View>
                 </View>
 
@@ -292,24 +286,13 @@ export function OwnerScreen({ onSignOut }: { onSignOut: () => void }) {
           })}
         </ScrollView>
 
-        {moreStores > 0 || canShowLessStores ? (
-          <TouchableOpacity
-            onPress={() => {
-              if (moreStores > 0) {
-                setStoreLimit((current) => current + 3);
-              } else {
-                setStoreLimit(3);
-              }
-            }}
-            style={s.viewAllRow}
-          >
+        {moreStores > 0 ? (
+          <TouchableOpacity onPress={() => navigation.navigate("AllStores")} style={s.viewAllRow}>
             <View>
-              <Text style={s.viewAllText}>
-                {moreStores > 0 ? `${t("common.showMore")} (${moreStores})` : t("common.showLess")}
-              </Text>
-              <Text style={s.viewAllHint}>{t("dashboard.swipeStoreCards")}</Text>
+              <Text style={s.viewAllText}>View all {summary.totalStores} stores</Text>
+              <Text style={s.viewAllHint}>Search · filter · per-store details</Text>
             </View>
-            <Text style={s.viewAllArrow}>â†’</Text>
+            <Text style={s.viewAllArrow}>→</Text>
           </TouchableOpacity>
         ) : null}
 
@@ -319,7 +302,7 @@ export function OwnerScreen({ onSignOut }: { onSignOut: () => void }) {
   );
 }
 
-// Pure-RN progress ring â€” donut-style fill for stores-closed. No SVG dep:
+// Pure-RN progress ring — donut-style fill for stores-closed. No SVG dep:
 // uses a rotated/clipped circle trick with two stacked Views. For tighter
 // fidelity later we can swap to react-native-svg (Expo SDK 52 ships it).
 function ProgressRing({
@@ -357,7 +340,7 @@ function ProgressRing({
 function DashboardSkeleton() {
   return (
     <View style={{ gap: spacing.md, marginTop: spacing.md }}>
-      {/* Hero card skeleton â€” matches the real hero layout */}
+      {/* Hero card skeleton — matches the real hero layout */}
       <Card style={{ gap: spacing.md, paddingVertical: spacing.lg }}>
         <View style={{ flexDirection: "row", gap: spacing.md }}>
           <View style={{ flex: 1, gap: spacing.sm }}>
@@ -376,7 +359,7 @@ function DashboardSkeleton() {
       {/* Section title placeholder */}
       <Skeleton width={180} height={22} borderRadius={4} style={{ marginTop: spacing.sm }} />
 
-      {/* H-scroll cards placeholder â€” render 2 partial cards */}
+      {/* H-scroll cards placeholder — render 2 partial cards */}
       <View style={{ flexDirection: "row", gap: spacing.sm }}>
         <Skeleton width={260} height={220} borderRadius={radius.lg} />
         <Skeleton width={60} height={220} borderRadius={radius.lg} />

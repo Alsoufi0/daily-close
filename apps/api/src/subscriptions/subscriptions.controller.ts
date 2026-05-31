@@ -91,17 +91,9 @@ export class SubscriptionsController {
     }
 
     const type: string | undefined = payload?.type;
-    const object = payload?.data?.object;
-    const customerId: string | undefined = object?.customer;
-    const checkoutCompleted = type === "checkout.session.completed";
-    const subscriptionId: string | undefined = checkoutCompleted ? object?.subscription : object?.id;
-    const subscription = subscriptionId ? await this.subscriptions.fetchStripeSubscription(subscriptionId) : null;
-    const status: string | undefined = object?.status || subscription?.status || (checkoutCompleted ? "active" : undefined);
-    const ownerId: string | undefined = checkoutCompleted
-      ? object?.client_reference_id || object?.metadata?.ownerId
-      : object?.metadata?.ownerId;
-    const subscriptionItemId: string | null =
-      object?.items?.data?.[0]?.id ?? subscription?.itemId ?? null;
+    const customerId: string | undefined = payload?.data?.object?.customer;
+    const subscriptionId: string | undefined = payload?.data?.object?.id;
+    const status: string | undefined = payload?.data?.object?.status;
 
     if (!type || !customerId || !status) {
       throw new BadRequestException("Unsupported webhook payload.");
@@ -118,10 +110,8 @@ export class SubscriptionsController {
 
     try {
       await this.subscriptions.syncFromStripe({
-        ownerId,
         stripeCustomerId: customerId,
         stripeSubscriptionId: subscriptionId,
-        stripeSubscriptionItemId: subscriptionItemId,
         status: mapped
       });
     } catch {

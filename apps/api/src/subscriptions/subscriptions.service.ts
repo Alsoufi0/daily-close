@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 
 export type SubscriptionStatus = "TRIALING" | "ACTIVE" | "PAST_DUE" | "CANCELED";
@@ -10,18 +10,12 @@ export interface SubscriptionView {
   daysLeftInTrial: number | null;
   active: boolean;
   stripeCustomerId: string | null;
-  activeStoreCount: number;
-  billedStoreQuantity: number;
-  unitAmountCents: number;
-  priceId: string | null;
   checkoutUrl: string | null;
   portalUrl: string | null;
 }
 
 @Injectable()
 export class SubscriptionsService {
-  private readonly logger = new Logger(SubscriptionsService.name);
-
   constructor(private readonly prisma: PrismaService) {}
 
   static isActive(status: string, trialEndsAt: Date | null): boolean {
@@ -43,8 +37,6 @@ export class SubscriptionsService {
     const owner = await this.prisma.owner.findUnique({ where: { id: ownerId } });
     if (!owner) throw new NotFoundException("Owner not found.");
     const status = (owner.subscriptionStatus || "TRIALING") as SubscriptionStatus;
-    const activeStoreCount = await this.activeStoreCount(ownerId);
-    const billedStoreQuantity = this.billableQuantity(activeStoreCount);
     return {
       status,
       plan: owner.subscriptionPlan,
@@ -52,10 +44,6 @@ export class SubscriptionsService {
       daysLeftInTrial: SubscriptionsService.daysLeft(owner.trialEndsAt),
       active: SubscriptionsService.isActive(status, owner.trialEndsAt),
       stripeCustomerId: owner.stripeCustomerId,
-      activeStoreCount,
-      billedStoreQuantity,
-      unitAmountCents: Number(process.env.STRIPE_UNIT_AMOUNT_CENTS || 4999),
-      priceId: process.env.STRIPE_PRICE_ID || null,
       checkoutUrl: process.env.STRIPE_CHECKOUT_URL || null,
       portalUrl: process.env.STRIPE_PORTAL_URL || null
     };
@@ -72,27 +60,16 @@ export class SubscriptionsService {
   }
 
   async syncFromStripe(input: {
-    ownerId?: string | null;
     stripeCustomerId: string;
     stripeSubscriptionId?: string | null;
-    stripeSubscriptionItemId?: string | null;
     status: string;
   }) {
-    const data = {
-      subscriptionStatus: input.status,
-      stripeCustomerId: input.stripeCustomerId,
-      stripeSubscriptionId: input.stripeSubscriptionId ?? undefined,
-      stripeSubscriptionItemId: input.stripeSubscriptionItemId ?? undefined
-    };
-    if (input.ownerId) {
-      return this.prisma.owner.update({
-        where: { id: input.ownerId },
-        data
-      });
-    }
     return this.prisma.owner.update({
       where: { stripeCustomerId: input.stripeCustomerId },
-      data
+      data: {
+        subscriptionStatus: input.status,
+        stripeSubscriptionId: input.stripeSubscriptionId ?? undefined
+      }
     });
   }
 
@@ -113,8 +90,6 @@ export class SubscriptionsService {
     const siteUrl = process.env.SITE_URL || "https://daily-close-mvp.vercel.app";
     const successUrl = process.env.STRIPE_SUCCESS_URL || `${siteUrl}/billing?status=success`;
     const cancelUrl = process.env.STRIPE_CANCEL_URL || `${siteUrl}/billing?status=cancel`;
-    const activeStoreCount = await this.activeStoreCount(ownerId);
-    const quantity = this.billableQuantity(activeStoreCount);
 
     const params = new URLSearchParams();
     params.set("mode", "subscription");
@@ -122,9 +97,8 @@ export class SubscriptionsService {
     params.set("cancel_url", cancelUrl);
     params.set("customer_email", ownerEmail);
     params.set("client_reference_id", ownerId);
-    params.set("subscription_data[metadata][ownerId]", ownerId);
     params.set("line_items[0][price]", priceId);
-    params.set("line_items[0][quantity]", String(quantity));
+    params.set("line_items[0][quantity]", "1");
     params.set("allow_promotion_codes", "true");
 
     const res = await fetch("https://api.stripe.com/v1/checkout/sessions", {
@@ -142,65 +116,5 @@ export class SubscriptionsService {
     const data = (await res.json()) as { url?: string };
     if (!data.url) throw new Error("Stripe did not return a checkout URL.");
     return data.url;
-  }
-
-  async syncStoreQuantityForOwner(ownerId: string): Promise<{ synced: boolean; quantity: number }> {
-    const owner = await this.prisma.owner.findUnique({ where: { id: ownerId } });
-    if (!owner) throw new NotFoundException("Owner not found.");
-    const quantity = this.billableQuantity(await this.activeStoreCount(ownerId));
-    const secret = process.env.STRIPE_SECRET_KEY;
-    const itemId = owner.stripeSubscriptionItemId;
-    if (owner.subscriptionStatus !== "ACTIVE") {
-      return { synced: false, quantity };
-    }
-    if (!secret || !itemId) {
-      throw new Error("Stripe subscription item is missing for active owner.");
-    }
-
-    const params = new URLSearchParams();
-    params.set("quantity", String(quantity));
-    params.set("proration_behavior", "create_prorations");
-
-    const res = await fetch(`https://api.stripe.com/v1/subscription_items/${itemId}`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${secret}`,
-        "Content-Type": "application/x-www-form-urlencoded"
-      },
-      body: params.toString()
-    });
-    if (!res.ok) {
-      const body = await res.text();
-      throw new Error(`Stripe quantity update failed: ${res.status} ${body.slice(0, 200)}`);
-    }
-    return { synced: true, quantity };
-  }
-
-  async fetchStripeSubscription(subscriptionId: string): Promise<{
-    status: string;
-    itemId: string | null;
-  } | null> {
-    const secret = process.env.STRIPE_SECRET_KEY;
-    if (!secret || !subscriptionId) return null;
-    const res = await fetch(`https://api.stripe.com/v1/subscriptions/${subscriptionId}`, {
-      headers: { Authorization: `Bearer ${secret}` }
-    });
-    if (!res.ok) {
-      this.logger.warn(`Could not fetch Stripe subscription ${subscriptionId}: ${res.status}`);
-      return null;
-    }
-    const data = await res.json() as any;
-    return {
-      status: data?.status || "active",
-      itemId: data?.items?.data?.[0]?.id ?? null
-    };
-  }
-
-  private activeStoreCount(ownerId: string): Promise<number> {
-    return this.prisma.store.count({ where: { ownerId, deletedAt: null } });
-  }
-
-  private billableQuantity(activeStoreCount: number): number {
-    return Math.max(1, activeStoreCount);
   }
 }
