@@ -82,6 +82,8 @@ export function ProductionLogin() {
         <LanguageSelect />
       </div>
       <div className="mb-5 lg:hidden">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/apple-touch-icon.png" alt="Daily Close" className="mb-3 h-14 w-14 rounded-2xl shadow-sm" />
         <h1 className="text-2xl font-black leading-tight tracking-tight text-ink">
           {t("home.mobileHero")}
         </h1>
@@ -89,6 +91,8 @@ export function ProductionLogin() {
 
       <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-start lg:gap-10">
         <div className="hidden lg:block">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/apple-touch-icon.png" alt="Daily Close" className="mb-4 h-16 w-16 rounded-2xl shadow-sm" />
           <span className="inline-flex items-center gap-2 rounded-full bg-leaf/10 px-3 py-1 text-xs font-black uppercase tracking-wide text-leaf">
             <Store size={14} aria-hidden />
             {t("home.platforms")}

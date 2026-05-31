@@ -18,6 +18,7 @@ export default function ChangePasswordPage() {
 }
 
 function ChangePasswordPageInner() {
+  const { t } = useLanguage();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [show, setShow] = useState(false);
@@ -31,19 +32,19 @@ function ChangePasswordPageInner() {
 
     if (password.length < 8) {
       setStatus("error");
-      setMessage("Password must be at least 8 characters.");
+      setMessage(t("account.pwTooShort"));
       return;
     }
     if (password !== confirm) {
       setStatus("error");
-      setMessage("Passwords do not match.");
+      setMessage(t("account.pwMismatch"));
       return;
     }
 
     const supabase = createBrowserSupabase();
     if (!supabase) {
       setStatus("error");
-      setMessage("Supabase is not configured.");
+      setMessage(t("account.supabaseNotConfigured"));
       return;
     }
 
@@ -62,7 +63,7 @@ function ChangePasswordPageInner() {
         href="/owner"
         className="focus-ring inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm font-black text-ink/65 hover:text-ink"
       >
-        <ArrowLeft size={16} aria-hidden /> Back
+        <ArrowLeft size={16} aria-hidden /> {t("account.back")}
       </Link>
 
       <div className="mt-6 rounded-2xl border border-ink/10 bg-white p-6 shadow-sm">
@@ -71,26 +72,26 @@ function ChangePasswordPageInner() {
             <ShieldCheck size={22} aria-hidden />
           </span>
           <div>
-            <h1 className="text-2xl font-black">Change password</h1>
-            <p className="text-sm font-semibold text-ink/60">Use at least 8 characters.</p>
+            <h1 className="text-2xl font-black">{t("account.changePassword")}</h1>
+            <p className="text-sm font-semibold text-ink/60">{t("account.useAtLeast8")}</p>
           </div>
         </div>
 
         {status === "done" ? (
           <div className="mt-6 flex flex-col items-center gap-3 rounded-xl bg-leaf/5 p-6 text-center text-leaf">
             <CheckCircle2 size={48} aria-hidden />
-            <p className="text-lg font-black text-ink">Password updated.</p>
+            <p className="text-lg font-black text-ink">{t("account.passwordUpdated")}</p>
             <Link
               href="/owner"
               className="focus-ring inline-flex h-12 items-center justify-center rounded-lg bg-leaf px-5 font-black text-white"
             >
-              Back to dashboard
+              {t("account.backToDashboard")}
             </Link>
           </div>
         ) : (
           <form onSubmit={submit} className="mt-6 space-y-4">
             <Field
-              label="New password"
+              label={t("account.newPassword")}
               type={show ? "text" : "password"}
               autoComplete="new-password"
               value={password}
@@ -99,7 +100,7 @@ function ChangePasswordPageInner() {
                 <button
                   type="button"
                   onClick={() => setShow((v) => !v)}
-                  aria-label={show ? "Hide password" : "Show password"}
+                  aria-label={show ? t("account.hidePassword") : t("account.showPassword")}
                   className="focus-ring rounded-md p-2 text-ink/55 hover:bg-smoke"
                 >
                   {show ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -107,7 +108,7 @@ function ChangePasswordPageInner() {
               }
             />
             <Field
-              label="Confirm new password"
+              label={t("account.confirmNewPassword")}
               type={show ? "text" : "password"}
               autoComplete="new-password"
               value={confirm}
@@ -122,7 +123,7 @@ function ChangePasswordPageInner() {
               className="focus-ring flex h-14 w-full items-center justify-center gap-2 rounded-lg bg-leaf text-lg font-black text-white disabled:opacity-60"
             >
               {status === "loading" ? <Loader2 className="animate-spin" size={20} /> : null}
-              {status === "loading" ? "Updating…" : "Update password"}
+              {status === "loading" ? t("account.updating") : t("account.updatePassword")}
             </button>
           </form>
         )}
@@ -133,9 +134,6 @@ function ChangePasswordPageInner() {
   );
 }
 
-// Apple Guideline 5.1.1(v) requires in-app account deletion. Two-step: an
-// open-the-form button, then a typed confirmation ("DELETE") before the actual
-// API call, so a stray tap can't wipe an account.
 function DeleteAccountSection() {
   const session = useSession();
   const { t } = useLanguage();
@@ -149,8 +147,6 @@ function DeleteAccountSection() {
     setBusy(true);
     try {
       await deleteMyAccount(session.token);
-      // Sign out locally + bounce to the home page. The Supabase auth user is
-      // already gone server-side, so the next call would 401 anyway.
       try {
         const supabase = createBrowserSupabase();
         await supabase?.auth.signOut();
@@ -173,9 +169,7 @@ function DeleteAccountSection() {
         </span>
         <div>
           <h2 className="text-xl font-black text-warning">{t("account.deleteSection")}</h2>
-          <p className="text-sm font-semibold text-ink/70">
-            {t("account.deleteIntro")}
-          </p>
+          <p className="text-sm font-semibold text-ink/70">{t("account.deleteIntro")}</p>
         </div>
       </div>
 

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Leaf, LogOut, Menu, X } from "lucide-react";
+import { LogOut, Menu, X } from "lucide-react";
 import { clsx } from "clsx";
 import { createBrowserSupabase } from "../lib/supabase-browser";
 import { useSession } from "../lib/use-session";
@@ -69,9 +69,8 @@ export function TopBar() {
     <header className="sticky top-0 z-30 border-b border-ink/10 bg-white/90 backdrop-blur">
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-2 px-4 sm:px-6 lg:px-8">
         <Link href="/" className="focus-ring flex shrink-0 items-center gap-2 rounded-lg px-1 py-1 text-ink">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-leaf text-white shadow-sm">
-            <Leaf size={20} aria-hidden />
-          </span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/apple-touch-icon.png" alt="Daily Close" className="h-9 w-9 rounded-lg shadow-sm" />
           <span className="text-lg font-black tracking-tight">Daily Close</span>
         </Link>
 

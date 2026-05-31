@@ -4,11 +4,13 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Mail, Phone } from "lucide-react";
 import { createBrowserSupabase } from "../../lib/supabase-browser";
+import { useLanguage } from "../../components/language-provider";
 
 type Mode = "email" | "phone";
 type Phase = "form" | "code" | "emailSent";
 
 export default function ForgotPasswordPage() {
+  const { t } = useLanguage();
   const [mode, setMode] = useState<Mode>("email");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -28,14 +30,12 @@ export default function ForgotPasswordPage() {
     const supabase = createBrowserSupabase();
     if (!supabase) {
       setLoading(false);
-      setError("Supabase is not configured in this environment.");
+      setError(t("auth.supabaseNotConfiguredEnv"));
       return null;
     }
     return supabase;
   }
 
-  // Email reset — Supabase emails a recovery link that lands on
-  // /account/password (a session is established from the link there).
   async function sendEmail(event: React.FormEvent) {
     event.preventDefault();
     setLoading(true);
@@ -52,10 +52,6 @@ export default function ForgotPasswordPage() {
     setPhase("emailSent");
   }
 
-  // Phone reset — phone-only owners/employees have no email, so we send an
-  // SMS one-time code. shouldCreateUser:false means forgot-password never
-  // creates an account; it only texts existing users. Verifying the code
-  // signs the user in, then we send them to /account/password to set a new one.
   async function sendCode(event: React.FormEvent) {
     event.preventDefault();
     setLoading(true);
@@ -87,7 +83,7 @@ export default function ForgotPasswordPage() {
     });
     if (error || !data.session) {
       setLoading(false);
-      setError(error?.message || "That code is invalid or expired. Try again.");
+      setError(error?.message || t("auth.codeInvalid"));
       return;
     }
     window.localStorage.setItem("dailyclose-token", data.session.access_token);
@@ -100,7 +96,7 @@ export default function ForgotPasswordPage() {
         href="/"
         className="focus-ring inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm font-black text-ink/65 hover:text-ink"
       >
-        <ArrowLeft size={16} aria-hidden /> Back to sign in
+        <ArrowLeft size={16} aria-hidden /> {t("auth.backToSignIn")}
       </Link>
 
       <div className="mt-6 rounded-2xl border border-ink/10 bg-white p-6 shadow-sm">
@@ -109,24 +105,22 @@ export default function ForgotPasswordPage() {
             {mode === "email" ? <Mail size={22} aria-hidden /> : <Phone size={22} aria-hidden />}
           </span>
           <div>
-            <h1 className="text-2xl font-black">Reset your password</h1>
+            <h1 className="text-2xl font-black">{t("auth.resetTitle")}</h1>
             <p className="text-sm font-semibold text-ink/60">
-              {mode === "email" ? "We'll email you a reset link." : "We'll text you a code to verify."}
+              {mode === "email" ? t("auth.resetEmailSub") : t("auth.resetPhoneSub")}
             </p>
           </div>
         </div>
 
         {phase === "emailSent" ? (
           <div className="mt-6 rounded-xl bg-leaf/5 p-4 text-leaf">
-            <p className="text-lg font-black">Check your email.</p>
+            <p className="text-lg font-black">{t("auth.checkEmail")}</p>
             <p className="mt-1 text-sm font-bold text-ink/65">
-              If email delivery is enabled, a reset link will arrive at{" "}
-              <strong>{email}</strong>. Employees can also ask the owner to reset their password from Admin.
+              {t("auth.checkEmailBody").replace("{email}", email)}
             </p>
           </div>
         ) : (
           <>
-            {/* Mode toggle — hidden once an SMS code has been sent */}
             {phase === "form" ? (
               <div className="mt-5 grid grid-cols-2 gap-2 rounded-xl bg-smoke p-1 text-sm font-black">
                 <button
@@ -136,7 +130,7 @@ export default function ForgotPasswordPage() {
                     mode === "email" ? "bg-white text-ink shadow-sm" : "text-ink/55"
                   }`}
                 >
-                  <Mail size={16} aria-hidden /> Email
+                  <Mail size={16} aria-hidden /> {t("auth.email")}
                 </button>
                 <button
                   type="button"
@@ -145,7 +139,7 @@ export default function ForgotPasswordPage() {
                     mode === "phone" ? "bg-white text-ink shadow-sm" : "text-ink/55"
                   }`}
                 >
-                  <Phone size={16} aria-hidden /> Phone
+                  <Phone size={16} aria-hidden /> {t("auth.phone")}
                 </button>
               </div>
             ) : null}
@@ -153,7 +147,7 @@ export default function ForgotPasswordPage() {
             {mode === "email" ? (
               <form onSubmit={sendEmail} className="mt-5 space-y-4">
                 <label className="block">
-                  <span className="text-sm font-black">Email</span>
+                  <span className="text-sm font-black">{t("auth.email")}</span>
                   <input
                     type="email"
                     required
@@ -171,13 +165,13 @@ export default function ForgotPasswordPage() {
                   disabled={loading}
                   className="focus-ring flex h-14 w-full items-center justify-center gap-2 rounded-lg bg-leaf text-lg font-black text-white disabled:opacity-60"
                 >
-                  {loading ? "Sending…" : "Send reset link"}
+                  {loading ? t("auth.sending") : t("auth.sendResetLink")}
                 </button>
               </form>
             ) : phase === "form" ? (
               <form onSubmit={sendCode} className="mt-5 space-y-4">
                 <label className="block">
-                  <span className="text-sm font-black">Phone number</span>
+                  <span className="text-sm font-black">{t("auth.phoneNumber")}</span>
                   <input
                     type="tel"
                     required
@@ -189,7 +183,7 @@ export default function ForgotPasswordPage() {
                     onChange={(e) => setPhone(e.target.value)}
                   />
                   <span className="mt-1 block text-xs font-bold text-ink/55">
-                    Include the country code, like +1 for the US.
+                    {t("auth.includeCountryCode")}
                   </span>
                 </label>
                 {error ? (
@@ -200,16 +194,16 @@ export default function ForgotPasswordPage() {
                   disabled={loading}
                   className="focus-ring flex h-14 w-full items-center justify-center gap-2 rounded-lg bg-leaf text-lg font-black text-white disabled:opacity-60"
                 >
-                  {loading ? "Sending…" : "Send code"}
+                  {loading ? t("auth.sending") : t("auth.sendCode")}
                 </button>
               </form>
             ) : (
               <form onSubmit={verifyCode} className="mt-5 space-y-4">
                 <p className="text-sm font-bold text-ink/65">
-                  We texted a code to <strong>{phone}</strong>. Enter it below to set a new password.
+                  {t("auth.codeSentTo").replace("{phone}", phone)}
                 </p>
                 <label className="block">
-                  <span className="text-sm font-black">6-digit code</span>
+                  <span className="text-sm font-black">{t("auth.sixDigitCode")}</span>
                   <input
                     type="text"
                     required
@@ -230,14 +224,14 @@ export default function ForgotPasswordPage() {
                   disabled={loading || code.length < 6}
                   className="focus-ring flex h-14 w-full items-center justify-center gap-2 rounded-lg bg-leaf text-lg font-black text-white disabled:opacity-60"
                 >
-                  {loading ? "Verifying…" : "Verify & continue"}
+                  {loading ? t("auth.verifying") : t("auth.verifyContinue")}
                 </button>
                 <button
                   type="button"
                   onClick={() => switchMode("phone")}
                   className="focus-ring w-full text-center text-xs font-bold text-ink/55 underline"
                 >
-                  Use a different number
+                  {t("auth.useDifferentNumber")}
                 </button>
               </form>
             )}

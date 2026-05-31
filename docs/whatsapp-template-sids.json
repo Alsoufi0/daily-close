@@ -1,27 +1,27 @@
 [
   {
-    "name": "daily_close_employee_welcome",
-    "sid": "HX24a0822e987c868b0c0b762bfb5354fb",
+    "name": "daily_close_welcome_v2",
+    "sid": "HX949e489663d0a7e61c94e3e152bbfcfd",
     "category": "UTILITY"
   },
   {
-    "name": "daily_close_missed_close",
-    "sid": "HXf7edd8be728231c90d42962bd03b0bf0",
+    "name": "daily_close_missed_v2",
+    "sid": "HX0476d1783a3fb41887af1b102bf7ebea",
     "category": "UTILITY"
   },
   {
-    "name": "daily_close_completed",
-    "sid": "HX6a5d49e0888766737b9e943825cf40de",
+    "name": "daily_close_completed_v2",
+    "sid": "HX16407e71f4d576b8f355376dee7d609c",
     "category": "UTILITY"
   },
   {
-    "name": "daily_close_weekly_summary",
-    "sid": "HX0b83190d8ad4ee505efa090e1e733009",
+    "name": "daily_close_weekly_v2",
+    "sid": "HX65eeafe2b4aeeb89bbb442a16c89d6a7",
     "category": "UTILITY"
   },
   {
-    "name": "daily_close_monthly_summary",
-    "sid": "HXb8e2d3886bdbd0accc792a2cbff0fe77",
+    "name": "daily_close_monthly_v2",
+    "sid": "HXeb87cd1609d49f8bd9273e03db746829",
     "category": "UTILITY"
   }
 ]
