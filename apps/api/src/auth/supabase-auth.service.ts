@@ -295,10 +295,10 @@ export class SupabaseAuthService {
 
     const createInput = phone
       ? {
-          phone,
+          email,
           password: input.password,
-          phone_confirm: true,
-          user_metadata: { name, role: "STORE_OWNER", signup_channel: "phone" }
+          email_confirm: true,
+          user_metadata: { name, phone, role: "STORE_OWNER", signup_channel: "phone" }
         }
       : {
           email,

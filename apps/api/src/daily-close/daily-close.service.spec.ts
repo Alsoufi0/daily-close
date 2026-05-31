@@ -59,6 +59,7 @@ function makeService(overrides: Partial<{
     isConfigured: jest.fn().mockReturnValue(false),
     sendCloseCompletedTemplate: jest.fn().mockResolvedValue(false)
   };
+  const sms = { send: jest.fn().mockResolvedValue({ sent: true }) };
   const service = new DailyCloseService(
     repository as any,
     posParser as any,
@@ -66,9 +67,10 @@ function makeService(overrides: Partial<{
     storage as any,
     prisma as any,
     notifications as any,
-    whatsapp as any
+    whatsapp as any,
+    sms as any
   );
-  return { service, repository, prisma, ocr, posParser, storage, notifications, whatsapp };
+  return { service, repository, prisma, ocr, posParser, storage, notifications, whatsapp, sms };
 }
 
 const baseInput: CreateDailyCloseDto = {
@@ -305,6 +307,28 @@ describe("DailyCloseService.finishClosing", () => {
       ownerName: "Owner",
       storeName: "Main Street Smoke Shop"
     });
+  });
+
+  it("falls back to Twilio WhatsApp/SMS when Meta WhatsApp is not configured", async () => {
+    const { service, prisma, notifications, sms } = makeService();
+    prisma.store.findUnique
+      .mockResolvedValueOnce({ timezone: "UTC" })
+      .mockResolvedValueOnce({
+        storeName: "Main Street Smoke Shop",
+        ownerId: "owner-1",
+        owner: { user: { name: "Owner" } }
+      });
+    notifications.getOwnerWhatsAppPreferences.mockResolvedValueOnce({
+      phone: "+15551234567",
+      alertsEnabled: false,
+      closeAlertsEnabled: true,
+      reportsEnabled: false
+    });
+    await service.finishClosing(baseInput, employeeUser);
+    expect(sms.send).toHaveBeenCalledWith(
+      "+15551234567",
+      expect.stringContaining("Main Street Smoke Shop")
+    );
   });
 });
 

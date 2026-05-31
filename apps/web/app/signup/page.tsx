@@ -62,7 +62,7 @@ export default function SignupPage() {
     let data;
     let error;
     try {
-      await signupOwner({
+      const created = await signupOwner({
         name,
         email: mode === "email" ? trimmedEmail : undefined,
         phone: mode === "phone" ? trimmedPhone : undefined,
@@ -71,7 +71,7 @@ export default function SignupPage() {
       const signIn =
         mode === "email"
           ? await supabase.auth.signInWithPassword({ email: trimmedEmail, password })
-          : await supabase.auth.signInWithPassword({ phone: trimmedPhone, password });
+          : await supabase.auth.signInWithPassword({ email: created.email, password });
       data = signIn.data;
       error = signIn.error;
     } catch (err) {

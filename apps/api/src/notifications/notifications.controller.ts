@@ -18,6 +18,7 @@ import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
 import { SubscriptionGuard } from "../subscriptions/subscription.guard";
 import { MissedCloseService } from "./missed-close.service";
 import { NotificationsService } from "./notifications.service";
+import { SmsService } from "./sms.service";
 import { WhatsAppService } from "./whatsapp.service";
 import { WeeklySummaryService } from "./weekly-summary.service";
 import { EmailService } from "./email.service";
@@ -30,6 +31,7 @@ export class NotificationsController {
     private readonly missedClose: MissedCloseService,
     private readonly weekly: WeeklySummaryService,
     private readonly whatsapp: WhatsAppService,
+    private readonly sms: SmsService,
     private readonly email: EmailService
   ) {}
 
@@ -126,19 +128,18 @@ export class NotificationsController {
     if (!prefs.phone) {
       return { sent: false, message: "Add a WhatsApp phone number first." };
     }
-    if (!this.whatsapp.isConfigured()) {
-      return { sent: false, message: "WhatsApp is not configured on the server." };
-    }
-    const sent = await this.whatsapp.sendCloseCompletedTemplate({
-      toPhone: prefs.phone,
-      ownerName: user.name || "Owner",
-      storeName: "Daily Close test"
-    });
+    const sent = this.whatsapp.isConfigured()
+      ? await this.whatsapp.sendCloseCompletedTemplate({
+          toPhone: prefs.phone,
+          ownerName: user.name || "Owner",
+          storeName: "Daily Close test"
+        })
+      : (await this.sms.send(prefs.phone, "Daily Close: test WhatsApp message.")).sent;
     return {
       sent,
       message: sent
         ? "Test WhatsApp message sent."
-        : "WhatsApp test did not send. Check Meta template approval, recipient access, and Render env vars."
+        : "WhatsApp test did not send. Check Twilio/Meta setup, recipient access, and Render env vars."
     };
   }
 

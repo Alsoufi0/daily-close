@@ -31,7 +31,7 @@ export default function StoresAdminPage() {
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState<StoreRowWithMeta | null>(null);
-  const { visible, hasMore, remaining, canShowLess, showMore, showLess } = useShowMore(stores, 10);
+  const { visible, hasMore, remaining, canShowLess, showMore, showLess } = useShowMore(stores, 5);
 
   useEffect(() => {
     if (!session.token) {

@@ -22,6 +22,10 @@ const FEATURES = [
   { icon: BadgeCheck, titleKey: "home.featureBooksTitle", bodyKey: "home.featureBooksBody" }
 ];
 
+function syntheticPhoneEmail(phone: string, namespace: "owners" | "invites") {
+  return `phone_${phone.replace(/\D/g, "")}@${namespace}.dailyclose.local`;
+}
+
 export function ProductionLogin() {
   const { t, dir } = useLanguage();
   const [email, setEmail] = useState("");
@@ -57,18 +61,30 @@ export function ProductionLogin() {
     // Supabase signInWithPassword accepts either { email, password } or
     // { phone, password } — we use the same flow for both tabs so phone
     // sign-in is a single submit, not an OTP send-then-verify dance.
-    const creds =
-      authMode === "email"
-        ? { email: email.trim(), password }
-        : { phone: phone.trim(), password };
-    const { data, error } = await supabase.auth.signInWithPassword(creds);
+    let session;
+    let error;
+    if (authMode === "email") {
+      const result = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+      session = result.data.session;
+      error = result.error;
+    } else {
+      for (const candidate of [
+        syntheticPhoneEmail(phone.trim(), "owners"),
+        syntheticPhoneEmail(phone.trim(), "invites")
+      ]) {
+        const result = await supabase.auth.signInWithPassword({ email: candidate, password });
+        session = result.data.session;
+        error = result.error;
+        if (session) break;
+      }
+    }
     setLoading(false);
-    if (error || !data.session) {
+    if (error || !session) {
       setMessage(error?.message || t("auth.loginFailed"));
       return;
     }
 
-    window.localStorage.setItem("dailyclose-token", data.session.access_token);
+    window.localStorage.setItem("dailyclose-token", session.access_token);
     window.location.href = "/owner";
   }
 

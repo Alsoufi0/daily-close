@@ -38,7 +38,7 @@ export function HistoryPanel({ token }: { token?: string }) {
 
   const totalSales = rows.reduce((sum, r) => sum + r.totalSales, 0);
   const totalShortage = rows.reduce((sum, r) => sum + Math.min(r.difference, 0), 0);
-  const { visible, hasMore, remaining, canShowLess, showMore, showLess } = useShowMore(rows, 10, days);
+  const { visible, hasMore, remaining, canShowLess, showMore, showLess } = useShowMore(rows, 5, days);
 
   function requestDelete(row: HistoryRow) {
     if (!token) return;

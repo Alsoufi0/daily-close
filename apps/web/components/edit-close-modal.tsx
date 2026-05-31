@@ -150,6 +150,9 @@ function Field({
         className="focus-ring mt-1 h-11 w-full rounded-lg border border-ink/15 px-3 text-lg font-black"
         inputMode="decimal"
         value={value}
+        onFocus={(e) => {
+          if (e.currentTarget.value === "0") e.currentTarget.select();
+        }}
         onChange={(e) => onChange(e.target.value)}
       />
     </label>

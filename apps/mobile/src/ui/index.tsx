@@ -117,6 +117,7 @@ export function MoneyInput({
         style={ui.input}
         value={value}
         onChangeText={onChange}
+        selectTextOnFocus={value === "0"}
         keyboardType="decimal-pad"
         placeholderTextColor={colors.inkMuted}
       />

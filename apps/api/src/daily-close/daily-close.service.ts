@@ -19,6 +19,7 @@ import { DailyCloseRepository } from "./daily-close.repository";
 import { PrismaService } from "../prisma/prisma.service";
 import { DashboardService } from "../dashboard/dashboard.service";
 import { NotificationsService } from "../notifications/notifications.service";
+import { SmsService } from "../notifications/sms.service";
 import { WhatsAppService } from "../notifications/whatsapp.service";
 
 @Injectable()
@@ -32,7 +33,8 @@ export class DailyCloseService {
     private readonly storage: SupabaseStorageService,
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
-    private readonly whatsapp: WhatsAppService
+    private readonly whatsapp: WhatsAppService,
+    private readonly sms: SmsService
   ) {}
 
   async scanReport(input: ScanReportDto): Promise<ParsedPOSReport & { rawText?: string }> {
@@ -357,12 +359,19 @@ export class DailyCloseService {
       });
       if (!store) return;
       const prefs = await this.notifications.getOwnerWhatsAppPreferences(store.ownerId);
-      if (!prefs.closeAlertsEnabled || !prefs.phone || !this.whatsapp.isConfigured()) return;
-      await this.whatsapp.sendCloseCompletedTemplate({
-        toPhone: prefs.phone,
-        ownerName: store.owner.user.name,
-        storeName: store.storeName
-      });
+      if (!prefs.closeAlertsEnabled || !prefs.phone) return;
+      if (this.whatsapp.isConfigured()) {
+        const sent = await this.whatsapp.sendCloseCompletedTemplate({
+          toPhone: prefs.phone,
+          ownerName: store.owner.user.name,
+          storeName: store.storeName
+        });
+        if (sent) return;
+      }
+      await this.sms.send(
+        prefs.phone,
+        `Daily Close: ${store.storeName} closing was completed. Open Daily Close to view details.`
+      );
     } catch (err: any) {
       this.logger.warn(`Close-completed WhatsApp alert skipped: ${err?.message || err}`);
     }

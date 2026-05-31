@@ -34,7 +34,7 @@ function ReceiptsView() {
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<ReceiptRow | null>(null);
   const [downloadingAll, setDownloadingAll] = useState(false);
-  const { visible, hasMore, remaining, canShowLess, showMore, showLess } = useShowMore(rows, 12, `${storeId}:${from}:${to}`);
+  const { visible, hasMore, remaining, canShowLess, showMore, showLess } = useShowMore(rows, 6, `${storeId}:${from}:${to}`);
 
   const stores = session.stores;
 

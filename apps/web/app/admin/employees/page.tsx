@@ -97,7 +97,7 @@ export default function EmployeesAdminPage() {
     return Array.from(byUser.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [employees]);
 
-  const { visible, hasMore, remaining, canShowLess, showMore, showLess } = useShowMore(grouped, 10);
+  const { visible, hasMore, remaining, canShowLess, showMore, showLess } = useShowMore(grouped, 5);
 
   async function remove(employeeId: string, name: string) {
     if (!session.token) return;

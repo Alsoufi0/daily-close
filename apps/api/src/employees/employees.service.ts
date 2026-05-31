@@ -117,10 +117,10 @@ export class EmployeesService {
             user_metadata: { name: input.name, role: "EMPLOYEE" }
           })
         : await this.supabase.auth.admin.createUser({
-            phone: phone!,
+            email: syntheticEmail!,
             password: tempPassword,
-            phone_confirm: true,
-            user_metadata: { name: input.name, role: "EMPLOYEE" }
+            email_confirm: true,
+            user_metadata: { name: input.name, phone, role: "EMPLOYEE", signup_channel: "phone" }
           });
       if (create.error) throw new BadRequestException(create.error.message);
       authUserId = create.data.user?.id;

@@ -470,6 +470,9 @@ export function EmployeeClose() {
                         className="focus-ring mt-1 h-12 w-full rounded-lg border border-ink/15 px-3 text-xl font-black"
                         inputMode="decimal"
                         value={item.amount}
+                        onFocus={(event) => {
+                          if (event.currentTarget.value === "0") event.currentTarget.select();
+                        }}
                         onChange={(event) => {
                           const next = [...expenseItems];
                           next[idx] = { ...item, amount: event.target.value };
@@ -674,6 +677,9 @@ function MoneyInput({ label, value, onChange }: { label: string; value: string; 
         className="focus-ring mt-2 h-14 w-full rounded-lg border border-ink/15 px-4 text-2xl font-black"
         inputMode="decimal"
         value={value}
+        onFocus={(event) => {
+          if (event.currentTarget.value === "0") event.currentTarget.select();
+        }}
         onChange={(event) => onChange(event.target.value)}
       />
     </label>

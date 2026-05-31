@@ -19,7 +19,9 @@ const FEATURES: Array<{ icon: string; titleKey: string; bodyKey: string }> = [
 
 export function LoginScreen({ onOpen }: { onOpen: () => void }) {
   const [mode, setMode] = useState<"intro" | "signin" | "forgot">(supabase ? "intro" : "intro");
+  const [authMode, setAuthMode] = useState<"email" | "phone">("email");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,13 +33,27 @@ export function LoginScreen({ onOpen }: { onOpen: () => void }) {
     }
     setSubmitting(true);
     setError(null);
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    let session;
+    let error;
+    if (authMode === "email") {
+      const result = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+      session = result.data.session;
+      error = result.error;
+    } else {
+      for (const namespace of ["owners", "invites"] as const) {
+        const syntheticEmail = `phone_${phone.replace(/\D/g, "")}@${namespace}.dailyclose.local`;
+        const result = await supabase.auth.signInWithPassword({ email: syntheticEmail, password });
+        session = result.data.session;
+        error = result.error;
+        if (session) break;
+      }
+    }
     setSubmitting(false);
-    if (error || !data.session) {
+    if (error || !session) {
       setError(error?.message || t("auth.couldNotSignIn"));
       return;
     }
-    await saveToken(data.session.access_token);
+    await saveToken(session.access_token);
     // Auth gate in App.tsx will re-render via Supabase's onAuthStateChange
     // listener; onOpen is the explicit "I'm in" signal for any wrap logic.
     onOpen();
@@ -55,19 +71,49 @@ export function LoginScreen({ onOpen }: { onOpen: () => void }) {
         <Text style={s.copy}>{t("auth.useSamePassword")}</Text>
 
         <View style={{ gap: spacing.md, marginTop: spacing.lg }}>
-          <View>
-            <Text style={s.label}>{t("auth.email")}</Text>
-            <TextInput
-              style={s.input}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              autoComplete="email"
-              value={email}
-              onChangeText={setEmail}
-              placeholder="you@store.com"
-              placeholderTextColor={colors.inkMuted}
-            />
+          <View style={s.segment}>
+            <TouchableOpacity
+              onPress={() => setAuthMode("email")}
+              style={[s.segmentBtn, authMode === "email" && s.segmentBtnActive]}
+            >
+              <Text style={[s.segmentText, authMode === "email" && s.segmentTextActive]}>{t("auth.email")}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setAuthMode("phone")}
+              style={[s.segmentBtn, authMode === "phone" && s.segmentBtnActive]}
+            >
+              <Text style={[s.segmentText, authMode === "phone" && s.segmentTextActive]}>{t("auth.phone")}</Text>
+            </TouchableOpacity>
           </View>
+          {authMode === "email" ? (
+            <View>
+              <Text style={s.label}>{t("auth.email")}</Text>
+              <TextInput
+                style={s.input}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                autoComplete="email"
+                value={email}
+                onChangeText={setEmail}
+                placeholder="you@store.com"
+                placeholderTextColor={colors.inkMuted}
+              />
+            </View>
+          ) : (
+            <View>
+              <Text style={s.label}>{t("auth.phoneNumber")}</Text>
+              <TextInput
+                style={s.input}
+                autoCapitalize="none"
+                keyboardType="phone-pad"
+                autoComplete="tel"
+                value={phone}
+                onChangeText={setPhone}
+                placeholder="+15551234567"
+                placeholderTextColor={colors.inkMuted}
+              />
+            </View>
+          )}
           <View>
             <Text style={s.label}>{t("auth.password")}</Text>
             <TextInput
@@ -170,6 +216,23 @@ const s = StyleSheet.create({
   legalRow: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", marginTop: spacing.lg },
   linkText: { color: colors.leaf, fontWeight: font.black, fontSize: 13 },
   label: { color: colors.ink, fontWeight: font.black, fontSize: 13, marginBottom: 6 },
+  segment: {
+    flexDirection: "row",
+    gap: 4,
+    padding: 4,
+    borderRadius: radius.md,
+    backgroundColor: colors.smoke
+  },
+  segmentBtn: {
+    flex: 1,
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: radius.sm
+  },
+  segmentBtnActive: { backgroundColor: colors.white },
+  segmentText: { color: colors.inkMuted, fontWeight: font.black, fontSize: 14 },
+  segmentTextActive: { color: colors.ink },
   input: {
     height: 52,
     borderRadius: radius.md,

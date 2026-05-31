@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { NotificationsService } from "./notifications.service";
 import { DashboardService } from "../dashboard/dashboard.service";
+import { SmsService } from "./sms.service";
 import { WhatsAppService } from "./whatsapp.service";
 
 @Injectable()
@@ -9,7 +10,8 @@ export class MissedCloseService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
-    private readonly whatsapp: WhatsAppService
+    private readonly whatsapp: WhatsAppService,
+    private readonly sms: SmsService
   ) {}
 
   async checkStores(date = new Date()) {
@@ -49,10 +51,20 @@ export class MissedCloseService {
         });
         if (!owner) return;
 
-        // Best-effort WhatsApp ping to the owner. No-op when WhatsApp env is unset.
+        // Best-effort WhatsApp ping to the owner. Prefer Meta templates when
+        // configured; otherwise use Twilio WhatsApp/SMS through SmsService.
         const prefs = await this.notifications.getOwnerWhatsAppPreferences(owner.id);
-        if (prefs.alertsEnabled && prefs.phone && this.whatsapp.isConfigured()) {
-          await this.whatsapp.sendMissedCloseTemplate(prefs.phone, store.storeName);
+        if (prefs.alertsEnabled && prefs.phone) {
+          let sent = false;
+          if (this.whatsapp.isConfigured()) {
+            sent = await this.whatsapp.sendMissedCloseTemplate(prefs.phone, store.storeName);
+          }
+          if (!sent) {
+            await this.sms.send(
+              prefs.phone,
+              `Daily Close: ${store.storeName} has not completed closing yet.`
+            );
+          }
         }
 
         const existing = await this.prisma.notification.findFirst({
