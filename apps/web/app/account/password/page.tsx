@@ -7,6 +7,7 @@ import { createBrowserSupabase } from "../../../lib/supabase-browser";
 import { deleteMyAccount } from "../../../lib/api-client";
 import { useSession } from "../../../lib/use-session";
 import { RequireAuth } from "../../../components/require-auth";
+import { useLanguage } from "../../../components/language-provider";
 
 export default function ChangePasswordPage() {
   return (
@@ -137,6 +138,7 @@ function ChangePasswordPageInner() {
 // API call, so a stray tap can't wipe an account.
 function DeleteAccountSection() {
   const session = useSession();
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
@@ -159,7 +161,7 @@ function DeleteAccountSection() {
       window.location.replace("/?deleted=1");
     } catch (err: any) {
       setBusy(false);
-      setError(err?.message || "Could not delete account.");
+      setError(err?.message || t("account.deleteFailed"));
     }
   }
 
@@ -170,10 +172,9 @@ function DeleteAccountSection() {
           <Trash2 size={22} aria-hidden />
         </span>
         <div>
-          <h2 className="text-xl font-black text-warning">Delete account</h2>
+          <h2 className="text-xl font-black text-warning">{t("account.deleteSection")}</h2>
           <p className="text-sm font-semibold text-ink/70">
-            Permanently removes your sign-in, cancels any active subscription, and detaches
-            your stores. This can't be undone.
+            {t("account.deleteIntro")}
           </p>
         </div>
       </div>
@@ -184,12 +185,12 @@ function DeleteAccountSection() {
           onClick={() => setOpen(true)}
           className="focus-ring mt-4 inline-flex h-11 items-center gap-2 rounded-lg border-2 border-warning bg-white px-5 font-black text-warning hover:bg-warning/5"
         >
-          <Trash2 size={16} aria-hidden /> Delete my account
+          <Trash2 size={16} aria-hidden /> {t("account.deleteSection")}
         </button>
       ) : (
         <div className="mt-4 space-y-3">
           <label className="block text-sm font-black text-ink">
-            Type <span className="rounded bg-white px-1 font-mono">DELETE</span> to confirm
+            {t("account.deleteConfirmLabel")}
             <input
               autoFocus
               className="focus-ring mt-2 h-12 w-full rounded-lg border border-ink/15 bg-white px-4 font-bold tracking-widest"
@@ -210,7 +211,7 @@ function DeleteAccountSection() {
               disabled={busy}
               className="focus-ring h-11 flex-1 rounded-lg border-2 border-ink/15 bg-white font-black text-ink hover:bg-smoke disabled:opacity-60"
             >
-              Cancel
+              {t("common.cancel")}
             </button>
             <button
               type="button"
@@ -219,7 +220,7 @@ function DeleteAccountSection() {
               className="focus-ring flex h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-warning font-black text-white disabled:opacity-50"
             >
               {busy ? <Loader2 className="animate-spin" size={16} aria-hidden /> : null}
-              {busy ? "Deleting…" : "Permanently delete"}
+              {busy ? t("account.deleting") : t("account.permanentlyDelete")}
             </button>
           </div>
         </div>

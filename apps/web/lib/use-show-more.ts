@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 /**
  * Client-side "show more" for long lists. Lists in this app are fetched whole
@@ -13,19 +13,15 @@ import { useEffect, useMemo, useState } from "react";
  *   {visible.map(...)}
  *   {hasMore && <button onClick={showMore}>Show {remaining} more</button>}
  *
- * The visible count resets to `step` whenever the list shrinks (e.g. a filter
- * narrows results) so the user never lands on a stale "show more" state, but is
- * preserved as the list grows from background refreshes/polling.
+ * `slice(0, limit)` clamps naturally: if a filter shrinks the list below the
+ * current limit, `visible` just shows the smaller set and `hasMore` goes false
+ * (the button hides) — no reset needed. An earlier version reset the limit
+ * whenever `items.length < limit`, which fired the instant you clicked "show
+ * more" past the first page (limit > length) and snapped the list back to the
+ * first page, so the rest never opened.
  */
 export function useShowMore<T>(items: T[], step = 10) {
   const [limit, setLimit] = useState(step);
-
-  // Reset to the first page when the underlying list gets shorter than what's
-  // currently shown (filter change, items removed). Growing lists keep the
-  // user's expanded view.
-  useEffect(() => {
-    if (items.length < limit) setLimit(step);
-  }, [items.length, limit, step]);
 
   const visible = useMemo(() => items.slice(0, limit), [items, limit]);
   const hasMore = items.length > limit;

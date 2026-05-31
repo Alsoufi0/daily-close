@@ -7,29 +7,31 @@ import { clsx } from "clsx";
 import { RequireAuth } from "../../components/require-auth";
 import { useSession } from "../../lib/use-session";
 import { isAccountOwner } from "../../lib/session-roles";
+import { useLanguage } from "../../components/language-provider";
 
 const items = [
-  { href: "/admin/stores", label: "Stores", icon: Store },
-  { href: "/admin/employees", label: "Employees", icon: Users },
+  { href: "/admin/stores", labelKey: "admin.stores", icon: Store },
+  { href: "/admin/employees", labelKey: "admin.employees", icon: Users },
   // Billing is account-owner-only — hidden from per-store managers.
-  { href: "/billing", label: "Billing", icon: CreditCard, accountOnly: true }
+  { href: "/billing", labelKey: "nav.billing", icon: CreditCard, accountOnly: true }
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || "";
   const session = useSession();
+  const { t } = useLanguage();
   const accountOwner = isAccountOwner(session.profile);
   const visibleItems = items.filter((item) => !item.accountOnly || accountOwner);
   return (
     <RequireAuth allowedRoles={["STORE_OWNER", "SUPER_ADMIN"]} allowManagers>
     <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
       <header className="mb-6 flex items-center gap-2 text-sm font-black uppercase tracking-wide text-leaf">
-        <Settings size={16} aria-hidden /> Admin
+        <Settings size={16} aria-hidden /> {t("admin.sidebarTitle")}
       </header>
       <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
         <aside>
           <nav className="flex flex-row gap-1 overflow-x-auto rounded-xl border border-ink/10 bg-white p-2 shadow-sm lg:flex-col">
-            {visibleItems.map(({ href, label, icon: Icon }) => {
+            {visibleItems.map(({ href, labelKey, icon: Icon }) => {
               const active = pathname.startsWith(href);
               return (
                 <Link
@@ -41,7 +43,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   )}
                 >
                   <Icon size={16} aria-hidden />
-                  {label}
+                  {t(labelKey)}
                 </Link>
               );
             })}

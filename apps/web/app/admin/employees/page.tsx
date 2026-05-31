@@ -101,7 +101,7 @@ export default function EmployeesAdminPage() {
 
   async function remove(employeeId: string, name: string) {
     if (!session.token) return;
-    if (!window.confirm(`Remove ${name}? They will no longer be able to sign in. Their past closes stay on record.`)) {
+    if (!window.confirm(t("admin.removeConfirm").replace("{name}", name))) {
       return;
     }
     setDeletingId(employeeId);
@@ -163,7 +163,7 @@ export default function EmployeesAdminPage() {
         if (!adminTarget.isAdmin) {
           await setEmployeeAdminAccess(session.token, adminTarget.primaryEmployeeId, true);
         }
-        setInfo(`${adminTarget.name} is now an admin for the whole account.`);
+        setInfo(t("admin.accountAdminSet").replace("{name}", adminTarget.name));
       } else if (result.kind === "stores") {
         // Per-store admin. If they were account admin, step them down first.
         if (adminTarget.isAdmin) {
@@ -173,8 +173,8 @@ export default function EmployeesAdminPage() {
         const count = result.storeIds?.length ?? 0;
         setInfo(
           count > 0
-            ? `${adminTarget.name} is now an admin for ${count} store${count === 1 ? "" : "s"}.`
-            : `${adminTarget.name}'s admin access was removed.`
+            ? t("admin.storeAdminSet").replace("{name}", adminTarget.name).replace("{count}", String(count))
+            : t("admin.adminRemoved").replace("{name}", adminTarget.name)
         );
       } else {
         if (adminTarget.isAdmin) {
@@ -183,7 +183,7 @@ export default function EmployeesAdminPage() {
         if (adminTarget.managerStoreIds.length > 0) {
           await setEmployeeManagerStores(session.token, adminTarget.userId, []);
         }
-        setInfo(`${adminTarget.name}'s admin access was removed.`);
+        setInfo(t("admin.adminRemoved").replace("{name}", adminTarget.name));
       }
       setAdminTarget(null);
       // Re-fetch so role/manager badges reconcile with the server.
@@ -207,11 +207,11 @@ export default function EmployeesAdminPage() {
         targetStoreId
       );
       if (result.alreadyAssigned) {
-        setInfo("Already assigned to that store.");
+        setInfo(t("admin.alreadyAssigned"));
       } else {
         // Optimistically add the new assignment to the local list so the
         // chip appears immediately. The next list refresh will reconcile.
-        const newStoreName = session.stores.find((s) => s.id === targetStoreId)?.storeName ?? "Store";
+        const newStoreName = session.stores.find((s) => s.id === targetStoreId)?.storeName ?? t("common.store");
         setEmployees((prev) => [
           ...prev,
           {
@@ -222,7 +222,7 @@ export default function EmployeesAdminPage() {
             store: { id: targetStoreId, storeName: newStoreName }
           }
         ]);
-        setInfo(`${assignTarget.name} can now close ${newStoreName}.`);
+        setInfo(t("admin.canNowClose").replace("{name}", assignTarget.name).replace("{store}", newStoreName));
       }
       setAssignTarget(null);
     } catch (err) {
@@ -236,7 +236,7 @@ export default function EmployeesAdminPage() {
     if (!session.token) return;
     if (
       !window.confirm(
-        `Remove ${name} from ${storeName}? They can no longer close that store. Other store assignments stay.`
+        t("admin.unassignConfirm").replace("{name}", name).replace("{store}", storeName)
       )
     ) {
       return;
@@ -299,7 +299,7 @@ export default function EmployeesAdminPage() {
       // was email-based to begin with), fall back to the manual share modal so
       // the password is still recoverable.
       if (result.smsSent) {
-        setInfo(`Welcome SMS sent to ${result.phone}. The employee can sign in now.`);
+        setInfo(t("admin.welcomeSmsSent").replace("{phone}", result.phone ?? ""));
       } else {
         setResetResult({ email: contactDisplay, tempPassword: result.tempPassword });
         if (contactType === "phone" && result.smsError) {
@@ -323,15 +323,15 @@ export default function EmployeesAdminPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
-          <h1 className="text-2xl font-black">Employees</h1>
-          <p className="text-sm font-bold text-ink/65">Invite the people who close your stores at night.</p>
+          <h1 className="text-2xl font-black">{t("admin.employees")}</h1>
+          <p className="text-sm font-bold text-ink/65">{t("admin.inviteEmployees")}</p>
         </div>
         {!showForm ? (
           <button
             onClick={() => setShowForm(true)}
             className="focus-ring inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-leaf px-4 font-black text-white sm:w-auto"
           >
-            <Plus size={16} /> Invite
+            <Plus size={16} /> {t("admin.invite")}
           </button>
         ) : null}
       </div>
@@ -349,7 +349,7 @@ export default function EmployeesAdminPage() {
               {error}
             </div>
           ) : null}
-          <Field label="Full name">
+          <Field label={t("admin.fullName")}>
             <input
               required
               autoFocus
@@ -365,18 +365,18 @@ export default function EmployeesAdminPage() {
                 onClick={() => setContactType("email")}
                 className={contactType === "email" ? "rounded-md bg-white px-3 py-1.5 shadow-sm" : "px-3 py-1.5 text-ink/55"}
               >
-                Email
+                {t("admin.email")}
               </button>
               <button
                 type="button"
                 onClick={() => setContactType("phone")}
                 className={contactType === "phone" ? "rounded-md bg-white px-3 py-1.5 shadow-sm" : "px-3 py-1.5 text-ink/55"}
               >
-                Phone
+                {t("admin.phone")}
               </button>
             </div>
             {contactType === "email" ? (
-              <Field label="Email">
+              <Field label={t("admin.email")}>
                 <input
                   required
                   type="email"
@@ -386,7 +386,7 @@ export default function EmployeesAdminPage() {
                 />
               </Field>
             ) : (
-              <Field label="Phone (E.164, e.g. +15551234567)">
+              <Field label={t("admin.phoneLabel")}>
                 <input
                   required
                   type="tel"
@@ -399,7 +399,7 @@ export default function EmployeesAdminPage() {
               </Field>
             )}
           </div>
-          <Field label="Store">
+          <Field label={t("common.store")}>
             <select
               required
               className="focus-ring h-12 w-full rounded-lg border border-ink/15 px-3 text-base font-bold"
@@ -432,7 +432,7 @@ export default function EmployeesAdminPage() {
               onClick={() => setShowForm(false)}
               className="focus-ring h-12 flex-1 rounded-lg border-2 border-ink/15 bg-white font-black text-ink hover:bg-smoke"
             >
-              Cancel
+              {t("common.cancel")}
             </button>
             <button
               type="submit"
@@ -440,7 +440,7 @@ export default function EmployeesAdminPage() {
               className="focus-ring flex h-12 flex-1 items-center justify-center gap-2 rounded-lg bg-leaf font-black text-white disabled:opacity-60"
             >
               {submitting ? <Loader2 className="animate-spin" size={18} /> : null}
-              {submitting ? "Sending…" : "Send invite"}
+              {submitting ? t("admin.sending") : t("admin.sendInvite")}
             </button>
           </div>
         </form>
@@ -456,11 +456,11 @@ export default function EmployeesAdminPage() {
         {loading ? (
           <div className="rounded-xl border border-ink/10 bg-white p-6 text-center text-sm font-bold text-ink/55">
             <Loader2 className="mx-auto mb-2 animate-spin" size={18} />
-            Loading employees…
+            {t("admin.loadingEmployees")}
           </div>
         ) : grouped.length === 0 ? (
           <div className="rounded-xl border border-ink/10 bg-white p-8 text-center text-sm font-bold text-ink/65">
-            No employees yet.
+            {t("admin.noEmployees")}
           </div>
         ) : (
           visible.map((g) => (
@@ -476,7 +476,7 @@ export default function EmployeesAdminPage() {
                   <p className="font-black truncate">{g.name}</p>
                   <p className="text-xs font-bold text-ink/55 truncate">{g.email}</p>
                 </div>
-                {g.isAdmin ? <span className="rounded-full bg-leaf/10 px-2 py-0.5 text-xs font-black text-leaf">Admin</span> : null}
+                {g.isAdmin ? <span className="rounded-full bg-leaf/10 px-2 py-0.5 text-xs font-black text-leaf">{t("admin.adminBadge")}</span> : null}
               </div>
 
               {/* Store chips — one per assignment row, with per-chip unassign */}
@@ -489,7 +489,7 @@ export default function EmployeesAdminPage() {
                         ? "inline-flex items-center gap-1.5 rounded-full bg-leaf/10 px-2.5 py-1 text-xs font-black text-leaf"
                         : "inline-flex items-center gap-1.5 rounded-full bg-smoke px-2.5 py-1 text-xs font-black text-ink"
                     }
-                    title={a.role === "MANAGER" ? `${g.name} is an admin for ${a.storeName}` : undefined}
+                    title={a.role === "MANAGER" ? t("admin.adminBadge") : undefined}
                   >
                     {a.role === "MANAGER" ? <ShieldCheck size={12} aria-hidden /> : <Store size={12} aria-hidden />}
                     {a.storeName}
@@ -514,7 +514,7 @@ export default function EmployeesAdminPage() {
                   }
                   className="focus-ring inline-flex items-center gap-1 rounded-full border border-dashed border-ink/25 px-2.5 py-1 text-xs font-black text-ink/65 hover:border-leaf hover:text-leaf"
                 >
-                  <Plus size={11} /> Assign to another store
+                  <Plus size={11} /> {t("admin.assignAnotherStore")}
                 </button>
               </div>
 
@@ -538,19 +538,19 @@ export default function EmployeesAdminPage() {
                 >
                   <ShieldCheck size={14} />
                   {g.isAdmin
-                    ? "Account admin"
+                    ? t("admin.accountAdmin")
                     : g.managerStoreIds.length > 0
-                      ? `Store admin (${g.managerStoreIds.length})`
-                      : "Make admin"}
+                      ? t("admin.storeAdminCount").replace("{count}", String(g.managerStoreIds.length))
+                      : t("admin.makeAdmin")}
                 </button>
                 <button
                   onClick={() => reset(g.primaryEmployeeId)}
                   disabled={resettingId === g.primaryEmployeeId}
                   className="focus-ring inline-flex h-9 items-center gap-1.5 rounded-lg border border-ink/15 px-3 text-xs font-black text-ink hover:bg-smoke disabled:opacity-60"
-                  aria-label="Reset password"
+                  aria-label={t("admin.passwordReset")}
                 >
                   {resettingId === g.primaryEmployeeId ? <Loader2 className="animate-spin" size={14} /> : <Key size={14} />}
-                  Reset password
+                  {t("admin.passwordReset")}
                 </button>
                 {/* Removing the LAST chip via the chip's X already removes
                     the entire user via the existing remove flow. Skip a
@@ -608,6 +608,7 @@ function AdminAccessModal({
 }) {
   // Three mutually-exclusive levels: no admin, admin of specific stores, or
   // admin of the whole account. Pre-select the user's current state.
+  const { t } = useLanguage();
   type Mode = "none" | "stores" | "account";
   const [mode, setMode] = useState<Mode>(
     target.isAdmin ? "account" : target.managerStoreIds.length > 0 ? "stores" : "none"
@@ -666,7 +667,7 @@ function AdminAccessModal({
       >
         <div className="flex items-start justify-between gap-3">
           <h3 id="admin-access-title" className="text-lg font-black text-ink">
-            Admin access for {target.name}
+            {t("admin.adminAccessFor").replace("{name}", target.name)}
           </h3>
           <button
             type="button"
@@ -679,21 +680,17 @@ function AdminAccessModal({
         </div>
 
         <div className="mt-4 space-y-2">
-          <Choice value="none" title="No admin access" desc="Can close their assigned stores only." />
-          <Choice
-            value="stores"
-            title="Admin for specific stores"
-            desc="Full admin — but only for the stores you pick below. No billing, can't delete stores."
-          />
-          <Choice value="account" title="Admin for the whole account" desc="Full access to every store and setting (except billing)." />
+          <Choice value="none" title={t("admin.noAdminAccess")} desc={t("admin.noAdminAccessDesc")} />
+          <Choice value="stores" title={t("admin.storeAdminOption")} desc={t("admin.storeAdminOptionDesc")} />
+          <Choice value="account" title={t("admin.fullAdminOption")} desc={t("admin.fullAdminOptionDesc")} />
         </div>
 
         {mode === "stores" ? (
           <div className="mt-4">
-            <p className="mb-2 text-xs font-black uppercase tracking-wide text-ink/55">Choose stores</p>
+            <p className="mb-2 text-xs font-black uppercase tracking-wide text-ink/55">{t("admin.chooseStores")}</p>
             <div className="max-h-48 space-y-1.5 overflow-y-auto rounded-lg border border-ink/10 p-2">
               {stores.length === 0 ? (
-                <p className="p-2 text-sm font-bold text-ink/55">You have no stores yet.</p>
+                <p className="p-2 text-sm font-bold text-ink/55">{t("admin.noStoresYet")}</p>
               ) : (
                 stores.map((s) => (
                   <label
@@ -720,7 +717,7 @@ function AdminAccessModal({
             onClick={onCancel}
             className="focus-ring h-10 rounded-lg border border-ink/15 bg-white px-4 text-sm font-black text-ink hover:bg-smoke"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             type="button"
@@ -729,7 +726,7 @@ function AdminAccessModal({
             className="focus-ring inline-flex h-10 items-center gap-1.5 rounded-lg bg-leaf px-4 text-sm font-black text-white disabled:opacity-60"
           >
             {submitting ? <Loader2 className="animate-spin" size={14} /> : <ShieldCheck size={14} />}
-            Save
+            {t("common.save")}
           </button>
         </div>
       </div>
@@ -750,6 +747,7 @@ function AssignToStoreModal({
   onCancel: () => void;
   onConfirm: (storeId: string) => void;
 }) {
+  const { t } = useLanguage();
   // Filter out stores the user is already assigned to so the dropdown
   // only offers actionable choices.
   const available = stores.filter((s) => !target.assignedStoreIds.has(s.id));
@@ -777,7 +775,7 @@ function AssignToStoreModal({
       >
         <div className="flex items-start justify-between gap-3">
           <h3 id="assign-store-title" className="text-lg font-black text-ink">
-            Assign {target.name} to another store
+            {t("admin.assignTitle").replace("{name}", target.name)}
           </h3>
           <button
             type="button"
@@ -791,15 +789,15 @@ function AssignToStoreModal({
 
         {available.length === 0 ? (
           <p className="mt-4 text-sm font-bold text-ink/65">
-            {target.name} is already assigned to every store you own.
+            {t("admin.assignAllDone").replace("{name}", target.name)}
           </p>
         ) : (
           <>
             <p className="mt-2 text-sm font-bold text-ink/65">
-              They'll be able to close this store alongside their existing assignments.
+              {t("admin.assignDesc")}
             </p>
             <label className="mt-4 block">
-              <span className="text-sm font-black">Store</span>
+              <span className="text-sm font-black">{t("common.store")}</span>
               <select
                 value={storeId}
                 onChange={(e) => setStoreId(e.target.value)}
@@ -821,7 +819,7 @@ function AssignToStoreModal({
             onClick={onCancel}
             className="focus-ring h-10 rounded-lg border border-ink/15 bg-white px-4 text-sm font-black text-ink hover:bg-smoke"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
           {available.length > 0 ? (
             <button
@@ -831,7 +829,7 @@ function AssignToStoreModal({
               className="focus-ring inline-flex h-10 items-center gap-1.5 rounded-lg bg-leaf px-4 text-sm font-black text-white disabled:opacity-60"
             >
               {submitting ? <Loader2 className="animate-spin" size={14} /> : <Plus size={14} />}
-              Assign
+              {t("admin.assign")}
             </button>
           ) : null}
         </div>
@@ -849,6 +847,7 @@ function ResetPasswordModal({
   tempPassword: string;
   onClose: () => void;
 }) {
+  const { t } = useLanguage();
   const [copied, setCopied] = useState(false);
   async function copy() {
     try {
@@ -872,8 +871,8 @@ function ResetPasswordModal({
       >
         <div className="mb-3 flex items-start justify-between">
           <div>
-            <p className="text-xs font-black uppercase tracking-wide text-leaf">Password reset</p>
-            <h2 className="text-xl font-black">Share this with {email}</h2>
+            <p className="text-xs font-black uppercase tracking-wide text-leaf">{t("admin.passwordReset")}</p>
+            <h2 className="text-xl font-black">{t("admin.shareWith").replace("{email}", email)}</h2>
           </div>
           <button
             onClick={onClose}
@@ -884,7 +883,7 @@ function ResetPasswordModal({
           </button>
         </div>
         <p className="mb-3 text-sm font-bold text-ink/65">
-          Temporary password — they'll be asked to change it on first sign in.
+          {t("admin.tempPasswordNote")}
         </p>
         <div className="flex items-center gap-2 rounded-lg border border-ink/15 bg-smoke px-3 py-3 font-mono text-lg font-black">
           <span className="flex-1 break-all">{tempPassword}</span>
@@ -892,11 +891,11 @@ function ResetPasswordModal({
             onClick={copy}
             className="focus-ring inline-flex h-9 items-center gap-1.5 rounded-md bg-white px-3 text-xs font-black hover:bg-smoke"
           >
-            <Copy size={14} /> {copied ? "Copied" : "Copy"}
+            <Copy size={14} /> {copied ? t("admin.copied") : t("admin.copy")}
           </button>
         </div>
         <p className="mt-4 text-xs font-bold text-ink/55">
-          Send by text or in person. This password won't be shown again.
+          {t("admin.sharePasswordNote")}
         </p>
       </div>
     </div>
