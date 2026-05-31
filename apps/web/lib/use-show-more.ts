@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 /**
  * Client-side "show more" for long lists. Lists in this app are fetched whole
@@ -20,20 +20,30 @@ import { useMemo, useState } from "react";
  * more" past the first page (limit > length) and snapped the list back to the
  * first page, so the rest never opened.
  */
-export function useShowMore<T>(items: T[], step = 10) {
+export function useShowMore<T>(items: T[], step = 10, resetKey?: unknown) {
   const [limit, setLimit] = useState(step);
+
+  useEffect(() => {
+    setLimit(step);
+  }, [resetKey, step]);
 
   const visible = useMemo(() => items.slice(0, limit), [items, limit]);
   const hasMore = items.length > limit;
   const remaining = Math.max(0, items.length - limit);
+  const canShowLess = limit > step && items.length > step;
+  const visibleCount = visible.length;
 
   function showMore() {
     setLimit((n) => n + step);
+  }
+
+  function showLess() {
+    setLimit(step);
   }
 
   function showAll() {
     setLimit(items.length);
   }
 
-  return { visible, hasMore, remaining, showMore, showAll };
+  return { visible, hasMore, remaining, canShowLess, visibleCount, showMore, showLess, showAll };
 }

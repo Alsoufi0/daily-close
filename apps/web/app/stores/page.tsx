@@ -22,7 +22,7 @@ import { useSession } from "../../lib/use-session";
 import { isAccountOwner } from "../../lib/session-roles";
 import { useShowMore } from "../../lib/use-show-more";
 import { useLanguage } from "../../components/language-provider";
-import { ShowMoreButton } from "../../components/show-more-button";
+import { ListRevealControls } from "../../components/show-more-button";
 import { RequireAuth } from "../../components/require-auth";
 
 type View = "grid" | "list";
@@ -93,7 +93,7 @@ function StoresPageInner() {
     });
   }, [stores, query, filter]);
 
-  const { visible, hasMore, remaining, showMore } = useShowMore(filtered, 9);
+  const { visible, hasMore, remaining, canShowLess, showMore, showLess } = useShowMore(filtered, 9, `${query}:${filter}`);
 
   const counts = useMemo(
     () => ({
@@ -218,7 +218,15 @@ function StoresPageInner() {
                 <StoreCard key={s.id} store={s} index={i} t={t} />
               ))}
             </div>
-            <ShowMoreButton hasMore={hasMore} remaining={remaining} onShowMore={showMore} />
+            <ListRevealControls
+              hasMore={hasMore}
+              canShowLess={canShowLess}
+              remaining={remaining}
+              onShowMore={showMore}
+              onShowLess={showLess}
+              showMoreLabel={t("common.showMore")}
+              showLessLabel={t("common.showLess")}
+            />
           </>
         ) : (
           <>
@@ -227,7 +235,15 @@ function StoresPageInner() {
                 <StoreRow key={s.id} store={s} index={i} t={t} last={i === visible.length - 1} />
               ))}
             </div>
-            <ShowMoreButton hasMore={hasMore} remaining={remaining} onShowMore={showMore} />
+            <ListRevealControls
+              hasMore={hasMore}
+              canShowLess={canShowLess}
+              remaining={remaining}
+              onShowMore={showMore}
+              onShowLess={showLess}
+              showMoreLabel={t("common.showMore")}
+              showLessLabel={t("common.showLess")}
+            />
           </>
         )}
       </section>

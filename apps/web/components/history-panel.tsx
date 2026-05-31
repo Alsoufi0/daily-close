@@ -7,7 +7,7 @@ import { formatMoney, formatMoneyExact } from "@smokeshop/shared/utils/money";
 import { deleteDailyClose, getOwnerHistory, HistoryRow } from "../lib/api-client";
 import { useShowMore } from "../lib/use-show-more";
 import { EditCloseModal } from "./edit-close-modal";
-import { ShowMoreButton } from "./show-more-button";
+import { ListRevealControls } from "./show-more-button";
 import { useLanguage } from "./language-provider";
 
 const ranges = [7, 14, 30] as const;
@@ -38,7 +38,7 @@ export function HistoryPanel({ token }: { token?: string }) {
 
   const totalSales = rows.reduce((sum, r) => sum + r.totalSales, 0);
   const totalShortage = rows.reduce((sum, r) => sum + Math.min(r.difference, 0), 0);
-  const { visible, hasMore, remaining, showMore } = useShowMore(rows, 10);
+  const { visible, hasMore, remaining, canShowLess, showMore, showLess } = useShowMore(rows, 10, days);
 
   function requestDelete(row: HistoryRow) {
     if (!token) return;
@@ -210,7 +210,15 @@ export function HistoryPanel({ token }: { token?: string }) {
             ))}
           </div>
           <div className="p-3">
-            <ShowMoreButton hasMore={hasMore} remaining={remaining} onShowMore={showMore} />
+            <ListRevealControls
+              hasMore={hasMore}
+              canShowLess={canShowLess}
+              remaining={remaining}
+              onShowMore={showMore}
+              onShowLess={showLess}
+              showMoreLabel={t("common.showMore")}
+              showLessLabel={t("common.showLess")}
+            />
           </div>
           </>
         )}

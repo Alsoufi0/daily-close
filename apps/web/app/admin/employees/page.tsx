@@ -5,7 +5,7 @@ import { Copy, Key, Loader2, Plus, ShieldCheck, Store, Trash2, User, X } from "l
 import { useSession } from "../../../lib/use-session";
 import { useShowMore } from "../../../lib/use-show-more";
 import { useLanguage } from "../../../components/language-provider";
-import { ShowMoreButton } from "../../../components/show-more-button";
+import { ListRevealControls } from "../../../components/show-more-button";
 import {
   ApiError,
   assignEmployeeToStore,
@@ -97,7 +97,7 @@ export default function EmployeesAdminPage() {
     return Array.from(byUser.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [employees]);
 
-  const { visible, hasMore, remaining, showMore } = useShowMore(grouped, 10);
+  const { visible, hasMore, remaining, canShowLess, showMore, showLess } = useShowMore(grouped, 10);
 
   async function remove(employeeId: string, name: string) {
     if (!session.token) return;
@@ -559,7 +559,15 @@ export default function EmployeesAdminPage() {
             </div>
           ))
         )}
-        <ShowMoreButton hasMore={hasMore} remaining={remaining} onShowMore={showMore} />
+        <ListRevealControls
+          hasMore={hasMore}
+          canShowLess={canShowLess}
+          remaining={remaining}
+          onShowMore={showMore}
+          onShowLess={showLess}
+          showMoreLabel={t("common.showMore")}
+          showLessLabel={t("common.showLess")}
+        />
       </div>
 
       {resetResult ? (

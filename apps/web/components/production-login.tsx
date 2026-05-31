@@ -81,14 +81,6 @@ export function ProductionLogin() {
       <div className="mb-5 flex justify-end lg:hidden">
         <LanguageSelect />
       </div>
-      <div className="mb-5 lg:hidden">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/apple-touch-icon.png" alt="Daily Close" className="mb-3 h-14 w-14 rounded-2xl shadow-sm" />
-        <h1 className="text-2xl font-black leading-tight tracking-tight text-ink">
-          {t("home.mobileHero")}
-        </h1>
-      </div>
-
       <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-start lg:gap-10">
         <div className="hidden lg:block">
           <span className="inline-flex items-center gap-2 rounded-full bg-leaf/10 px-3 py-1 text-xs font-black uppercase tracking-wide text-leaf">

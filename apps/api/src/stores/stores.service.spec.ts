@@ -41,9 +41,17 @@ function makePrisma(extra: any = {}) {
   return prisma;
 }
 
+function makeSubscriptions(extra: any = {}) {
+  return {
+    ensureActiveForOwner: jest.fn().mockResolvedValue(undefined),
+    syncStoreQuantityForOwner: jest.fn().mockResolvedValue({ synced: false, quantity: 1 }),
+    ...extra
+  };
+}
+
 describe("StoresService", () => {
   it("createForOwner forbids non-owners", async () => {
-    const service = new StoresService(makePrisma());
+    const service = new StoresService(makePrisma(), makeSubscriptions() as any);
     await expect(
       service.createForOwner(employee, { storeName: "X" })
     ).rejects.toThrow(ForbiddenException);
@@ -51,7 +59,8 @@ describe("StoresService", () => {
 
   it("createForOwner persists with the owner's id and timezone default", async () => {
     const prisma = makePrisma();
-    const service = new StoresService(prisma);
+    const subscriptions = makeSubscriptions();
+    const service = new StoresService(prisma, subscriptions as any);
     await service.createForOwner(owner, { storeName: "Downtown" });
     expect(prisma.store.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
@@ -61,10 +70,26 @@ describe("StoresService", () => {
         closeTime: "23:30"
       })
     });
+    expect(subscriptions.syncStoreQuantityForOwner).toHaveBeenCalledWith("owner-1");
+  });
+
+  it("createForOwner rolls back the active store when billing quantity update fails", async () => {
+    const prisma = makePrisma();
+    const service = new StoresService(
+      prisma,
+      makeSubscriptions({ syncStoreQuantityForOwner: jest.fn().mockRejectedValue(new Error("stripe down")) }) as any
+    );
+    await expect(service.createForOwner(owner, { storeName: "Downtown" })).rejects.toThrow(
+      "billing could not be updated"
+    );
+    expect(prisma.store.update).toHaveBeenCalledWith({
+      where: { id: "store-new" },
+      data: { deletedAt: expect.any(Date) }
+    });
   });
 
   it("updateForOwner forbids non-owners", async () => {
-    const service = new StoresService(makePrisma());
+    const service = new StoresService(makePrisma(), makeSubscriptions() as any);
     await expect(
       service.updateForOwner(employee, "s-1", { storeName: "X" })
     ).rejects.toThrow(ForbiddenException);
@@ -72,7 +97,7 @@ describe("StoresService", () => {
 
   it("updateForOwner returns 404 when the store does not belong to the owner", async () => {
     const prisma = makePrisma({ findFirst: jest.fn().mockResolvedValue(null) });
-    const service = new StoresService(prisma);
+    const service = new StoresService(prisma, makeSubscriptions() as any);
     const { NotFoundException } = require("@nestjs/common");
     await expect(
       service.updateForOwner(owner, "s-x", { storeName: "X" })
@@ -81,7 +106,7 @@ describe("StoresService", () => {
 
   it("updateForOwner patches and writes an audit log", async () => {
     const prisma = makePrisma();
-    const service = new StoresService(prisma);
+    const service = new StoresService(prisma, makeSubscriptions() as any);
     await service.updateForOwner(owner, "s-1", { storeName: "Renamed", closeTime: "22:00" });
     expect(prisma.store.update).toHaveBeenCalledWith({
       where: { id: "s-1" },

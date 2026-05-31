@@ -2,12 +2,16 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { RequestUser } from "../auth/request-user";
 import { assertScopeAllowsStore, resolveAdminScope } from "../auth/admin-scope";
 import { PrismaService } from "../prisma/prisma.service";
+import { SubscriptionsService } from "../subscriptions/subscriptions.service";
 import { CreateStoreDto } from "./dto/create-store.dto";
 import { UpdateStoreDto } from "./dto/update-store.dto";
 
 @Injectable()
 export class StoresService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly subscriptions: SubscriptionsService
+  ) {}
 
   async listForUser(user: RequestUser) {
     if (user.role === "STORE_OWNER" && user.ownerId) {
@@ -59,6 +63,18 @@ export class StoresService {
     await this.prisma.auditLog.create({
       data: { userId: user.id, storeId, action: "store.deleted", metadata: {} }
     });
+    try {
+      await this.subscriptions.syncStoreQuantityForOwner(user.ownerId);
+    } catch (err) {
+      await this.prisma.auditLog.create({
+        data: {
+          userId: user.id,
+          storeId,
+          action: "billing.store_quantity_sync_needed",
+          metadata: { message: err instanceof Error ? err.message : String(err) }
+        }
+      });
+    }
     return { id: storeId, deleted: true };
   }
 
@@ -72,6 +88,7 @@ export class StoresService {
     // it lazily on first close (which would still work) would leave a
     // window where listing assignments for the owner misses the new
     // store. Atomic create avoids that.
+    await this.subscriptions.ensureActiveForOwner(user.ownerId);
     const store = await this.prisma.$transaction(async (tx) => {
       const created = await tx.store.create({
         data: {
@@ -88,6 +105,27 @@ export class StoresService {
       });
       return created;
     });
+    try {
+      await this.subscriptions.syncStoreQuantityForOwner(user.ownerId);
+    } catch (err) {
+      await this.prisma.store.update({
+        where: { id: store.id },
+        data: { deletedAt: new Date() }
+      });
+      await this.prisma.employee.updateMany({
+        where: { storeId: store.id, deletedAt: null },
+        data: { deletedAt: new Date() }
+      });
+      await this.prisma.auditLog.create({
+        data: {
+          userId: user.id,
+          storeId: store.id,
+          action: "billing.store_quantity_sync_failed",
+          metadata: { message: err instanceof Error ? err.message : String(err) }
+        }
+      });
+      throw new BadRequestException("Store was not added because billing could not be updated. Please try again.");
+    }
     return store;
   }
 

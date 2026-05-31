@@ -14,7 +14,7 @@ import {
 import { useSession } from "../../../lib/use-session";
 import { useShowMore } from "../../../lib/use-show-more";
 import { useLanguage } from "../../../components/language-provider";
-import { ShowMoreButton } from "../../../components/show-more-button";
+import { ListRevealControls } from "../../../components/show-more-button";
 import { RequireAuth } from "../../../components/require-auth";
 
 function todayMinus(days: number): string {
@@ -34,7 +34,7 @@ function ReceiptsView() {
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<ReceiptRow | null>(null);
   const [downloadingAll, setDownloadingAll] = useState(false);
-  const { visible, hasMore, remaining, showMore } = useShowMore(rows, 12);
+  const { visible, hasMore, remaining, canShowLess, showMore, showLess } = useShowMore(rows, 12, `${storeId}:${from}:${to}`);
 
   const stores = session.stores;
 
@@ -195,7 +195,15 @@ function ReceiptsView() {
             </button>
           ))}
           <div className="col-span-full">
-            <ShowMoreButton hasMore={hasMore} remaining={remaining} onShowMore={showMore} />
+            <ListRevealControls
+              hasMore={hasMore}
+              canShowLess={canShowLess}
+              remaining={remaining}
+              onShowMore={showMore}
+              onShowLess={showLess}
+              showMoreLabel={t("common.showMore")}
+              showLessLabel={t("common.showLess")}
+            />
           </div>
         </div>
       )}

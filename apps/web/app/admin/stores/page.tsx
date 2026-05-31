@@ -4,7 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import { Loader2, Pencil, Plus, Store, Trash2 } from "lucide-react";
 import { getBrowserTimeZone, getSupportedTimeZones } from "@smokeshop/shared/timezones";
 import { useLanguage } from "../../../components/language-provider";
+import { ListRevealControls } from "../../../components/show-more-button";
 import { useSession } from "../../../lib/use-session";
+import { useShowMore } from "../../../lib/use-show-more";
 import {
   ApiError,
   CreateStoreInput,
@@ -29,6 +31,7 @@ export default function StoresAdminPage() {
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState<StoreRowWithMeta | null>(null);
+  const { visible, hasMore, remaining, canShowLess, showMore, showLess } = useShowMore(stores, 10);
 
   useEffect(() => {
     if (!session.token) {
@@ -119,7 +122,8 @@ export default function StoresAdminPage() {
             <p className="text-base font-bold text-ink/65">{t("admin.noStoresAdd")}</p>
           </div>
         ) : (
-          stores.map((s) => (
+          <>
+          {visible.map((s) => (
             <div
               key={s.id}
               className="flex items-center gap-3 rounded-xl border border-ink/10 bg-white p-4 shadow-sm"
@@ -150,7 +154,17 @@ export default function StoresAdminPage() {
                 <Trash2 size={16} />
               </button>
             </div>
-          ))
+          ))}
+          <ListRevealControls
+            hasMore={hasMore}
+            canShowLess={canShowLess}
+            remaining={remaining}
+            onShowMore={showMore}
+            onShowLess={showLess}
+            showMoreLabel={t("common.showMore")}
+            showLessLabel={t("common.showLess")}
+          />
+          </>
         )}
       </div>
     </div>
