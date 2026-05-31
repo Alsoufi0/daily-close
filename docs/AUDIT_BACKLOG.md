@@ -219,7 +219,7 @@ The partner shipped multi-line expenses (categories + add-button + mobile parity
 | `NODE_ENV` on Render staging | `staging` (temporary — Sentry-required-in-prod gate is disabled until SENTRY_DSN is set) |
 | `SENTRY_DSN` on Render staging | ❌ not set — see "Pending dashboard work" below |
 | `OCR_SPACE_API_KEY` on Render staging | ❌ not set — using public "helloworld" demo key (~500/day, rate-limited) |
-| Mobile EAS staging build | ❌ not built yet (intentional — testing on Vercel first) |
+| Mobile EAS preview builds | ✅ 13 builds run as of 2026-05-31 — native rebuild complete (drawer nav + Admin Stores/Employees + Reports + Settings stack). Latest stable APK linked in `.claude-access.md` (gitignored). |
 
 ---
 
