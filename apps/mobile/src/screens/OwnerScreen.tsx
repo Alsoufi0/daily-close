@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Linking,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -9,20 +8,17 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import type { DrawerNavigationProp } from "@react-navigation/drawer";
 import { formatMoney, formatMoneyExact } from "@smokeshop/shared/utils/money";
 import type { OwnerDashboardSummary } from "@smokeshop/shared/types";
 import { getOwnerDashboard } from "../api";
 import { useSession } from "../use-session";
 import { AccountFooter } from "../components/AccountFooter";
-import { Banner, Button, Card, Header, Pill } from "../ui";
+import type { DrawerParamList } from "../navigation/AppDrawer";
+import { Banner, Button, Card, Pill } from "../ui";
 import { colors, font, radius, spacing } from "../theme";
 import { t } from "../i18n";
-
-const WEB_BASE = (process.env.EXPO_PUBLIC_APP_URL || "https://dailyclose.us").replace(/\/+$/, "");
-
-function openWeb(path: string) {
-  Linking.openURL(`${WEB_BASE}${path}`).catch(() => {});
-}
 
 const today = new Date().toLocaleDateString(undefined, {
   weekday: "long",
@@ -43,14 +39,9 @@ const EMPTY_SUMMARY: OwnerDashboardSummary = {
   alerts: []
 };
 
-export function OwnerScreen({
-  onSignOut,
-  onCloseStore
-}: {
-  onSignOut: () => void;
-  onCloseStore: () => void;
-}) {
+export function OwnerScreen({ onSignOut }: { onSignOut: () => void }) {
   const session = useSession();
+  const navigation = useNavigation<DrawerNavigationProp<DrawerParamList>>();
   const [summary, setSummary] = useState<OwnerDashboardSummary>(EMPTY_SUMMARY);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -93,16 +84,19 @@ export function OwnerScreen({
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <Header title={t("dashboard.title")} subtitle={today} />
       <ScrollView
         contentContainerStyle={s.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.leaf} />}
       >
-        {/* Welcome line — small, leaf-colored, like web's top row */}
+        {/* Welcome line + manual refresh button (drawer header gives us the
+            menu/title — this is just the in-content greeting). */}
         <View style={s.welcomeRow}>
-          <Text style={s.welcome} numberOfLines={1}>
-            {t("dashboard.welcome")} {ownerName}
-          </Text>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={s.welcome} numberOfLines={1}>
+              {t("dashboard.welcome")} {ownerName}
+            </Text>
+            <Text style={s.todayLabel}>{today}</Text>
+          </View>
           <TouchableOpacity
             onPress={onRefresh}
             disabled={refreshing}
@@ -113,24 +107,8 @@ export function OwnerScreen({
           </TouchableOpacity>
         </View>
 
-        {/* Primary CTA — owner can close a store from their phone too */}
-        <Button title="Close a store" icon="🧾" onPress={onCloseStore} />
-
-        {/* Secondary navigation — open the web for things mobile doesn't natively cover yet */}
-        <View style={s.navRow}>
-          <TouchableOpacity onPress={() => openWeb("/stores")} style={s.navTile}>
-            <Text style={s.navIcon}>🏪</Text>
-            <Text style={s.navLabel}>All stores</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => openWeb("/admin/stores")} style={s.navTile}>
-            <Text style={s.navIcon}>⚙️</Text>
-            <Text style={s.navLabel}>Admin</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => openWeb("/owner/receipts")} style={s.navTile}>
-            <Text style={s.navIcon}>📄</Text>
-            <Text style={s.navLabel}>Reports</Text>
-          </TouchableOpacity>
-        </View>
+        {/* Primary CTA — anyone (owner or employee) can close a store */}
+        <Button title="Close a store" icon="🧾" onPress={() => navigation.navigate("CloseStore")} />
 
         {loading && !summary.totalStores ? (
           <View style={{ paddingVertical: spacing.xl, alignItems: "center" }}>
@@ -281,10 +259,10 @@ export function OwnerScreen({
         </ScrollView>
 
         {moreStores > 0 ? (
-          <TouchableOpacity onPress={() => openWeb("/stores")} style={s.viewAllRow}>
+          <TouchableOpacity onPress={() => navigation.navigate("AllStores")} style={s.viewAllRow}>
             <View>
               <Text style={s.viewAllText}>View all {summary.totalStores} stores</Text>
-              <Text style={s.viewAllHint}>Opens in browser · or swipe cards →</Text>
+              <Text style={s.viewAllHint}>Search · filter · per-store details</Text>
             </View>
             <Text style={s.viewAllArrow}>→</Text>
           </TouchableOpacity>
@@ -355,22 +333,15 @@ const STORE_CARD_WIDTH = 300;
 
 const s = StyleSheet.create({
   content: { padding: spacing.lg, gap: spacing.md, paddingBottom: 40 },
-  welcomeRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  welcome: { color: colors.leaf, fontWeight: font.black, fontSize: 12, textTransform: "uppercase", letterSpacing: 0.6, flex: 1, minWidth: 0 },
+  welcomeRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  welcome: { color: colors.leaf, fontWeight: font.black, fontSize: 12, textTransform: "uppercase", letterSpacing: 0.6 },
+  todayLabel: { color: colors.inkSoft, fontWeight: font.bold, fontSize: 13, marginTop: 2 },
   refreshBtn: {
-    width: 36, height: 36, borderRadius: radius.md,
+    width: 40, height: 40, borderRadius: radius.md,
     backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border,
     alignItems: "center", justifyContent: "center"
   },
   refreshIcon: { color: colors.ink, fontWeight: font.black, fontSize: 20, marginTop: -2 },
-  navRow: { flexDirection: "row", gap: spacing.sm },
-  navTile: {
-    flex: 1, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border,
-    borderRadius: radius.md, paddingVertical: spacing.md, paddingHorizontal: spacing.sm,
-    alignItems: "center", gap: 4
-  },
-  navIcon: { fontSize: 20 },
-  navLabel: { color: colors.ink, fontWeight: font.black, fontSize: 12, textAlign: "center" },
   heroCard: { gap: spacing.md, paddingVertical: spacing.lg },
   heroTop: { flexDirection: "row", alignItems: "flex-start", gap: spacing.md },
   heroKicker: { color: colors.inkMuted, fontWeight: font.black, fontSize: 11, textTransform: "uppercase", letterSpacing: 0.6 },

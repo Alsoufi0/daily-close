@@ -23,7 +23,7 @@ import { AccountFooter } from "../components/AccountFooter";
 import { OfflineBanner } from "../components/OfflineBanner";
 import { uploadMobilePosReport } from "../upload-pos-report";
 import { useSession } from "../use-session";
-import { Banner, Button, Card, Header, MetricCard, MoneyInput, StepProgress } from "../ui";
+import { Banner, Button, Card, MetricCard, MoneyInput, StepProgress } from "../ui";
 import { colors, font, radius, spacing } from "../theme";
 import { t } from "../i18n";
 
@@ -85,13 +85,7 @@ const initialReport: ParsedPOSReport = {
   confidence: 0
 };
 
-export function EmployeeScreen({
-  onSignOut,
-  onBackToDashboard
-}: {
-  onSignOut: () => void;
-  onBackToDashboard?: () => void;
-}) {
+export function EmployeeScreen({ onSignOut }: { onSignOut: () => void }) {
   const session = useSession();
   const [step, setStep] = useState<Step>("start");
   const [loading, setLoading] = useState(false);
@@ -355,11 +349,17 @@ export function EmployeeScreen({
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      <Header
-        title={`${t("closing.closeStore")} ${activeStore.storeName}`}
-        subtitle={session.profile?.name ? `${t("closing.headerHi")} ${session.profile.name}` : t("closing.headerStep")}
-        onBack={onBackToDashboard}
-      />
+      {/* Drawer's own header gives us title + hamburger; show context here */}
+      <View style={s.contextBar}>
+        <Text style={s.contextTitle} numberOfLines={1}>
+          {t("closing.closeStore")} {activeStore.storeName}
+        </Text>
+        {session.profile?.name ? (
+          <Text style={s.contextSubtitle}>
+            {t("closing.headerHi")} {session.profile.name}
+          </Text>
+        ) : null}
+      </View>
       <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
         <OfflineBanner />
         {/* Multi-store picker — hidden when the user has only one store so
@@ -646,6 +646,9 @@ export function EmployeeScreen({
 
 const s = StyleSheet.create({
   content: { padding: spacing.lg, gap: spacing.md, paddingBottom: 40 },
+  contextBar: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border },
+  contextTitle: { color: colors.ink, fontWeight: font.black, fontSize: 16 },
+  contextSubtitle: { color: colors.inkSoft, fontWeight: font.bold, fontSize: 12, marginTop: 2 },
   title: { color: colors.ink, fontWeight: font.black, fontSize: 20 },
   helper: { color: colors.inkSoft, fontWeight: font.bold, fontSize: 13, textAlign: "center" },
   uploadTile: {

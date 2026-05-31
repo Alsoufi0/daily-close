@@ -9,6 +9,11 @@
 // Defining our own entry here and pointing `"main"` in package.json at it
 // gives the path a stable anchor (`./App` relative to apps/mobile/) that works
 // the same whether node_modules is hoisted or local.
+//
+// IMPORTANT: react-native-gesture-handler must be imported BEFORE anything
+// else (required by @react-navigation/drawer). See:
+// https://reactnavigation.org/docs/drawer-navigator/#installation
+import "react-native-gesture-handler";
 import { registerRootComponent } from "expo";
 import App from "./App";
 

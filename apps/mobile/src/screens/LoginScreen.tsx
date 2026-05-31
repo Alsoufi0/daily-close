@@ -14,7 +14,7 @@ const FEATURES: Array<{ icon: string; titleKey: string; bodyKey: string }> = [
   { icon: "🛡", titleKey: "mobile.feature3Title", bodyKey: "mobile.feature3Body" }
 ];
 
-export function LoginScreen({ onOpen }: { onOpen: (s: "owner" | "employee") => void }) {
+export function LoginScreen({ onOpen }: { onOpen: () => void }) {
   const [mode, setMode] = useState<"intro" | "signin">(supabase ? "intro" : "intro");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -35,8 +35,9 @@ export function LoginScreen({ onOpen }: { onOpen: (s: "owner" | "employee") => v
       return;
     }
     await saveToken(data.session.access_token);
-    // Treat owners and employees the same on mobile - dashboard handles role.
-    onOpen("owner");
+    // Auth gate in App.tsx will re-render via Supabase's onAuthStateChange
+    // listener; onOpen is the explicit "I'm in" signal for any wrap logic.
+    onOpen();
   }
 
   if (mode === "signin") {
