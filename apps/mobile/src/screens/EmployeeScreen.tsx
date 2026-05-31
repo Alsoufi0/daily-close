@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -142,23 +143,26 @@ export function EmployeeScreen({ onSignOut }: { onSignOut: () => void }) {
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
   const [storePickerOpen, setStorePickerOpen] = useState(false);
 
-  // Hydrate the saved selection on mount. If it's not in the current
-  // stores list (employee was unassigned from that store), fall back to
-  // the first available store.
-  useEffect(() => {
-    let cancelled = false;
-    loadSelectedStoreId().then((saved) => {
-      if (cancelled) return;
-      if (saved && session.stores.some((s) => s.id === saved)) {
-        setSelectedStoreId(saved);
-      } else if (session.stores[0]) {
-        setSelectedStoreId(session.stores[0].id);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [session.stores]);
+  // Hydrate the saved selection on mount AND every time the screen comes
+  // into focus — so when AllStoresScreen's "Close this store" button
+  // saves a new selection and navigates here, we pick it up even though
+  // the drawer keeps EmployeeScreen mounted.
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      loadSelectedStoreId().then((saved) => {
+        if (cancelled) return;
+        if (saved && session.stores.some((s) => s.id === saved)) {
+          setSelectedStoreId(saved);
+        } else if (session.stores[0]) {
+          setSelectedStoreId(session.stores[0].id);
+        }
+      });
+      return () => {
+        cancelled = true;
+      };
+    }, [session.stores])
+  );
 
   const activeStore =
     session.stores.find((s) => s.id === selectedStoreId) ??

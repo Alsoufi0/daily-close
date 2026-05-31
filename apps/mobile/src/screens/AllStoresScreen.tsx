@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -9,9 +10,13 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import type { DrawerNavigationProp } from "@react-navigation/drawer";
 import { formatMoney, formatMoneyExact } from "@smokeshop/shared/utils/money";
 import type { OwnerDashboardSummary } from "@smokeshop/shared/types";
 import { getOwnerDashboard } from "../api";
+import { saveSelectedStoreId } from "../persistence";
+import type { DrawerParamList } from "../navigation/AppDrawer";
 import { Banner, Card, Pill } from "../ui";
 import { Skeleton, SkeletonCard } from "../ui/Skeleton";
 import { t } from "../i18n";
@@ -29,12 +34,20 @@ function getFilters(): Array<{ key: Filter; label: string }> {
 }
 
 export function AllStoresScreen() {
+  const navigation = useNavigation<DrawerNavigationProp<DrawerParamList>>();
   const [summary, setSummary] = useState<OwnerDashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
+
+  // Persist the selected store + jump to the close-a-store flow. EmployeeScreen
+  // reads the saved selection on mount so it picks up the right store.
+  async function startCloseFor(storeId: string) {
+    await saveSelectedStoreId(storeId);
+    navigation.navigate("CloseStore");
+  }
 
   const load = useCallback(async (initial: boolean) => {
     if (initial) setLoading(true);
@@ -175,6 +188,18 @@ export function AllStoresScreen() {
                   ? t("dashboard.closeNotSubmitted")
                   : `${t("dashboard.closesAt")} ${store.closeTime ?? "23:30"}`}
             </Text>
+
+            {/* Per-store CTA — tap to start the close for THIS store. Hidden
+                when the store is already closed for today. */}
+            {!store.closedToday ? (
+              <Pressable
+                onPress={() => startCloseFor(store.id)}
+                style={({ pressed }) => [s.closeBtn, pressed && { opacity: 0.85 }]}
+                accessibilityLabel={`${t("nav.closeStore")} — ${store.storeName}`}
+              >
+                <Text style={s.closeBtnText}>🧾  {t("nav.closeStore")}</Text>
+              </Pressable>
+            ) : null}
           </Card>
         );
       })}
@@ -215,6 +240,8 @@ const s = StyleSheet.create({
   miniLabel: { color: colors.inkMuted, fontWeight: font.black, fontSize: 10, textTransform: "uppercase", letterSpacing: 0.4 },
   miniValue: { color: colors.ink, fontWeight: font.black, fontSize: 14, marginTop: 2 },
   closeTime: { color: colors.inkSoft, fontWeight: font.bold, fontSize: 12 },
+  closeBtn: { backgroundColor: colors.leaf, paddingVertical: 10, borderRadius: radius.md, alignItems: "center", marginTop: spacing.xs },
+  closeBtnText: { color: colors.white, fontWeight: font.black, fontSize: 14 },
   emptyTitle: { color: colors.ink, fontWeight: font.black, fontSize: 16 },
   emptyBody: { color: colors.inkSoft, fontWeight: font.bold, fontSize: 13, marginTop: 4, textAlign: "center" }
 });

@@ -207,7 +207,17 @@ export const translations: Record<Language, Dictionary> = {
     "reports.uploaded": "Uploaded",
     "stores.noMatchSearch": "Nothing matches \"{query}\".",
     "stores.tryFilter": "Try a different filter.",
-    "stores.closedToday": "Closed today"
+    "stores.closedToday": "Closed today",
+    "nav.dashboard": "Dashboard",
+    "nav.closeStore": "Close a store",
+    "nav.allStores": "All stores",
+    "nav.adminStores": "Admin: Stores",
+    "nav.adminEmployees": "Admin: Employees",
+    "nav.reports": "Reports",
+    "nav.settings": "Settings",
+    "nav.mobile": "Mobile",
+    "auth.signOutTitle": "Sign out?",
+    "auth.signOutBody": "You'll need to enter your email and password again."
   },
   ar: {
     "common.export": "تصدير",
@@ -394,7 +404,17 @@ export const translations: Record<Language, Dictionary> = {
     "reports.uploaded": "\u062a\u0645 \u0627\u0644\u0631\u0641\u0639",
     "stores.noMatchSearch": "\u0644\u0627 \u062a\u0648\u062c\u062f \u0646\u062a\u0627\u0626\u062c \u0644\u0640 \"{query}\".",
     "stores.tryFilter": "\u062c\u0631\u0651\u0628 \u0641\u0644\u062a\u0631\u0627\u064b \u0645\u062e\u062a\u0644\u0641\u0627\u064b.",
-    "stores.closedToday": "\u0623\u064f\u063a\u0644\u0642 \u0627\u0644\u064a\u0648\u0645"
+    "stores.closedToday": "\u0623\u064f\u063a\u0644\u0642 \u0627\u0644\u064a\u0648\u0645",
+    "nav.dashboard": "\u0644\u0648\u062d\u0629 \u0627\u0644\u062a\u062d\u0643\u0645",
+    "nav.closeStore": "\u0625\u063a\u0644\u0627\u0642 \u0645\u062a\u062c\u0631",
+    "nav.allStores": "\u0643\u0644 \u0627\u0644\u0645\u062a\u0627\u062c\u0631",
+    "nav.adminStores": "\u0625\u062f\u0627\u0631\u0629: \u0627\u0644\u0645\u062a\u0627\u062c\u0631",
+    "nav.adminEmployees": "\u0625\u062f\u0627\u0631\u0629: \u0627\u0644\u0645\u0648\u0638\u0641\u0648\u0646",
+    "nav.reports": "\u0627\u0644\u062a\u0642\u0627\u0631\u064a\u0631",
+    "nav.settings": "\u0627\u0644\u0625\u0639\u062f\u0627\u062f\u0627\u062a",
+    "nav.mobile": "\u0627\u0644\u062c\u0648\u0627\u0644",
+    "auth.signOutTitle": "\u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u062e\u0631\u0648\u062c\u061f",
+    "auth.signOutBody": "\u0633\u062a\u062d\u062a\u0627\u062c \u0625\u0644\u0649 \u0625\u062f\u062e\u0627\u0644 \u0628\u0631\u064a\u062f\u0643 \u0627\u0644\u0625\u0644\u0643\u062a\u0631\u0648\u0646\u064a \u0648\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0645\u0631\u0629 \u0623\u062e\u0631\u0649."
   },
   es: {
     "common.export": "Exportar",
@@ -581,7 +601,17 @@ export const translations: Record<Language, Dictionary> = {
     "reports.uploaded": "Subido",
     "stores.noMatchSearch": "Nada coincide con \"{query}\".",
     "stores.tryFilter": "Prueba otro filtro.",
-    "stores.closedToday": "Cerrada hoy"
+    "stores.closedToday": "Cerrada hoy",
+    "nav.dashboard": "Panel",
+    "nav.closeStore": "Cerrar tienda",
+    "nav.allStores": "Todas las tiendas",
+    "nav.adminStores": "Admin: Tiendas",
+    "nav.adminEmployees": "Admin: Empleados",
+    "nav.reports": "Reportes",
+    "nav.settings": "Ajustes",
+    "nav.mobile": "Móvil",
+    "auth.signOutTitle": "¿Cerrar sesión?",
+    "auth.signOutBody": "Tendrás que ingresar tu correo y contraseña otra vez."
   },
   hi: {
     "common.export": "एक्सपोर्ट",
@@ -768,7 +798,17 @@ export const translations: Record<Language, Dictionary> = {
     "reports.uploaded": "\u0905\u092a\u0932\u094b\u0921 \u0939\u0941\u0906",
     "stores.noMatchSearch": "\"{query}\" \u0938\u0947 \u0915\u0941\u091b \u092d\u0940 \u092e\u0947\u0932 \u0928\u0939\u0940\u0902 \u0916\u093e\u0924\u093e\u0964",
     "stores.tryFilter": "\u0905\u0932\u0917 \u092b\u093c\u093f\u0932\u094d\u091f\u0930 \u0906\u091c\u093c\u092e\u093e\u090f\u0902\u0964",
-    "stores.closedToday": "\u0906\u091c \u092c\u0902\u0926 \u0939\u0941\u0906"
+    "stores.closedToday": "\u0906\u091c \u092c\u0902\u0926 \u0939\u0941\u0906",
+    "nav.dashboard": "\u0921\u0948\u0936\u092c\u094b\u0930\u094d\u0921",
+    "nav.closeStore": "\u0938\u094d\u091f\u094b\u0930 \u0915\u094d\u0932\u094b\u091c\u093c \u0915\u0930\u0947\u0902",
+    "nav.allStores": "\u0938\u092d\u0940 \u0938\u094d\u091f\u094b\u0930",
+    "nav.adminStores": "\u090f\u0921\u092e\u093f\u0928: \u0938\u094d\u091f\u094b\u0930",
+    "nav.adminEmployees": "\u090f\u0921\u092e\u093f\u0928: \u0915\u0930\u094d\u092e\u091a\u093e\u0930\u0940",
+    "nav.reports": "\u0930\u093f\u092a\u094b\u0930\u094d\u091f",
+    "nav.settings": "\u0938\u0947\u091f\u093f\u0902\u0917\u094d\u0938",
+    "nav.mobile": "\u092e\u094b\u092c\u093e\u0907\u0932",
+    "auth.signOutTitle": "\u0938\u093e\u0907\u0928 \u0906\u0909\u091f \u0915\u0930\u0947\u0902?",
+    "auth.signOutBody": "\u0906\u092a\u0915\u094b \u0905\u092a\u0928\u093e \u0908\u092e\u0947\u0932 \u0914\u0930 \u092a\u093e\u0938\u0935\u0930\u094d\u0921 \u092b\u093f\u0930 \u0938\u0947 \u0921\u093e\u0932\u0928\u093e \u0939\u094b\u0917\u093e\u0964"
   }
 };
 

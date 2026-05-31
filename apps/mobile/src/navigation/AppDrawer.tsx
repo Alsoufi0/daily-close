@@ -12,6 +12,7 @@ import { SettingsScreen } from "../screens/SettingsScreen";
 import { ChangePasswordScreen } from "../screens/settings/ChangePasswordScreen";
 import { WhatsAppSettingsScreen } from "../screens/settings/WhatsAppSettingsScreen";
 import { LanguageScreen } from "../screens/settings/LanguageScreen";
+import { getMobileLanguage, t } from "../i18n";
 import { colors, font, radius, spacing } from "../theme";
 
 export type DrawerParamList = {
@@ -48,27 +49,33 @@ function SettingsStackScreen() {
         component={SettingsScreen}
         options={{ headerShown: false }}
       />
-      <SettingsStack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ title: "Change password" }} />
-      <SettingsStack.Screen name="WhatsAppSettings" component={WhatsAppSettingsScreen} options={{ title: "WhatsApp alerts" }} />
-      <SettingsStack.Screen name="Language" component={LanguageScreen} options={{ title: "Language" }} />
+      <SettingsStack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ title: t("account.changePassword") }} />
+      <SettingsStack.Screen name="WhatsAppSettings" component={WhatsAppSettingsScreen} options={{ title: t("settings.whatsappTitle") }} />
+      <SettingsStack.Screen name="Language" component={LanguageScreen} options={{ title: t("common.language") }} />
     </SettingsStack.Navigator>
   );
 }
 
 export function AppDrawer({ onSignOut }: { onSignOut: () => Promise<void> | void }) {
+  // Re-key on language so React Navigation re-reads the screen options
+  // (which are evaluated at register time, not on each render). Without
+  // this, switching language doesn't update drawer labels until app restart.
+  const langKey = getMobileLanguage();
+
   function confirmSignOut() {
     Alert.alert(
-      "Sign out?",
-      "You'll need to enter your email and password again.",
+      t("auth.signOutTitle"),
+      t("auth.signOutBody"),
       [
-        { text: "Cancel", style: "cancel" },
-        { text: "Sign out", style: "destructive", onPress: () => onSignOut() }
+        { text: t("common.cancel"), style: "cancel" },
+        { text: t("auth.signOut"), style: "destructive", onPress: () => onSignOut() }
       ]
     );
   }
 
   return (
     <Drawer.Navigator
+      key={langKey}
       initialRouteName="Dashboard"
       screenOptions={{
         headerStyle: { backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border },
@@ -83,14 +90,14 @@ export function AppDrawer({ onSignOut }: { onSignOut: () => Promise<void> | void
     >
       <Drawer.Screen
         name="Dashboard"
-        options={{ title: "Dashboard", drawerLabel: "🏠  Dashboard" }}
+        options={{ title: t("dashboard.title"), drawerLabel: `🏠  ${t("nav.dashboard")}` }}
       >
         {() => <OwnerScreen onSignOut={onSignOut} />}
       </Drawer.Screen>
 
       <Drawer.Screen
         name="CloseStore"
-        options={{ title: "Close a store", drawerLabel: "🧾  Close a store" }}
+        options={{ title: t("nav.closeStore"), drawerLabel: `🧾  ${t("nav.closeStore")}` }}
       >
         {() => <EmployeeScreen onSignOut={onSignOut} />}
       </Drawer.Screen>
@@ -98,31 +105,31 @@ export function AppDrawer({ onSignOut }: { onSignOut: () => Promise<void> | void
       <Drawer.Screen
         name="AllStores"
         component={AllStoresScreen}
-        options={{ title: "All stores", drawerLabel: "🏪  All stores" }}
+        options={{ title: t("nav.allStores"), drawerLabel: `🏪  ${t("nav.allStores")}` }}
       />
 
       <Drawer.Screen
         name="AdminStores"
         component={AdminStoresScreen}
-        options={{ title: "Admin · Stores", drawerLabel: "⚙️  Admin: Stores" }}
+        options={{ title: t("nav.adminStores"), drawerLabel: `⚙️  ${t("nav.adminStores")}` }}
       />
 
       <Drawer.Screen
         name="AdminEmployees"
         component={AdminEmployeesScreen}
-        options={{ title: "Admin · Employees", drawerLabel: "👥  Admin: Employees" }}
+        options={{ title: t("nav.adminEmployees"), drawerLabel: `👥  ${t("nav.adminEmployees")}` }}
       />
 
       <Drawer.Screen
         name="Reports"
         component={ReportsScreen}
-        options={{ title: "Reports", drawerLabel: "📄  Reports" }}
+        options={{ title: t("nav.reports"), drawerLabel: `📄  ${t("nav.reports")}` }}
       />
 
       <Drawer.Screen
         name="SettingsRoot"
         component={SettingsStackScreen}
-        options={{ title: "Settings", drawerLabel: "🔧  Settings" }}
+        options={{ title: t("nav.settings"), drawerLabel: `🔧  ${t("nav.settings")}` }}
       />
     </Drawer.Navigator>
   );
@@ -136,13 +143,13 @@ function CustomDrawerContent({
     <DrawerContentScrollView {...rest} contentContainerStyle={{ flex: 1 }}>
       <View style={s.header}>
         <Text style={s.headerTitle}>Daily Close</Text>
-        <Text style={s.headerSubtitle}>Mobile</Text>
+        <Text style={s.headerSubtitle}>{t("nav.mobile")}</Text>
       </View>
       <View style={{ flex: 1 }}>
         <DrawerItemList {...rest} />
       </View>
       <TouchableOpacity onPress={onSignOut} style={s.signOutBtn}>
-        <Text style={s.signOutText}>Sign out</Text>
+        <Text style={s.signOutText}>{t("auth.signOut")}</Text>
       </TouchableOpacity>
     </DrawerContentScrollView>
   );
