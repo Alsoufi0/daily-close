@@ -56,6 +56,10 @@ services:
         sync: false # also verifies the inbound /sms/webhook signature
       - key: TWILIO_MESSAGING_SERVICE_SID
         sync: false # MG... — preferred; handles STOP/HELP + sender pool
+      # Set to "whatsapp" to route these same employee invite/report messages
+      # through Twilio WhatsApp while SMS toll-free verification is pending.
+      - key: TWILIO_DELIVERY_CHANNEL
+        sync: false
       - key: TWILIO_FROM_NUMBER
         sync: false # +1... — fallback only if no Messaging Service
       # OCR — Google Vision preferred when both keys are present

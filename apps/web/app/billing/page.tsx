@@ -13,6 +13,10 @@ const demoSub: SubscriptionView = {
   trialEndsAt: new Date(Date.now() + 12 * 86_400_000).toISOString(),
   daysLeftInTrial: 12,
   active: true,
+  activeStoreCount: 1,
+  billedStoreQuantity: 1,
+  unitAmountCents: 4999,
+  priceId: null,
   checkoutUrl: null,
   portalUrl: null
 };
@@ -75,6 +79,7 @@ function BillingPageInner() {
 
   const trialStatus = sub.status === "TRIALING";
   const expired = !sub.active;
+  const unitPrice = `$${(sub.unitAmountCents / 100).toFixed(2)}`;
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6">
@@ -143,6 +148,15 @@ function BillingPageInner() {
         </div>
       </div>
 
+      <section className="mt-4 grid gap-3 sm:grid-cols-3">
+        <BillingStat label="Active stores" value={String(sub.activeStoreCount)} />
+        <BillingStat label="Stores billed" value={String(sub.billedStoreQuantity)} />
+        <BillingStat label="Price per store" value={unitPrice} />
+      </section>
+      <p className="mt-3 rounded-xl border border-leaf/20 bg-leaf/5 p-3 text-sm font-bold text-ink/70">
+        Adding a store asks for confirmation and updates your monthly bill automatically.
+      </p>
+
       <section className="mt-8 grid gap-3 sm:grid-cols-3">
         <FeatureCard icon={<TimerReset size={20} />} title="Daily close in 2 min" body="Employees finish closing from their phone." />
         <FeatureCard icon={<CheckCircle2 size={20} />} title="Multi-store dashboard" body="See sales, missing cash, alerts — all in one screen." />
@@ -154,6 +168,15 @@ function BillingPageInner() {
         <Link href="/privacy" className="underline">Privacy</Link>
       </p>
     </main>
+  );
+}
+
+function BillingStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-ink/10 bg-white p-4 shadow-sm">
+      <p className="text-xs font-black uppercase tracking-wide text-ink/55">{label}</p>
+      <p className="mt-1 text-2xl font-black text-ink">{value}</p>
+    </div>
   );
 }
 

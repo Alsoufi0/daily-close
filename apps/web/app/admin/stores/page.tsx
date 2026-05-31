@@ -197,6 +197,10 @@ function StoreForm({
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!token) return;
+    if (mode === "create") {
+      const confirmed = window.confirm(t("admin.addStoreBillingConfirm"));
+      if (!confirmed) return;
+    }
     setSubmitting(true);
     setError(null);
     try {
