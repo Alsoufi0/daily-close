@@ -2,8 +2,11 @@
   "expo": {
     "name": "Daily Close",
     "slug": "daily-close",
+    "owner": "daily-closes-team",
     "version": "0.1.0",
-    "runtimeVersion": { "policy": "appVersion" },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "scheme": "dailyclose",
@@ -30,12 +33,28 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1f7a4d"
       },
-      "permissions": ["CAMERA", "READ_MEDIA_IMAGES"]
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
-    "plugins": ["expo-image-picker", "expo-secure-store", "@sentry/react-native/expo"],
+    "plugins": [
+      "expo-image-picker",
+      "expo-secure-store",
+      "@sentry/react-native/expo",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "kotlinVersion": "1.9.25"
+          }
+        }
+      ]
+    ],
     "extra": {
       "eas": {
-        "projectId": "replace-after-eas-init"
+        "projectId": "3bf4a9e8-3ec5-42c7-b7d1-71b37185f4b4"
       }
     }
   }
