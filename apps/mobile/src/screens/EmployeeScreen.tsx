@@ -85,7 +85,7 @@ const initialReport: ParsedPOSReport = {
   confidence: 0
 };
 
-export function EmployeeScreen({ onBack }: { onBack: () => void }) {
+export function EmployeeScreen({ onSignOut }: { onSignOut: () => void }) {
   const session = useSession();
   const [step, setStep] = useState<Step>("start");
   const [loading, setLoading] = useState(false);
@@ -352,7 +352,6 @@ export function EmployeeScreen({ onBack }: { onBack: () => void }) {
       <Header
         title={`${t("closing.closeStore")} ${activeStore.storeName}`}
         subtitle={session.profile?.name ? `${t("closing.headerHi")} ${session.profile.name}` : t("closing.headerStep")}
-        onBack={onBack}
       />
       <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
         <OfflineBanner />
@@ -594,7 +593,7 @@ export function EmployeeScreen({ onBack }: { onBack: () => void }) {
             </View>
           ) : null}
         </Card>
-        <AccountFooter role="employee" onSignOut={onBack} />
+        <AccountFooter role="employee" onSignOut={onSignOut} />
       </ScrollView>
 
       {/* Store picker sheet — surfaces when the user taps the

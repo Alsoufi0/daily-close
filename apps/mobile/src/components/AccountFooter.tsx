@@ -62,6 +62,10 @@ export function AccountFooter({
         </TouchableOpacity>
       ) : null}
 
+      <TouchableOpacity onPress={onSignOut} style={s.signOutRow}>
+        <Text style={s.signOutLabel}>Sign out</Text>
+      </TouchableOpacity>
+
       <TouchableOpacity
         onPress={confirmDelete}
         disabled={deleting}
@@ -88,6 +92,20 @@ const s = StyleSheet.create({
     backgroundColor: colors.smoke
   },
   linkLabel: {
+    color: colors.ink,
+    fontWeight: font.black,
+    fontSize: 14,
+    textAlign: "center"
+  },
+  signOutRow: {
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 2,
+    borderColor: colors.ink,
+    backgroundColor: colors.white
+  },
+  signOutLabel: {
     color: colors.ink,
     fontWeight: font.black,
     fontSize: 14,

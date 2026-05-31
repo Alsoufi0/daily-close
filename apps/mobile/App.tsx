@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { AppState, AppStateStatus, SafeAreaView, StyleSheet } from "react-native";
+import { AppState, AppStateStatus, StyleSheet } from "react-native";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import * as Sentry from "@sentry/react-native";
 import { LoginScreen } from "./src/screens/LoginScreen";
@@ -68,12 +69,14 @@ function App() {
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <StatusBar style="dark" />
-      {screen === "login" ? <LoginScreen onOpen={setScreen} /> : null}
-      {screen === "owner" ? <OwnerScreen onBack={signOut} /> : null}
-      {screen === "employee" ? <EmployeeScreen onBack={signOut} /> : null}
-    </SafeAreaView>
+    <SafeAreaProvider>
+      <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
+        <StatusBar style="dark" />
+        {screen === "login" ? <LoginScreen onOpen={setScreen} /> : null}
+        {screen === "owner" ? <OwnerScreen onSignOut={signOut} /> : null}
+        {screen === "employee" ? <EmployeeScreen onSignOut={signOut} /> : null}
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 

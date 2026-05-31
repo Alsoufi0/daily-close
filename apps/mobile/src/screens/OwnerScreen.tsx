@@ -1,11 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View
+} from "react-native";
 import { formatMoney, formatMoneyExact } from "@smokeshop/shared/utils/money";
 import type { OwnerDashboardSummary } from "@smokeshop/shared/types";
 import { getOwnerDashboard } from "../api";
 import { useSession } from "../use-session";
 import { AccountFooter } from "../components/AccountFooter";
-import { Banner, Card, Header, MetricCard, Pill } from "../ui";
+import { Banner, Card, Header, Pill } from "../ui";
 import { colors, font, radius, spacing } from "../theme";
 import { t } from "../i18n";
 
@@ -28,31 +35,35 @@ const EMPTY_SUMMARY: OwnerDashboardSummary = {
   alerts: []
 };
 
-export function OwnerScreen({ onBack }: { onBack: () => void }) {
+export function OwnerScreen({ onSignOut }: { onSignOut: () => void }) {
   const session = useSession();
   const [summary, setSummary] = useState<OwnerDashboardSummary>(EMPTY_SUMMARY);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    getOwnerDashboard()
-      .then((data) => {
-        if (cancelled) return;
-        setSummary(data);
-        setError(null);
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setError(err?.message || "Could not load dashboard.");
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
+  const load = useCallback(async (initial: boolean) => {
+    if (initial) setLoading(true);
+    try {
+      const data = await getOwnerDashboard();
+      setSummary(data);
+      setError(null);
+    } catch (err: any) {
+      setError(err?.message || t("dashboard.loadFailed"));
+    } finally {
+      if (initial) setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    load(true);
+  }, [load]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await load(false);
+    setRefreshing(false);
+  }, [load]);
 
   const allClosed = summary.storesClosed === summary.totalStores;
   const shortage = summary.stores.find((s) => s.difference < 0);
@@ -61,23 +72,29 @@ export function OwnerScreen({ onBack }: { onBack: () => void }) {
     [summary.stores]
   );
 
-  return (
-    <View style={{ flex: 1 }}>
-      <Header title={t("dashboard.title")} subtitle={today} onBack={onBack} />
-      <ScrollView contentContainerStyle={s.content}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <Pill label={t("dashboard.livePill")} tone="good" />
-          <Text style={s.subhead}>
-            {session.profile?.name
-              ? `${t("dashboard.welcome")} ${session.profile.name}`
-              : `${t("dashboard.welcome")} ${t("dashboard.fallbackName")}`}
-          </Text>
-        </View>
+  const ownerName = session.profile?.name || t("dashboard.fallbackName");
+  const netColor = summary.totalNet < 0 ? colors.warning : colors.ink;
+  const visibleStores = summary.stores.slice(0, 3);
+  const moreStores = summary.stores.length > 3 ? summary.stores.length - 3 : 0;
 
-        {loading ? (
-          <View style={{ paddingVertical: spacing.lg, alignItems: "center" }}>
-            <ActivityIndicator />
-            <Text style={[s.subhead, { marginTop: spacing.sm }]}>{t("dashboard.loadingToday")}</Text>
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <Header title={t("dashboard.title")} subtitle={today} />
+      <ScrollView
+        contentContainerStyle={s.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.leaf} />}
+      >
+        {/* Welcome line — small, leaf-colored, like web's top row */}
+        <Text style={s.welcome}>
+          {t("dashboard.welcome")} {ownerName}
+        </Text>
+
+        {loading && !summary.totalStores ? (
+          <View style={{ paddingVertical: spacing.xl, alignItems: "center" }}>
+            <ActivityIndicator color={colors.leaf} />
+            <Text style={[s.welcome, { marginTop: spacing.sm, color: colors.inkSoft }]}>
+              {t("dashboard.loadingToday")}
+            </Text>
           </View>
         ) : null}
 
@@ -85,108 +102,271 @@ export function OwnerScreen({ onBack }: { onBack: () => void }) {
           <Banner tone="bad" title={t("dashboard.loadFailed")} body={error} />
         ) : null}
 
-        <View style={s.metricGrid}>
-          <MetricCard label={t("dashboard.salesToday")} value={formatMoney(summary.totalSales)} />
-          <MetricCard
-            label={t("dashboard.storesClosed")}
-            value={`${summary.storesClosed}/${summary.totalStores}`}
-            tone={allClosed ? "good" : "warn"}
-          />
-          <MetricCard
-            label={t("dashboard.missingCash")}
-            value={formatMoneyExact(summary.missingCash)}
-            tone={summary.missingCash < 0 ? "bad" : "good"}
-          />
-          <MetricCard
-            label={t("dashboard.needsAttention")}
-            value={String(summary.needsAttention)}
-            tone={summary.needsAttention === 0 ? "good" : "warn"}
-          />
-        </View>
+        {/* Hero: Net Profit headline + Gross/Expenses subtitle + Stores-closed ring */}
+        <Card style={s.heroCard}>
+          <View style={s.heroTop}>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={s.heroKicker}>{t("dashboard.netProfit")}</Text>
+              <Text style={[s.heroNet, { color: netColor }]} numberOfLines={1} adjustsFontSizeToFit>
+                {formatMoney(summary.totalNet)}
+              </Text>
+              <View style={s.heroSubRow}>
+                <Text style={s.heroSubItem}>
+                  <Text style={s.heroSubLabel}>{t("dashboard.grossSales")} </Text>
+                  <Text style={s.heroSubValue}>{formatMoney(summary.totalSales)}</Text>
+                </Text>
+                <Text style={s.heroDot}> · </Text>
+                <Text style={s.heroSubItem}>
+                  <Text style={s.heroSubLabel}>{t("dashboard.expenses")} </Text>
+                  <Text style={s.heroSubValue}>{formatMoney(summary.totalExpenses)}</Text>
+                </Text>
+              </View>
+            </View>
+            <ProgressRing
+              value={summary.storesClosed}
+              total={summary.totalStores}
+              tone={allClosed ? "good" : summary.storesClosed === 0 ? "neutral" : "warn"}
+            />
+          </View>
+          <View style={s.chipRow}>
+            <StatusChip
+              tone={summary.missingCash < 0 ? "bad" : "good"}
+              label={t("dashboard.missingCash")}
+              value={formatMoneyExact(summary.missingCash)}
+            />
+            <StatusChip
+              tone={summary.needsAttention === 0 ? "good" : "warn"}
+              label={t("dashboard.needsAttention")}
+              value={String(summary.needsAttention)}
+            />
+          </View>
+        </Card>
 
+        {/* Conditional alerts — only render when there's a real problem.
+            Web does the same to save vertical space when everything's fine. */}
         {summary.alerts.length > 0 ? (
           <Banner tone="warn" title={summary.alerts[0].message} body={t("dashboard.callStore")} />
-        ) : (
-          <Banner tone="good" title={t("dashboard.noMissedAlerts")} body={t("dashboard.everyStoreReported")} />
-        )}
-
+        ) : null}
         {shortage ? (
           <Banner
             tone="bad"
             title={`${shortage.storeName} ${t("dashboard.isShort")} ${formatMoneyExact(shortage.difference)}`}
             body={t("dashboard.cashLower")}
           />
-        ) : (
-          <Banner tone="good" title={t("dashboard.noCashShortage")} body={t("dashboard.cashMatches")} />
-        )}
+        ) : null}
 
         <Text style={s.sectionTitle}>{t("dashboard.storeComparison")}</Text>
-        {summary.stores.map((store) => {
-          const barWidth = store.closedToday ? Math.max(6, (store.totalSales / maxSales) * 100) : 0;
-          const needsClosing = !store.closedToday && Boolean(store.pastCloseTime);
-          const diffTone: "good" | "bad" | "warn" =
-            needsClosing ? "warn" : store.difference < 0 ? "bad" : "good";
-          return (
-            <Card key={store.id} style={{ gap: spacing.md }}>
-              <View style={s.rowBetween}>
-                <Text style={s.cardTitle}>{store.storeName}</Text>
-                <Pill
-                  label={store.closedToday ? t("dashboard.closed").toUpperCase() : needsClosing ? t("dashboard.needsClosing").toUpperCase() : t("dashboard.open").toUpperCase()}
-                  tone={store.closedToday ? "good" : needsClosing ? "warn" : "good"}
+
+        {/* Horizontal snap-scroll store cards (mirrors web's mobile pattern) */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          snapToAlignment="start"
+          decelerationRate="fast"
+          snapToInterval={STORE_CARD_WIDTH + spacing.sm}
+          contentContainerStyle={{ gap: spacing.sm, paddingRight: spacing.lg }}
+          style={{ marginHorizontal: -spacing.lg, paddingLeft: spacing.lg }}
+        >
+          {visibleStores.map((store) => {
+            const barWidth = store.closedToday ? Math.max(6, (store.totalSales / maxSales) * 100) : 0;
+            const needsClosing = !store.closedToday && Boolean(store.pastCloseTime);
+            const diffTone: "good" | "bad" | "warn" =
+              needsClosing ? "warn" : store.difference < 0 ? "bad" : "good";
+            return (
+              <Card key={store.id} style={s.storeCard}>
+                <View style={s.rowBetween}>
+                  <Text style={s.cardTitle} numberOfLines={1}>{store.storeName}</Text>
+                  <Pill
+                    label={
+                      store.closedToday
+                        ? t("dashboard.closed").toUpperCase()
+                        : needsClosing
+                          ? t("dashboard.needsClosing").toUpperCase()
+                          : t("dashboard.open").toUpperCase()
+                    }
+                    tone={store.closedToday ? "good" : needsClosing ? "warn" : "plain"}
+                  />
+                </View>
+
+                <View style={{ marginTop: spacing.md }}>
+                  <Text style={s.kicker}>{t("dashboard.salesToday")}</Text>
+                  <Text style={s.bigNumber}>{store.closedToday ? formatMoney(store.totalSales) : "—"}</Text>
+                  <View style={s.bar}>
+                    <View style={[s.barFill, { width: `${barWidth}%` }]} />
+                  </View>
+                </View>
+
+                <View style={s.miniRow}>
+                  <View style={s.miniCell}>
+                    <Text style={s.miniLabel}>{t("common.cash")}</Text>
+                    <Text style={s.miniValue}>{store.closedToday ? formatMoney(store.cashSales) : "—"}</Text>
+                  </View>
+                  <View style={s.miniCell}>
+                    <Text style={s.miniLabel}>{t("common.card")}</Text>
+                    <Text style={s.miniValue}>{store.closedToday ? formatMoney(store.cardSales) : "—"}</Text>
+                  </View>
+                </View>
+
+                {store.closedToday ? (
+                  <View style={s.miniRow}>
+                    <View style={s.miniCell}>
+                      <Text style={s.miniLabel}>{t("dashboard.expenses")}</Text>
+                      <Text style={s.miniValue}>{formatMoney(store.expenses)}</Text>
+                    </View>
+                    <View style={s.miniCell}>
+                      <Text style={s.miniLabel}>{t("dashboard.netProfit")}</Text>
+                      <Text style={[s.miniValue, store.netProfit < 0 && { color: colors.warning }]}>
+                        {formatMoney(store.netProfit)}
+                      </Text>
+                    </View>
+                  </View>
+                ) : null}
+
+                <Banner
+                  tone={diffTone}
+                  title={
+                    store.closedToday
+                      ? `${t("dashboard.cashDifference")}: ${formatMoneyExact(store.difference)}`
+                      : needsClosing
+                        ? t("dashboard.closeNotSubmitted")
+                        : `${t("dashboard.closeDueAt")} ${store.closeTime ?? "23:30"}`
+                  }
                 />
-              </View>
+              </Card>
+            );
+          })}
+        </ScrollView>
 
-              <View>
-                <Text style={s.kicker}>{t("dashboard.salesToday")}</Text>
-                <Text style={s.bigNumber}>{store.closedToday ? formatMoney(store.totalSales) : "—"}</Text>
-                <View style={s.bar}>
-                  <View style={[s.barFill, { width: `${barWidth}%` }]} />
-                </View>
-              </View>
+        {moreStores > 0 ? (
+          <View style={s.viewAllRow}>
+            <Text style={s.viewAllText}>
+              {summary.totalStores} {t("dashboard.totalStores") || "stores total"}
+            </Text>
+            <Text style={s.viewAllHint}>{t("dashboard.scrollHint") || "Swipe cards to see more →"}</Text>
+          </View>
+        ) : null}
 
-              <View style={s.miniRow}>
-                <View style={s.miniCell}>
-                  <Text style={s.miniLabel}>Cash</Text>
-                  <Text style={s.miniValue}>{store.closedToday ? formatMoney(store.cashSales) : "—"}</Text>
-                </View>
-                <View style={s.miniCell}>
-                  <Text style={s.miniLabel}>Card</Text>
-                  <Text style={s.miniValue}>{store.closedToday ? formatMoney(store.cardSales) : "—"}</Text>
-                </View>
-              </View>
-
-              <Banner
-                tone={diffTone}
-                title={
-                  store.closedToday
-                    ? `Cash difference: ${formatMoneyExact(store.difference)}`
-                    : needsClosing
-                      ? "Closing needed"
-                      : `Open - closes ${store.closeTime ?? "23:30"}`
-                }
-              />
-            </Card>
-          );
-        })}
-        <AccountFooter role="owner" onSignOut={onBack} />
+        <AccountFooter role="owner" onSignOut={onSignOut} />
       </ScrollView>
     </View>
   );
 }
 
+// Pure-RN progress ring — donut-style fill for stores-closed. No SVG dep:
+// uses a rotated/clipped circle trick with two stacked Views. For tighter
+// fidelity later we can swap to react-native-svg (Expo SDK 52 ships it).
+function ProgressRing({
+  value,
+  total,
+  tone
+}: {
+  value: number;
+  total: number;
+  tone: "good" | "warn" | "neutral";
+}) {
+  const pct = total > 0 ? Math.min(1, value / total) : 0;
+  const ringColor = tone === "good" ? colors.leaf : tone === "warn" ? colors.gold : colors.inkMuted;
+  return (
+    <View style={ringStyles.wrap}>
+      <View style={[ringStyles.track, { borderColor: ringColor + "26" /* ~15% */ }]} />
+      <View
+        style={[
+          ringStyles.fill,
+          { borderTopColor: ringColor, borderRightColor: pct > 0.25 ? ringColor : "transparent",
+            borderBottomColor: pct > 0.5 ? ringColor : "transparent",
+            borderLeftColor: pct > 0.75 ? ringColor : "transparent",
+            transform: [{ rotate: `${pct * 360}deg` }] }
+        ]}
+      />
+      <View style={ringStyles.center}>
+        <Text style={ringStyles.fraction}>
+          {value}<Text style={ringStyles.fractionSlash}>/{total}</Text>
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function StatusChip({
+  tone,
+  label,
+  value
+}: {
+  tone: "good" | "bad" | "warn";
+  label: string;
+  value: string;
+}) {
+  const bg = tone === "good" ? colors.leafSoft : tone === "bad" ? colors.warningSoft : colors.goldSoft;
+  const border = tone === "good" ? colors.leafBorder : tone === "bad" ? colors.warningBorder : colors.goldBorder;
+  const text = tone === "good" ? colors.leaf : tone === "bad" ? colors.warning : colors.gold;
+  return (
+    <View style={[s.chip, { backgroundColor: bg, borderColor: border }]}>
+      <Text style={[s.chipLabel, { color: text }]}>{label.toUpperCase()}</Text>
+      <Text style={[s.chipValue, { color: text }]}>{value}</Text>
+    </View>
+  );
+}
+
+const STORE_CARD_WIDTH = 300;
+
 const s = StyleSheet.create({
   content: { padding: spacing.lg, gap: spacing.md, paddingBottom: 40 },
-  subhead: { color: colors.inkSoft, fontWeight: font.bold, fontSize: 13 },
-  metricGrid: { gap: spacing.sm },
-  sectionTitle: { color: colors.ink, fontWeight: font.black, fontSize: 20, marginTop: spacing.md },
-  rowBetween: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  cardTitle: { color: colors.ink, fontWeight: font.black, fontSize: 18 },
-  kicker: { color: colors.inkSoft, fontWeight: font.black, fontSize: 11, textTransform: "uppercase", letterSpacing: 0.6 },
-  bigNumber: { color: colors.ink, fontWeight: font.black, fontSize: 32, marginTop: 2 },
+  welcome: { color: colors.leaf, fontWeight: font.black, fontSize: 12, textTransform: "uppercase", letterSpacing: 0.6 },
+  heroCard: { gap: spacing.md, paddingVertical: spacing.lg },
+  heroTop: { flexDirection: "row", alignItems: "flex-start", gap: spacing.md },
+  heroKicker: { color: colors.inkMuted, fontWeight: font.black, fontSize: 11, textTransform: "uppercase", letterSpacing: 0.6 },
+  heroNet: { color: colors.ink, fontWeight: font.black, fontSize: 40, marginTop: 4, letterSpacing: -0.5 },
+  heroSubRow: { flexDirection: "row", flexWrap: "wrap", marginTop: spacing.sm, alignItems: "center" },
+  heroSubItem: { fontSize: 13 },
+  heroSubLabel: { color: colors.inkMuted, fontWeight: font.bold, fontSize: 13 },
+  heroSubValue: { color: colors.ink, fontWeight: font.black, fontSize: 13 },
+  heroDot: { color: colors.inkMuted, fontWeight: font.bold },
+  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  chip: { flexDirection: "row", alignItems: "center", gap: 6, borderWidth: 1, borderRadius: radius.pill, paddingVertical: 6, paddingHorizontal: 10 },
+  chipLabel: { fontWeight: font.black, fontSize: 10, letterSpacing: 0.5 },
+  chipValue: { fontWeight: font.black, fontSize: 12 },
+  sectionTitle: { color: colors.ink, fontWeight: font.black, fontSize: 22, marginTop: spacing.md, letterSpacing: -0.3 },
+  storeCard: { width: STORE_CARD_WIDTH, gap: spacing.sm },
+  rowBetween: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
+  cardTitle: { color: colors.ink, fontWeight: font.black, fontSize: 18, flex: 1, minWidth: 0 },
+  kicker: { color: colors.inkMuted, fontWeight: font.black, fontSize: 11, textTransform: "uppercase", letterSpacing: 0.6 },
+  bigNumber: { color: colors.ink, fontWeight: font.black, fontSize: 28, marginTop: 2, letterSpacing: -0.3 },
   bar: { height: 6, backgroundColor: colors.smoke, borderRadius: radius.pill, overflow: "hidden", marginTop: spacing.sm },
   barFill: { height: "100%", backgroundColor: colors.leaf },
   miniRow: { flexDirection: "row", gap: spacing.sm },
   miniCell: { flex: 1, padding: spacing.md, backgroundColor: colors.smoke, borderRadius: radius.md },
-  miniLabel: { color: colors.inkSoft, fontWeight: font.black, fontSize: 11, textTransform: "uppercase" },
-  miniValue: { color: colors.ink, fontWeight: font.black, fontSize: 18, marginTop: 2 }
+  miniLabel: { color: colors.inkMuted, fontWeight: font.black, fontSize: 10, textTransform: "uppercase", letterSpacing: 0.4 },
+  miniValue: { color: colors.ink, fontWeight: font.black, fontSize: 16, marginTop: 2 },
+  viewAllRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: spacing.xs },
+  viewAllText: { color: colors.ink, fontWeight: font.black, fontSize: 13 },
+  viewAllHint: { color: colors.inkMuted, fontWeight: font.bold, fontSize: 12 }
+});
+
+const RING_SIZE = 84;
+const RING_BORDER = 8;
+const ringStyles = StyleSheet.create({
+  wrap: {
+    width: RING_SIZE,
+    height: RING_SIZE,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  track: {
+    position: "absolute",
+    width: RING_SIZE,
+    height: RING_SIZE,
+    borderRadius: RING_SIZE / 2,
+    borderWidth: RING_BORDER
+  },
+  fill: {
+    position: "absolute",
+    width: RING_SIZE,
+    height: RING_SIZE,
+    borderRadius: RING_SIZE / 2,
+    borderWidth: RING_BORDER,
+    borderColor: "transparent"
+  },
+  center: { alignItems: "center", justifyContent: "center" },
+  fraction: { color: colors.ink, fontWeight: font.black, fontSize: 18 },
+  fractionSlash: { color: colors.inkMuted, fontWeight: font.bold, fontSize: 13 }
 });
