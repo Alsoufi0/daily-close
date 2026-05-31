@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from "@nestjs/common";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { createHash, randomBytes, randomInt } from "crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import { RequestUser } from "./request-user";
 
@@ -332,6 +333,85 @@ export class SupabaseAuthService {
     return { email, phone: phone ?? null, name, ownerId: user.owner!.id };
   }
 
+  async requestPhonePasswordReset(input: { phone?: string }): Promise<{ sent: boolean; message: string }> {
+    if (!this.supabase) throw new UnauthorizedException("Supabase is not configured.");
+    const phone = this.normalizePhone(input.phone || "");
+    const user = await this.findUserByPhone(phone);
+    if (!user?.authUserId) {
+      // Same outward response as success to avoid phone-number enumeration.
+      return { sent: true, message: "If that number exists, a reset code was sent." };
+    }
+
+    const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
+    await this.ensurePhoneResetTable();
+    await this.prisma.$executeRawUnsafe(
+      `insert into public.phone_password_reset_codes
+         (id, phone, user_id, auth_user_id, code_hash, expires_at)
+       values ($1, $2, $3, $4, $5, now() + interval '10 minutes')`,
+      randomBytes(16).toString("hex"),
+      phone,
+      user.id,
+      user.authUserId,
+      this.hashResetCode(phone, code)
+    );
+
+    const sent = await this.sendTwilioPhoneMessage(
+      phone,
+      `Daily Close password reset code: ${code}. This code expires in 10 minutes.`
+    );
+    return {
+      sent,
+      message: sent
+        ? "Reset code sent."
+        : "Reset code could not be sent. Check Twilio WhatsApp setup."
+    };
+  }
+
+  async confirmPhonePasswordReset(input: {
+    phone?: string;
+    code?: string;
+    password?: string;
+  }): Promise<{ reset: true }> {
+    if (!this.supabase) throw new UnauthorizedException("Supabase is not configured.");
+    const phone = this.normalizePhone(input.phone || "");
+    const code = String(input.code || "").replace(/\D/g, "");
+    const password = input.password || "";
+    if (code.length !== 6) throw new BadRequestException("Enter the 6 digit code.");
+    if (password.length < 8) throw new BadRequestException("Password must be at least 8 characters.");
+
+    await this.ensurePhoneResetTable();
+    const rows = await this.prisma.$queryRawUnsafe<Array<{
+      id: string;
+      auth_user_id: string;
+    }>>(
+      `select id, auth_user_id
+         from public.phone_password_reset_codes
+        where phone = $1
+          and code_hash = $2
+          and consumed_at is null
+          and expires_at > now()
+        order by created_at desc
+        limit 1`,
+      phone,
+      this.hashResetCode(phone, code)
+    );
+    const row = rows[0];
+    if (!row) throw new BadRequestException("Code is invalid or expired.");
+
+    const { error } = await this.supabase.auth.admin.updateUserById(row.auth_user_id, {
+      password
+    });
+    if (error) throw new BadRequestException(error.message);
+
+    await this.prisma.$executeRawUnsafe(
+      `update public.phone_password_reset_codes
+          set consumed_at = now()
+        where id = $1`,
+      row.id
+    );
+    return { reset: true };
+  }
+
   private primaryEmailForAuthUser(user: { email?: string | null; phone?: string | null }): string | null {
     return this.emailsForAuthUser(user)[0] || null;
   }
@@ -349,6 +429,79 @@ export class SupabaseAuthService {
 
   private syntheticPhoneEmail(phone: string, namespace: "owners" | "invites"): string {
     return `phone_${phone.replace(/\D/g, "")}@${namespace}.dailyclose.local`;
+  }
+
+  private async findUserByPhone(phone: string): Promise<{ id: string; authUserId: string | null } | null> {
+    return this.prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: this.syntheticPhoneEmail(phone, "owners") },
+          { email: this.syntheticPhoneEmail(phone, "invites") }
+        ]
+      },
+      select: { id: true, authUserId: true }
+    });
+  }
+
+  private async ensurePhoneResetTable() {
+    await this.prisma.$executeRawUnsafe(
+      `create table if not exists public.phone_password_reset_codes (
+        id text primary key,
+        phone text not null,
+        user_id text not null references public.users(id) on delete cascade,
+        auth_user_id text not null,
+        code_hash text not null,
+        expires_at timestamptz not null,
+        consumed_at timestamptz,
+        created_at timestamptz not null default now()
+      )`
+    );
+    await this.prisma.$executeRawUnsafe(
+      `create index if not exists phone_password_reset_codes_phone_idx
+         on public.phone_password_reset_codes (phone, created_at desc)`
+    );
+  }
+
+  private hashResetCode(phone: string, code: string) {
+    const secret = process.env.CRON_SECRET || process.env.TWILIO_AUTH_TOKEN || "daily-close-dev";
+    return createHash("sha256").update(`${phone}:${code}:${secret}`).digest("hex");
+  }
+
+  private async sendTwilioPhoneMessage(phone: string, body: string): Promise<boolean> {
+    const sid = process.env.TWILIO_ACCOUNT_SID;
+    const token = process.env.TWILIO_AUTH_TOKEN;
+    const whatsapp = String(process.env.TWILIO_DELIVERY_CHANNEL || process.env.TWILIO_CHANNEL || "").toLowerCase() === "whatsapp";
+    const explicitWhatsAppFrom = process.env.TWILIO_WHATSAPP_FROM;
+    const messagingServiceSid = whatsapp && explicitWhatsAppFrom ? undefined : process.env.TWILIO_MESSAGING_SERVICE_SID;
+    const from = whatsapp
+      ? explicitWhatsAppFrom || process.env.TWILIO_FROM_NUMBER
+      : process.env.TWILIO_FROM_NUMBER;
+    if (!sid || !token || (!messagingServiceSid && !from)) return false;
+
+    const params = new URLSearchParams();
+    params.set("To", whatsapp ? this.whatsAppAddress(phone) : phone);
+    params.set("Body", body);
+    if (messagingServiceSid) {
+      params.set("MessagingServiceSid", messagingServiceSid);
+    } else if (from) {
+      params.set("From", whatsapp ? this.whatsAppAddress(from) : from);
+    }
+    const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${Buffer.from(`${sid}:${token}`).toString("base64")}`,
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body: params.toString()
+    });
+    return res.ok;
+  }
+
+  private whatsAppAddress(phone: string): string {
+    if (phone.startsWith("whatsapp:")) return phone;
+    const trimmed = phone.trim();
+    const e164 = trimmed.startsWith("+") ? trimmed : `+${trimmed.replace(/[^\d]/g, "")}`;
+    return `whatsapp:${e164}`;
   }
 
   private normalizePhone(input: string): string {

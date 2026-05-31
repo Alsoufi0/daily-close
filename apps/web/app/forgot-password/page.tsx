@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Mail, Phone } from "lucide-react";
 import { createBrowserSupabase } from "../../lib/supabase-browser";
+import { confirmPhonePasswordReset, requestPhonePasswordReset } from "../../lib/api-client";
 import { useLanguage } from "../../components/language-provider";
 
 type Mode = "email" | "phone";
@@ -15,6 +16,7 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [phase, setPhase] = useState<Phase>("form");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -24,6 +26,7 @@ export default function ForgotPasswordPage() {
     setPhase("form");
     setError("");
     setCode("");
+    setNewPassword("");
   }
 
   function clientOrFail() {
@@ -56,38 +59,33 @@ export default function ForgotPasswordPage() {
     event.preventDefault();
     setLoading(true);
     setError("");
-    const supabase = clientOrFail();
-    if (!supabase) return;
-    const { error } = await supabase.auth.signInWithOtp({
-      phone: phone.trim(),
-      options: { shouldCreateUser: false }
-    });
-    setLoading(false);
-    if (error) {
-      setError(error.message);
-      return;
+    try {
+      await requestPhonePasswordReset(phone.trim());
+      setPhase("code");
+    } catch (err: any) {
+      setError(err?.message || "Could not send reset code.");
+    } finally {
+      setLoading(false);
     }
-    setPhase("code");
   }
 
   async function verifyCode(event: React.FormEvent) {
     event.preventDefault();
     setLoading(true);
     setError("");
-    const supabase = clientOrFail();
-    if (!supabase) return;
-    const { data, error } = await supabase.auth.verifyOtp({
-      phone: phone.trim(),
-      token: code.trim(),
-      type: "sms"
-    });
-    if (error || !data.session) {
+    try {
+      await confirmPhonePasswordReset({
+        phone: phone.trim(),
+        code: code.trim(),
+        password: newPassword
+      });
       setLoading(false);
-      setError(error?.message || t("auth.codeInvalid"));
+      window.location.href = "/";
+    } catch (err: any) {
+      setLoading(false);
+      setError(err?.message || t("auth.codeInvalid"));
       return;
     }
-    window.localStorage.setItem("dailyclose-token", data.session.access_token);
-    window.location.href = "/account/password";
   }
 
   return (
@@ -216,12 +214,27 @@ export default function ForgotPasswordPage() {
                     onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, ""))}
                   />
                 </label>
+                <label className="block">
+                  <span className="text-sm font-black">{t("auth.password")}</span>
+                  <input
+                    type="password"
+                    required
+                    autoComplete="new-password"
+                    minLength={8}
+                    className="focus-ring mt-2 h-12 w-full rounded-lg border border-ink/15 px-4 font-bold"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                  />
+                  <span className="mt-1 block text-xs font-bold text-ink/55">
+                    {t("auth.atLeast8CharsShort")}
+                  </span>
+                </label>
                 {error ? (
                   <p className="rounded-lg bg-red-50 p-3 text-sm font-bold text-warning">{error}</p>
                 ) : null}
                 <button
                   type="submit"
-                  disabled={loading || code.length < 6}
+                  disabled={loading || code.length < 6 || newPassword.length < 8}
                   className="focus-ring flex h-14 w-full items-center justify-center gap-2 rounded-lg bg-leaf text-lg font-black text-white disabled:opacity-60"
                 >
                   {loading ? t("auth.verifying") : t("auth.verifyContinue")}

@@ -65,6 +65,24 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+export async function requestPhonePasswordReset(phone: string): Promise<{ sent: boolean; message: string }> {
+  return apiFetch<{ sent: boolean; message: string }>("/auth/phone-reset/request", {
+    method: "POST",
+    body: JSON.stringify({ phone })
+  });
+}
+
+export async function confirmPhonePasswordReset(input: {
+  phone: string;
+  code: string;
+  password: string;
+}): Promise<{ reset: true }> {
+  return apiFetch<{ reset: true }>("/auth/phone-reset/confirm", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
 export interface StoreRecord {
   id: string;
   storeName: string;
