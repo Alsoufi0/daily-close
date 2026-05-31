@@ -73,6 +73,8 @@ export interface StoreRecord {
   // optional here so the legacy fallback store objects still typecheck.
   timezone?: string;
   closeTime?: string;
+  address?: string | null;
+  phone?: string | null;
 }
 
 export async function getProfile(): Promise<SessionProfile> {
@@ -88,6 +90,35 @@ export async function deleteMyAccount(): Promise<{ deleted: true; canceledStripe
 
 export async function listStores(): Promise<StoreRecord[]> {
   return apiFetch<StoreRecord[]>("/stores");
+}
+
+export interface CreateStoreInput {
+  storeName: string;
+  address?: string;
+  phone?: string;
+  timezone?: string;
+  closeTime?: string;
+}
+
+export async function createStore(input: CreateStoreInput): Promise<StoreRecord> {
+  return apiFetch<StoreRecord>("/stores", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function updateStore(
+  id: string,
+  input: Partial<CreateStoreInput>
+): Promise<StoreRecord> {
+  return apiFetch<StoreRecord>(`/stores/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function deleteStore(id: string): Promise<void> {
+  await apiFetch<unknown>(`/stores/${id}`, { method: "DELETE" });
 }
 
 export async function getOwnerDashboard(): Promise<OwnerDashboardSummary> {
