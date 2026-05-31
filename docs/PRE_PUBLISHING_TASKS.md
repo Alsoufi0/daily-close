@@ -27,13 +27,9 @@ Apple requires apps that let users sign in to also offer **in-app** account dele
 - Implement Apple IAP for iOS (cost: 30% rev share).
 - Google Play has the same rule but enforces it less aggressively for B2B.
 
-### [ ] 3. Demo bypass in production builds
-- `apps/mobile/src/screens/LoginScreen.tsx:116-117` ships "Open Owner View (demo)" and "Open Employee View (demo)" buttons that bypass auth.
-- `.env.example` documents an `ALLOW_DEMO_AUTH` flag that lets `x-demo-role` headers bypass real auth.
-
-**Action:**
-- Gate mobile demo buttons behind `__DEV__` or `EXPO_PUBLIC_DEMO_MODE`, off in production.
-- Verify production env has `ALLOW_DEMO_AUTH=false`; consider deleting the demo-auth code path entirely before launch.
+### [x] 3. Demo bypass in production builds — **mobile side resolved 2026-05-31**
+- ~~`apps/mobile/src/screens/LoginScreen.tsx:116-117` ships "Open Owner View (demo)" and "Open Employee View (demo)" buttons that bypass auth.~~ Removed in the native rebuild; LoginScreen no longer has demo buttons.
+- `.env.example` documents an `ALLOW_DEMO_AUTH` flag that lets `x-demo-role` headers bypass real auth. **API side still pending** — verify production env has `ALLOW_DEMO_AUTH=false` before submission.
 
 ### [ ] 4. EAS / submission placeholders unfilled
 - `apps/mobile/app.json:38` — `"projectId": "replace-after-eas-init"`.
@@ -57,10 +53,10 @@ Already tracked in `APP_STORE_READINESS.md` Phase 5/7, listed here for completen
 ### [ ] 6. Bundle identifier domain ownership
 `apps/mobile/app.json:17,27` uses `com.dailyclose.app`. Apple may ask for DNS proof of ownership of `dailyclose.app`. Register the domain or switch to a reverse-domain you control.
 
-### [ ] 7. Accessibility labels missing on icon-only buttons
-- `apps/mobile/src/screens/EmployeeScreen.tsx:200,208` — emoji-only 📷 / 📁 buttons need `accessibilityLabel`.
-- `apps/mobile/src/screens/LoginScreen.tsx:103` — feature icon row.
-Google's pre-launch report will flag these; Apple sometimes does.
+### [x] 7. Accessibility labels missing on icon-only buttons — **resolved 2026-05-31**
+- ~~`apps/mobile/src/screens/EmployeeScreen.tsx:200,208` — emoji-only 📷 / 📁 buttons~~ now have `accessibilityLabel` + `accessibilityHint` + `accessibilityRole="button"`.
+- ~~`apps/mobile/src/screens/LoginScreen.tsx:103` — feature icon row.~~ Feature row icons are decorative (already paired with text labels).
+- New admin screens (Admin Stores / Employees) added explicit `accessibilityLabel` on icon-only edit/delete buttons.
 
 ### [ ] 8. POS image retention policy
 `apps/mobile/src/upload-pos-report.ts:34` uses 24h signed URLs but Supabase Storage files are never purged. Pick a retention window (e.g. 90 days post-close), add a cleanup cron, document it in the privacy policy.
@@ -75,8 +71,10 @@ Google's pre-launch report will flag these; Apple sometimes does.
 ### [ ] 10. Sign in with Apple — not required today
 Email/password only auth means no Sign in with Apple obligation. **If** Google/Facebook sign-in is added later, Apple requires Sign in with Apple as an option on iOS.
 
-### [ ] 11. Mobile localization declaration
-`shared/i18n/index.ts` ships Spanish, but `apps/mobile/app.json` doesn't declare `locales`. Add the supported locales to improve App Store discoverability in Spanish-speaking markets.
+### [x] 11. Mobile localization declaration — **resolved 2026-05-31**
+- `apps/mobile/app.json` now declares all four locales (en/es/ar/hi) via the `locales` field pointing at `./locales/{lang}.json`.
+- Each locale file localizes `CFBundleDisplayName`, `NSCameraUsageDescription`, and `NSPhotoLibraryUsageDescription` so iOS Settings + permission prompts render in the device language.
+- Adds `CFBundleLocalizations` to `infoPlist` so the App Store correctly tags the listing as available in those languages.
 
 ### [ ] 12. Splash safe area verification
 `apps/mobile/assets/splash.png` is 1284×2778 (iPhone 6.7"). With `resizeMode: contain`, smaller devices letterbox on `#1f7a4d`. Brand-color match makes this acceptable but verify on iPhone SE simulator.
@@ -87,7 +85,7 @@ Email/password only auth means no Sign in with Apple obligation. **If** Google/F
 
 The app uses two translation mechanisms in parallel: explicit `t("key")` calls (reliable, works everywhere) and a DOM-watching auto-translator backed by a `phraseKeys` map in `apps/web/components/language-provider.tsx` (web only, fragile, matches exact strings). Plan: finish migrating to explicit `t()` everywhere; treat auto-translate as a fading safety net.
 
-### [ ] L1. Mobile app is effectively English-only — **launch blocker for non-EN markets**
+### [x] L1. Mobile app is effectively English-only — **resolved 2026-05-31**
 - `apps/mobile/src/i18n.ts` defines `t()` and `setMobileLanguage()`, but `setMobileLanguage()` is **never called anywhere**.
 - No language switcher UI in mobile, no `AsyncStorage` read on startup → mobile stays in the default English regardless of user choice on web.
 - Only `apps/mobile/src/screens/OwnerScreen.tsx` imports `t`. `LoginScreen.tsx` and `EmployeeScreen.tsx` don't import it at all.
@@ -97,7 +95,10 @@ The app uses two translation mechanisms in parallel: explicit `t("key")` calls (
 2. Persist the choice in `AsyncStorage`, read on app boot, call `setMobileLanguage()`.
 3. Then wrap mobile strings (see L2).
 
-### [ ] L2. Mobile screens — ~31 hardcoded strings to wrap in `t()`
+### [~] L2. Mobile screens — ~31 hardcoded strings to wrap in `t()` — **mostly resolved 2026-05-31**
+Native rebuild added 8 new screens (Admin Stores / Admin Employees / All Stores / Reports / Settings + 3 sub-screens). All top-of-screen text (titles, primary buttons, alerts, banners, empty states) is localized. Long-tail remaining: form placeholders, modal helper text, EmployeeScreen invite-flow body copy.
+
+Original audit lines (now stale after rebuild):
 - `apps/mobile/src/screens/LoginScreen.tsx` (~9): FEATURES array L8-12, "Welcome back.", pill labels "SIGN IN"/"MOBILE PILOT", auth errors, "Signing in…", legal disclaimer L120.
 - `apps/mobile/src/screens/EmployeeScreen.tsx` (~17): step titles (L33-39), button props (L188, 239, 243, 250, 286), banner copy L212, `Alert.alert()` permission/error prompts (L86, 93, 113, 149), JSX text L179/186/187/285, fallback "My Store" L75, header subtitle fallback L165.
 - `apps/mobile/src/screens/OwnerScreen.tsx` (3): "Today's Store Close" L42, "Welcome back" L47, "Cash counted is lower than expected." L80.
