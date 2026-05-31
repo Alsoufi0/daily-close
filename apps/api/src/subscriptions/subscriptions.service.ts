@@ -60,10 +60,21 @@ export class SubscriptionsService {
   }
 
   async syncFromStripe(input: {
+    ownerId?: string | null;
     stripeCustomerId: string;
     stripeSubscriptionId?: string | null;
     status: string;
   }) {
+    if (input.ownerId) {
+      return this.prisma.owner.update({
+        where: { id: input.ownerId },
+        data: {
+          subscriptionStatus: input.status,
+          stripeCustomerId: input.stripeCustomerId,
+          stripeSubscriptionId: input.stripeSubscriptionId ?? undefined
+        }
+      });
+    }
     return this.prisma.owner.update({
       where: { stripeCustomerId: input.stripeCustomerId },
       data: {
@@ -97,6 +108,7 @@ export class SubscriptionsService {
     params.set("cancel_url", cancelUrl);
     params.set("customer_email", ownerEmail);
     params.set("client_reference_id", ownerId);
+    params.set("subscription_data[metadata][ownerId]", ownerId);
     params.set("line_items[0][price]", priceId);
     params.set("line_items[0][quantity]", "1");
     params.set("allow_promotion_codes", "true");

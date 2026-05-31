@@ -15,6 +15,7 @@ import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { RequestUser } from "../auth/request-user";
 import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
+import { SubscriptionGuard } from "../subscriptions/subscription.guard";
 import { MissedCloseService } from "./missed-close.service";
 import { NotificationsService } from "./notifications.service";
 import { WhatsAppService } from "./whatsapp.service";
@@ -73,35 +74,35 @@ export class NotificationsController {
 
   @Get()
   @ApiBearerAuth()
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(SupabaseAuthGuard, SubscriptionGuard)
   list(@CurrentUser() user: RequestUser) {
     return this.notifications.listForUser(user);
   }
 
   @Patch(":id/read")
   @ApiBearerAuth()
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(SupabaseAuthGuard, SubscriptionGuard)
   markRead(@Param("id") id: string, @CurrentUser() user: RequestUser) {
     return this.notifications.markRead(id, user);
   }
 
   @Delete(":id")
   @ApiBearerAuth()
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(SupabaseAuthGuard, SubscriptionGuard)
   remove(@Param("id") id: string, @CurrentUser() user: RequestUser) {
     return this.notifications.remove(id, user);
   }
 
   @Get("whatsapp-settings")
   @ApiBearerAuth()
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(SupabaseAuthGuard, SubscriptionGuard)
   getWhatsAppSettings(@CurrentUser() user: RequestUser) {
     return this.notifications.getWhatsAppSettings(user);
   }
 
   @Patch("whatsapp-settings")
   @ApiBearerAuth()
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(SupabaseAuthGuard, SubscriptionGuard)
   updateWhatsAppSettings(
     @CurrentUser() user: RequestUser,
     @Body() input: {
@@ -116,7 +117,7 @@ export class NotificationsController {
 
   @Post("whatsapp-settings/test")
   @ApiBearerAuth()
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(SupabaseAuthGuard, SubscriptionGuard)
   async testWhatsApp(@CurrentUser() user: RequestUser) {
     if (user.role !== "STORE_OWNER" || !user.ownerId) {
       throw new ForbiddenException("Only owners can test WhatsApp settings.");

@@ -46,3 +46,30 @@ describe("SubscriptionsService.ensureActiveForOwner", () => {
     await expect(service.ensureActiveForOwner("o1")).rejects.toMatchObject({ statusCode: 402 });
   });
 });
+
+describe("SubscriptionsService.syncFromStripe", () => {
+  it("links a first checkout payment to the owner id and preserves existing data", async () => {
+    const prisma = {
+      owner: {
+        update: jest.fn().mockResolvedValue({})
+      }
+    } as any;
+    const service = new SubscriptionsService(prisma);
+
+    await service.syncFromStripe({
+      ownerId: "owner-1",
+      stripeCustomerId: "cus_123",
+      stripeSubscriptionId: "sub_123",
+      status: "ACTIVE"
+    });
+
+    expect(prisma.owner.update).toHaveBeenCalledWith({
+      where: { id: "owner-1" },
+      data: {
+        subscriptionStatus: "ACTIVE",
+        stripeCustomerId: "cus_123",
+        stripeSubscriptionId: "sub_123"
+      }
+    });
+  });
+});

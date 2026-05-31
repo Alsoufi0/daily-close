@@ -13,7 +13,7 @@ import { ReportsService } from "./reports.service";
 @ApiTags("Reports")
 @ApiBearerAuth()
 @Controller("reports")
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(SupabaseAuthGuard, SubscriptionGuard)
 export class ReportsController {
   constructor(
     private readonly reports: ReportsService,
@@ -21,7 +21,6 @@ export class ReportsController {
   ) {}
 
   @Get("receipts")
-  @UseGuards(SupabaseAuthGuard, SubscriptionGuard)
   listReceipts(@CurrentUser() user: RequestUser, @Query() query: ReceiptsQueryDto) {
     return this.reports.listReceipts(query, user);
   }
@@ -30,7 +29,6 @@ export class ReportsController {
   // `receipts/:id/download` so Nest doesn't match the literal "download"
   // segment as an id.
   @Get("receipts/download")
-  @UseGuards(SupabaseAuthGuard, SubscriptionGuard)
   async downloadAllReceipts(
     @CurrentUser() user: RequestUser,
     @Query() query: ReceiptsQueryDto,
@@ -69,7 +67,6 @@ export class ReportsController {
   }
 
   @Get("receipts/:id/download")
-  @UseGuards(SupabaseAuthGuard, SubscriptionGuard)
   async downloadReceipt(
     @CurrentUser() user: RequestUser,
     @Param("id") id: string,

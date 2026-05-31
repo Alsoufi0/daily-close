@@ -3,12 +3,13 @@ import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { RequestUser } from "../auth/request-user";
 import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
+import { SubscriptionGuard } from "../subscriptions/subscription.guard";
 import { DashboardService } from "./dashboard.service";
 
 @ApiTags("Dashboard")
 @ApiBearerAuth()
 @Controller("dashboard")
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(SupabaseAuthGuard, SubscriptionGuard)
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
 

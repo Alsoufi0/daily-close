@@ -10,6 +10,9 @@ describe("SmsService", () => {
     delete process.env.TWILIO_AUTH_TOKEN;
     delete process.env.TWILIO_MESSAGING_SERVICE_SID;
     delete process.env.TWILIO_FROM_NUMBER;
+    delete process.env.TWILIO_DELIVERY_CHANNEL;
+    delete process.env.TWILIO_CHANNEL;
+    delete process.env.TWILIO_WHATSAPP_FROM;
     delete process.env.APP_URL;
     fetchSpy = jest.spyOn(globalThis, "fetch" as any);
   });
@@ -69,6 +72,33 @@ describe("SmsService", () => {
     const params = new URLSearchParams(fetchSpy.mock.calls[0][1].body);
     expect(params.get("From")).toBe("+15550001234");
     expect(params.get("MessagingServiceSid")).toBeNull();
+  });
+
+  it("send() can route Twilio messages over WhatsApp while SMS verification is pending", async () => {
+    process.env.TWILIO_ACCOUNT_SID = "AC123";
+    process.env.TWILIO_AUTH_TOKEN = "token";
+    process.env.TWILIO_DELIVERY_CHANNEL = "whatsapp";
+    process.env.TWILIO_WHATSAPP_FROM = "whatsapp:+15550009999";
+    fetchSpy.mockResolvedValue({ ok: true } as any);
+
+    await new SmsService().send("+15551234567", "x");
+    const params = new URLSearchParams(fetchSpy.mock.calls[0][1].body);
+    expect(params.get("To")).toBe("whatsapp:+15551234567");
+    expect(params.get("From")).toBe("whatsapp:+15550009999");
+  });
+
+  it("send() can route WhatsApp through a Twilio Messaging Service", async () => {
+    process.env.TWILIO_ACCOUNT_SID = "AC123";
+    process.env.TWILIO_AUTH_TOKEN = "token";
+    process.env.TWILIO_DELIVERY_CHANNEL = "whatsapp";
+    process.env.TWILIO_MESSAGING_SERVICE_SID = "MG_WHATSAPP";
+    fetchSpy.mockResolvedValue({ ok: true } as any);
+
+    await new SmsService().send("+15551234567", "x");
+    const params = new URLSearchParams(fetchSpy.mock.calls[0][1].body);
+    expect(params.get("To")).toBe("whatsapp:+15551234567");
+    expect(params.get("MessagingServiceSid")).toBe("MG_WHATSAPP");
+    expect(params.get("From")).toBeNull();
   });
 
   it("send() returns sent=false with the status when Twilio rejects", async () => {

@@ -41,10 +41,14 @@ export class SmsService {
   constructor(@Optional() private readonly prisma?: PrismaService) {}
 
   isConfigured(): boolean {
+    const whatsapp = this.deliveryChannel() === "whatsapp";
     return Boolean(
       process.env.TWILIO_ACCOUNT_SID &&
         process.env.TWILIO_AUTH_TOKEN &&
-        (process.env.TWILIO_MESSAGING_SERVICE_SID || process.env.TWILIO_FROM_NUMBER)
+        (process.env.TWILIO_MESSAGING_SERVICE_SID ||
+          (whatsapp
+            ? process.env.TWILIO_WHATSAPP_FROM || process.env.TWILIO_FROM_NUMBER
+            : process.env.TWILIO_FROM_NUMBER))
     );
   }
 
@@ -65,15 +69,18 @@ export class SmsService {
     const sid = process.env.TWILIO_ACCOUNT_SID!;
     const token = process.env.TWILIO_AUTH_TOKEN!;
     const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
-    const fromNumber = process.env.TWILIO_FROM_NUMBER;
+    const whatsapp = this.deliveryChannel() === "whatsapp";
+    const fromNumber = whatsapp
+      ? process.env.TWILIO_WHATSAPP_FROM || process.env.TWILIO_FROM_NUMBER
+      : process.env.TWILIO_FROM_NUMBER;
 
     const params = new URLSearchParams();
-    params.set("To", toPhone);
+    params.set("To", whatsapp ? this.whatsAppAddress(toPhone) : toPhone);
     params.set("Body", body);
     if (messagingServiceSid) {
       params.set("MessagingServiceSid", messagingServiceSid);
     } else if (fromNumber) {
-      params.set("From", fromNumber);
+      params.set("From", whatsapp ? this.whatsAppAddress(fromNumber) : fromNumber);
     }
 
     const auth = Buffer.from(`${sid}:${token}`).toString("base64");
@@ -154,5 +161,17 @@ export class SmsService {
       // Fail closed: if we can't verify consent, don't send.
       return false;
     }
+  }
+
+  private deliveryChannel(): "sms" | "whatsapp" {
+    const channel = String(process.env.TWILIO_DELIVERY_CHANNEL || process.env.TWILIO_CHANNEL || "sms").toLowerCase();
+    return channel === "whatsapp" ? "whatsapp" : "sms";
+  }
+
+  private whatsAppAddress(phone: string): string {
+    if (phone.startsWith("whatsapp:")) return phone;
+    const trimmed = phone.trim();
+    const e164 = trimmed.startsWith("+") ? trimmed : `+${trimmed.replace(/[^\d]/g, "")}`;
+    return `whatsapp:${e164}`;
   }
 }

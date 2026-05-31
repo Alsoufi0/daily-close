@@ -11,7 +11,7 @@ import { UpdateStoreDto } from "./dto/update-store.dto";
 @ApiTags("Stores")
 @ApiBearerAuth()
 @Controller("stores")
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(SupabaseAuthGuard, SubscriptionGuard)
 export class StoresController {
   constructor(private readonly storesService: StoresService) {}
 
@@ -21,7 +21,6 @@ export class StoresController {
   }
 
   @Post()
-  @UseGuards(SubscriptionGuard)
   create(@CurrentUser() user: RequestUser, @Body() input: CreateStoreDto) {
     return this.storesService.createForOwner(user, input);
   }

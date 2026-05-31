@@ -10,7 +10,7 @@ import { InviteEmployeeDto } from "./dto/invite-employee.dto";
 @ApiTags("Employees")
 @ApiBearerAuth()
 @Controller("employees")
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(SupabaseAuthGuard, SubscriptionGuard)
 export class EmployeesController {
   constructor(private readonly employees: EmployeesService) {}
 
@@ -20,7 +20,6 @@ export class EmployeesController {
   }
 
   @Post("invite")
-  @UseGuards(SubscriptionGuard)
   invite(@CurrentUser() user: RequestUser, @Body() input: InviteEmployeeDto) {
     return this.employees.invite(user, input);
   }
@@ -70,7 +69,6 @@ export class EmployeesController {
    * assignment with `alreadyAssigned: true`.
    */
   @Post(":id/assignments")
-  @UseGuards(SubscriptionGuard)
   assignToStore(
     @CurrentUser() user: RequestUser,
     @Param("id") id: string,
