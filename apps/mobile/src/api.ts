@@ -121,6 +121,144 @@ export async function deleteStore(id: string): Promise<void> {
   await apiFetch<unknown>(`/stores/${id}`, { method: "DELETE" });
 }
 
+// ── Employees admin ────────────────────────────────────────────────────────
+
+export interface EmployeeRow {
+  id: string; // assignment id (one user can have many)
+  storeId: string;
+  role?: "EMPLOYEE" | "MANAGER";
+  user?: { id: string; name: string; email?: string; phone?: string; role: "STORE_OWNER" | "EMPLOYEE" };
+  store?: { id: string; storeName: string };
+}
+
+export async function listEmployees(): Promise<EmployeeRow[]> {
+  return apiFetch<EmployeeRow[]>("/employees");
+}
+
+export async function inviteEmployee(input: {
+  name: string;
+  storeId: string;
+  email?: string;
+  phone?: string;
+  consent?: { granted: boolean; text: string };
+}): Promise<{
+  id: string;
+  employeeId: string;
+  email: string | null;
+  phone: string | null;
+  name: string;
+  storeId: string;
+  tempPassword: string;
+  invitedViaSupabase: boolean;
+  smsSent: boolean;
+  smsError: string | null;
+}> {
+  return apiFetch("/employees/invite", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function resetEmployeePassword(
+  employeeId: string
+): Promise<{ employeeId: string; email: string; tempPassword: string; reset: boolean }> {
+  return apiFetch(`/employees/${employeeId}/reset-password`, { method: "POST" });
+}
+
+export async function deleteEmployee(employeeId: string): Promise<void> {
+  await apiFetch<unknown>(`/employees/${employeeId}`, { method: "DELETE" });
+}
+
+export async function assignEmployeeToStore(
+  employeeId: string,
+  storeId: string
+): Promise<{ employeeId: string; userId: string; storeId: string; alreadyAssigned: boolean }> {
+  return apiFetch(`/employees/${employeeId}/assignments`, {
+    method: "POST",
+    body: JSON.stringify({ storeId })
+  });
+}
+
+export async function setEmployeeAdminAccess(
+  employeeId: string,
+  isAdmin: boolean
+): Promise<{ employeeId: string; userId: string; role: "STORE_OWNER" | "EMPLOYEE"; isAdmin: boolean }> {
+  return apiFetch(`/employees/${employeeId}/admin-access`, {
+    method: "PATCH",
+    body: JSON.stringify({ isAdmin })
+  });
+}
+
+export async function setEmployeeManagerStores(
+  userId: string,
+  storeIds: string[]
+): Promise<{ userId: string; managedStoreIds: string[] }> {
+  return apiFetch(`/employees/by-user/${userId}/manager-stores`, {
+    method: "PATCH",
+    body: JSON.stringify({ storeIds })
+  });
+}
+
+// ── Reports / Receipts ─────────────────────────────────────────────────────
+
+export interface ReceiptRow {
+  id: string;
+  imageUrl: string;
+  storeName: string;
+  closeDate: string;
+  employeeName: string;
+  parsedJson: unknown;
+  dailyClose: {
+    id: string;
+    totalSales: number;
+    cashSales: number;
+    cardSales: number;
+    difference: number;
+    status: "CLOSED" | "SHORT" | "OVER" | "PENDING";
+  } | null;
+  createdAt: string;
+}
+
+export async function listReceipts(filters: {
+  storeId: string;
+  from?: string;
+  to?: string;
+}): Promise<ReceiptRow[]> {
+  const params = new URLSearchParams();
+  params.set("storeId", filters.storeId);
+  if (filters.from) params.set("from", filters.from);
+  if (filters.to) params.set("to", filters.to);
+  return apiFetch<ReceiptRow[]>(`/reports/receipts?${params.toString()}`);
+}
+
+// ── WhatsApp settings ──────────────────────────────────────────────────────
+
+export interface WhatsAppSettings {
+  whatsappPhone: string | null;
+  whatsappAlertsEnabled: boolean;
+  whatsappCloseAlertsEnabled: boolean;
+  whatsappReportsEnabled: boolean;
+}
+
+export async function getWhatsAppSettings(): Promise<WhatsAppSettings> {
+  return apiFetch<WhatsAppSettings>("/notifications/whatsapp-settings");
+}
+
+export async function updateWhatsAppSettings(
+  input: WhatsAppSettings
+): Promise<WhatsAppSettings> {
+  return apiFetch<WhatsAppSettings>("/notifications/whatsapp-settings", {
+    method: "PATCH",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function sendWhatsAppTest(): Promise<{ sent: boolean; message: string }> {
+  return apiFetch<{ sent: boolean; message: string }>("/notifications/whatsapp-settings/test", {
+    method: "POST"
+  });
+}
+
 export async function getOwnerDashboard(): Promise<OwnerDashboardSummary> {
   return apiFetch<OwnerDashboardSummary>("/dashboard/me/today");
 }

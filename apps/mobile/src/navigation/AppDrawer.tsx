@@ -1,5 +1,6 @@
 import { createDrawerNavigator } from "@react-navigation/drawer";
 import { DrawerContentScrollView, DrawerItemList, DrawerContentComponentProps } from "@react-navigation/drawer";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { OwnerScreen } from "../screens/OwnerScreen";
 import { EmployeeScreen } from "../screens/EmployeeScreen";
@@ -8,6 +9,9 @@ import { AdminStoresScreen } from "../screens/admin/AdminStoresScreen";
 import { AdminEmployeesScreen } from "../screens/admin/AdminEmployeesScreen";
 import { ReportsScreen } from "../screens/ReportsScreen";
 import { SettingsScreen } from "../screens/SettingsScreen";
+import { ChangePasswordScreen } from "../screens/settings/ChangePasswordScreen";
+import { WhatsAppSettingsScreen } from "../screens/settings/WhatsAppSettingsScreen";
+import { LanguageScreen } from "../screens/settings/LanguageScreen";
 import { colors, font, radius, spacing } from "../theme";
 
 export type DrawerParamList = {
@@ -17,10 +21,39 @@ export type DrawerParamList = {
   AdminStores: undefined;
   AdminEmployees: undefined;
   Reports: undefined;
-  Settings: undefined;
+  SettingsRoot: undefined; // stack so Settings can drill into Password/WhatsApp/Language
+};
+
+export type SettingsStackParamList = {
+  SettingsHome: undefined;
+  ChangePassword: undefined;
+  WhatsAppSettings: undefined;
+  Language: undefined;
 };
 
 const Drawer = createDrawerNavigator<DrawerParamList>();
+const SettingsStack = createNativeStackNavigator<SettingsStackParamList>();
+
+function SettingsStackScreen() {
+  return (
+    <SettingsStack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: colors.white },
+        headerTintColor: colors.ink,
+        headerTitleStyle: { fontWeight: font.black, fontSize: 16 }
+      }}
+    >
+      <SettingsStack.Screen
+        name="SettingsHome"
+        component={SettingsScreen}
+        options={{ headerShown: false }}
+      />
+      <SettingsStack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ title: "Change password" }} />
+      <SettingsStack.Screen name="WhatsAppSettings" component={WhatsAppSettingsScreen} options={{ title: "WhatsApp alerts" }} />
+      <SettingsStack.Screen name="Language" component={LanguageScreen} options={{ title: "Language" }} />
+    </SettingsStack.Navigator>
+  );
+}
 
 export function AppDrawer({ onSignOut }: { onSignOut: () => Promise<void> | void }) {
   function confirmSignOut() {
@@ -87,8 +120,8 @@ export function AppDrawer({ onSignOut }: { onSignOut: () => Promise<void> | void
       />
 
       <Drawer.Screen
-        name="Settings"
-        component={SettingsScreen}
+        name="SettingsRoot"
+        component={SettingsStackScreen}
         options={{ title: "Settings", drawerLabel: "🔧  Settings" }}
       />
     </Drawer.Navigator>
