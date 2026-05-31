@@ -12,8 +12,8 @@ export function Footer() {
           <Link className="focus-ring rounded px-1 hover:text-ink" href="/terms">
             Terms
           </Link>
-          <Link className="focus-ring rounded px-1 hover:text-ink" href="/demo">
-            Demo
+          <Link className="focus-ring rounded px-1 hover:text-ink" href="/contact">
+            Contact
           </Link>
         </nav>
       </div>

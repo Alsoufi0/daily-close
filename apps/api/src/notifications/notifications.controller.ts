@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -18,6 +19,7 @@ import { MissedCloseService } from "./missed-close.service";
 import { NotificationsService } from "./notifications.service";
 import { WhatsAppService } from "./whatsapp.service";
 import { WeeklySummaryService } from "./weekly-summary.service";
+import { EmailService } from "./email.service";
 
 @ApiTags("Notifications")
 @Controller("notifications")
@@ -26,8 +28,48 @@ export class NotificationsController {
     private readonly notifications: NotificationsService,
     private readonly missedClose: MissedCloseService,
     private readonly weekly: WeeklySummaryService,
-    private readonly whatsapp: WhatsAppService
+    private readonly whatsapp: WhatsAppService,
+    private readonly email: EmailService
   ) {}
+
+  @Post("contact")
+  async contact(
+    @Body()
+    input: {
+      name?: string;
+      email?: string;
+      phone?: string;
+      storeCount?: string;
+      message?: string;
+    }
+  ) {
+    const name = input.name?.trim() || "";
+    const email = input.email?.trim().toLowerCase() || "";
+    const phone = input.phone?.trim() || "";
+    const storeCount = input.storeCount?.trim() || "";
+    const message = input.message?.trim() || "";
+    if (!name) throw new BadRequestException("Name is required.");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      throw new BadRequestException("Valid email is required.");
+    }
+    if (message.length < 10) {
+      throw new BadRequestException("Message must be at least 10 characters.");
+    }
+
+    const result = await this.email.sendContactMessage({
+      name,
+      email,
+      phone,
+      storeCount,
+      message
+    });
+    return {
+      sent: result.sent,
+      message: result.sent
+        ? "Message sent."
+        : "Email is not configured. Please email dailyclose@yahoo.com directly."
+    };
+  }
 
   @Get()
   @ApiBearerAuth()

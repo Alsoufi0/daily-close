@@ -50,7 +50,7 @@ export function ProductionLogin() {
     const supabase = createBrowserSupabase();
     if (!supabase) {
       setMessage(t("auth.demoFallback"));
-      window.location.href = "/demo";
+      window.location.href = "/contact";
       return;
     }
 
@@ -91,8 +91,6 @@ export function ProductionLogin() {
 
       <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-start lg:gap-10">
         <div className="hidden lg:block">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/apple-touch-icon.png" alt="Daily Close" className="mb-4 h-16 w-16 rounded-2xl shadow-sm" />
           <span className="inline-flex items-center gap-2 rounded-full bg-leaf/10 px-3 py-1 text-xs font-black uppercase tracking-wide text-leaf">
             <Store size={14} aria-hidden />
             {t("home.platforms")}
