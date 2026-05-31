@@ -17,6 +17,7 @@ import { useSession } from "../use-session";
 import { AccountFooter } from "../components/AccountFooter";
 import type { DrawerParamList } from "../navigation/AppDrawer";
 import { Banner, Button, Card, Pill } from "../ui";
+import { Skeleton } from "../ui/Skeleton";
 import { colors, font, radius, spacing } from "../theme";
 import { t } from "../i18n";
 
@@ -111,12 +112,7 @@ export function OwnerScreen({ onSignOut }: { onSignOut: () => void }) {
         <Button title="Close a store" icon="🧾" onPress={() => navigation.navigate("CloseStore")} />
 
         {loading && !summary.totalStores ? (
-          <View style={{ paddingVertical: spacing.xl, alignItems: "center" }}>
-            <ActivityIndicator color={colors.leaf} />
-            <Text style={[s.welcome, { marginTop: spacing.sm, color: colors.inkSoft }]}>
-              {t("dashboard.loadingToday")}
-            </Text>
-          </View>
+          <DashboardSkeleton />
         ) : null}
 
         {error ? (
@@ -304,6 +300,37 @@ function ProgressRing({
         <Text style={ringStyles.fraction}>
           {value}<Text style={ringStyles.fractionSlash}>/{total}</Text>
         </Text>
+      </View>
+    </View>
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <View style={{ gap: spacing.md, marginTop: spacing.md }}>
+      {/* Hero card skeleton — matches the real hero layout */}
+      <Card style={{ gap: spacing.md, paddingVertical: spacing.lg }}>
+        <View style={{ flexDirection: "row", gap: spacing.md }}>
+          <View style={{ flex: 1, gap: spacing.sm }}>
+            <Skeleton width="40%" height={11} borderRadius={3} />
+            <Skeleton width="70%" height={36} borderRadius={6} />
+            <Skeleton width="90%" height={13} borderRadius={3} />
+          </View>
+          <Skeleton width={84} height={84} borderRadius={42} />
+        </View>
+        <View style={{ flexDirection: "row", gap: spacing.sm }}>
+          <Skeleton width={120} height={28} borderRadius={14} />
+          <Skeleton width={120} height={28} borderRadius={14} />
+        </View>
+      </Card>
+
+      {/* Section title placeholder */}
+      <Skeleton width={180} height={22} borderRadius={4} style={{ marginTop: spacing.sm }} />
+
+      {/* H-scroll cards placeholder — render 2 partial cards */}
+      <View style={{ flexDirection: "row", gap: spacing.sm }}>
+        <Skeleton width={260} height={220} borderRadius={radius.lg} />
+        <Skeleton width={60} height={220} borderRadius={radius.lg} />
       </View>
     </View>
   );
