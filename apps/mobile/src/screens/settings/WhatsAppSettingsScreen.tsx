@@ -19,6 +19,7 @@ import {
   updateWhatsAppSettings,
   WhatsAppSettings
 } from "../../api";
+import { t } from "../../i18n";
 import { colors, font, radius, spacing } from "../../theme";
 
 const DEFAULT_SETTINGS: WhatsAppSettings = {
@@ -45,7 +46,7 @@ export function WhatsAppSettingsScreen() {
       setPhone(data.whatsappPhone ?? "");
       setError(null);
     } catch (err: any) {
-      setError(err instanceof ApiError ? err.message : "Could not load WhatsApp settings.");
+      setError(err instanceof ApiError ? err.message : t("settings.whatsappServerNotReady"));
     } finally {
       setLoading(false);
     }
@@ -66,9 +67,9 @@ export function WhatsAppSettingsScreen() {
       });
       setSettings(updated);
       setPhone(updated.whatsappPhone ?? "");
-      setInfo("Saved.");
+      setInfo(t("settings.saved"));
     } catch (err: any) {
-      setError(err instanceof ApiError ? err.message : "Save failed.");
+      setError(err instanceof ApiError ? err.message : t("settings.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -80,10 +81,10 @@ export function WhatsAppSettingsScreen() {
     setInfo(null);
     try {
       const result = await sendWhatsAppTest();
-      if (result.sent) setInfo("Test message sent — check your WhatsApp.");
-      else setError(result.message || "Test failed.");
+      if (result.sent) setInfo(t("settings.testSent"));
+      else setError(result.message || t("settings.testFailed"));
     } catch (err: any) {
-      setError(err instanceof ApiError ? err.message : "Test failed.");
+      setError(err instanceof ApiError ? err.message : t("settings.testFailed"));
     } finally {
       setTesting(false);
     }
@@ -104,16 +105,16 @@ export function WhatsAppSettingsScreen() {
           <View style={s.iconRow}>
             <View style={s.iconBg}><Text style={s.iconText}>💬</Text></View>
             <View style={{ flex: 1 }}>
-              <Text style={s.title}>WhatsApp alerts</Text>
-              <Text style={s.subtitle}>Receive close summaries + missed-close alerts on WhatsApp.</Text>
+              <Text style={s.title}>{t("settings.whatsappTitle")}</Text>
+              <Text style={s.subtitle}>{t("settings.whatsappSubtitle")}</Text>
             </View>
           </View>
 
           {info ? <Banner tone="good" title={info} /> : null}
-          {error ? <Banner tone="bad" title="Issue" body={error} /> : null}
+          {error ? <Banner tone="bad" title={t("common.error")} body={error} /> : null}
 
           <View>
-            <Text style={s.label}>WhatsApp phone (E.164)</Text>
+            <Text style={s.label}>{t("settings.whatsappPhone")}</Text>
             <TextInput
               value={phone}
               onChangeText={setPhone}
@@ -122,33 +123,33 @@ export function WhatsAppSettingsScreen() {
               style={s.input}
               keyboardType="phone-pad"
             />
-            <Text style={s.help}>Include country code with the + sign (e.g. +1 for US).</Text>
+            <Text style={s.help}>{t("settings.whatsappPhoneHelp")}</Text>
           </View>
 
           <ToggleRow
-            label="Missed-close alerts"
-            description="Get a ping when a store doesn't close on time."
+            label={t("settings.missedAlerts")}
+            description={t("settings.missedAlertsDesc")}
             value={settings.whatsappAlertsEnabled}
             onChange={(v) => setSettings({ ...settings, whatsappAlertsEnabled: v })}
           />
 
           <ToggleRow
-            label="Close summaries"
-            description="A summary message after each completed close."
+            label={t("settings.closeAlerts")}
+            description={t("settings.closeAlertsDesc")}
             value={settings.whatsappCloseAlertsEnabled}
             onChange={(v) => setSettings({ ...settings, whatsappCloseAlertsEnabled: v })}
           />
 
           <ToggleRow
-            label="Weekly + monthly reports"
-            description="Roll-up reports delivered automatically."
+            label={t("settings.weeklyMonthlyReports")}
+            description={t("settings.weeklyMonthlyReportsDesc")}
             value={settings.whatsappReportsEnabled}
             onChange={(v) => setSettings({ ...settings, whatsappReportsEnabled: v })}
           />
 
           <View style={{ gap: spacing.sm, marginTop: spacing.sm }}>
-            <Button title={saving ? "Saving…" : "Save settings"} onPress={save} loading={saving} disabled={saving} />
-            <Button title={testing ? "Sending…" : "Send test message"} variant="secondary" onPress={test} loading={testing} disabled={testing || !phone.trim()} />
+            <Button title={saving ? t("common.saving") : t("common.save")} onPress={save} loading={saving} disabled={saving} />
+            <Button title={testing ? t("common.sending") : t("settings.sendTest")} variant="secondary" onPress={test} loading={testing} disabled={testing || !phone.trim()} />
           </View>
         </Card>
       </ScrollView>

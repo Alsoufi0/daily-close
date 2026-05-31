@@ -5,6 +5,7 @@ import { AccountFooter } from "../components/AccountFooter";
 import type { SettingsStackParamList } from "../navigation/AppDrawer";
 import { supabase } from "../supabase";
 import { clearToken } from "../api";
+import { t } from "../i18n";
 import { colors, font, radius, spacing } from "../theme";
 
 const WEB_BASE = (process.env.EXPO_PUBLIC_APP_URL || "https://dailyclose.us").replace(/\/+$/, "");
@@ -18,12 +19,14 @@ interface Row {
   web?: string; // fallback: opens web in browser
 }
 
-const ROWS: Row[] = [
-  { title: "Change password", subtitle: "Update your sign-in password", navigate: "ChangePassword" },
-  { title: "WhatsApp alerts", subtitle: "Phone number + alert preferences", navigate: "WhatsAppSettings" },
-  { title: "Language", subtitle: "App language preference", navigate: "Language" },
-  { title: "Billing & subscription", subtitle: "Manage your Daily Close subscription", web: "/billing" }
-];
+function getRows(): Row[] {
+  return [
+    { title: t("account.changePassword"), subtitle: t("settings.changePasswordSubtitle"), navigate: "ChangePassword" },
+    { title: t("settings.whatsappTitle"), subtitle: t("settings.whatsappListSubtitle"), navigate: "WhatsAppSettings" },
+    { title: t("common.language"), subtitle: t("settings.languageSubtitle"), navigate: "Language" },
+    { title: t("settings.billingTitle"), subtitle: t("settings.billingSubtitle"), web: "/billing" }
+  ];
+}
 
 export function SettingsScreen() {
   const navigation = useNavigation<SettingsNav>();
@@ -37,11 +40,12 @@ export function SettingsScreen() {
     }
   }
 
+  const rows = getRows();
   return (
     <ScrollView contentContainerStyle={s.content}>
-      <Text style={s.sectionLabel}>ACCOUNT</Text>
+      <Text style={s.sectionLabel}>{t("settings.accountSection").toUpperCase()}</Text>
       <View style={s.rowGroup}>
-        {ROWS.map((row, i) => {
+        {rows.map((row, i) => {
           const isFirst = i === 0;
           return (
             <TouchableOpacity

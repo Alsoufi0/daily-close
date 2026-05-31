@@ -24,6 +24,8 @@ import {
   updateStore
 } from "../../api";
 import { Button, Card } from "../../ui";
+import { SkeletonRow } from "../../ui/Skeleton";
+import { t } from "../../i18n";
 import { colors, font, radius, spacing } from "../../theme";
 
 const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -43,7 +45,7 @@ export function AdminStoresScreen() {
       setStores(s);
       setError(null);
     } catch (err: any) {
-      setError(err?.message || "Could not load stores.");
+      setError(err?.message || t("admin.loadStoresFailed"));
     } finally {
       if (initial) setLoading(false);
     }
@@ -61,19 +63,19 @@ export function AdminStoresScreen() {
 
   function confirmDelete(store: StoreRecord) {
     Alert.alert(
-      `Delete ${store.storeName}?`,
-      "This removes the store and detaches it from any employees. Past close reports stay intact.",
+      t("admin.removeStoreConfirm").replace("{store}", store.storeName),
+      t("admin.removeStoreBody"),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Delete",
+          text: t("common.delete"),
           style: "destructive",
           onPress: async () => {
             try {
               await deleteStore(store.id);
               await load(false);
             } catch (err: any) {
-              Alert.alert("Couldn't delete", err?.message || "Try again.");
+              Alert.alert(t("admin.removeStoreFailed"), err?.message || t("common.tryAgain"));
             }
           }
         }
@@ -85,11 +87,11 @@ export function AdminStoresScreen() {
     <View style={s.wrap}>
       <View style={s.header}>
         <View style={{ flex: 1 }}>
-          <Text style={s.headerTitle}>Stores</Text>
-          <Text style={s.headerSubtitle}>Add, rename, set close time + timezone</Text>
+          <Text style={s.headerTitle}>{t("admin.stores")}</Text>
+          <Text style={s.headerSubtitle}>{t("admin.storesHelp")}</Text>
         </View>
         <TouchableOpacity onPress={() => setShowCreate(true)} style={s.newBtn}>
-          <Text style={s.newBtnText}>+ New</Text>
+          <Text style={s.newBtnText}>+ {t("admin.newStore")}</Text>
         </TouchableOpacity>
       </View>
 
@@ -102,15 +104,14 @@ export function AdminStoresScreen() {
       ) : null}
 
       {loading && stores.length === 0 ? (
-        <View style={{ padding: spacing.xl, alignItems: "center" }}>
-          <ActivityIndicator color={colors.leaf} />
-          <Text style={s.loadingText}>Loading stores…</Text>
+        <View style={{ padding: spacing.lg, gap: spacing.sm }}>
+          {[0, 1, 2].map((i) => <SkeletonRow key={i} />)}
         </View>
       ) : !loading && stores.length === 0 ? (
         <View style={{ paddingHorizontal: spacing.lg }}>
           <Card style={{ alignItems: "center", paddingVertical: spacing.xl }}>
-            <Text style={s.emptyTitle}>No stores yet</Text>
-            <Text style={s.emptyBody}>Tap "+ New" to add your first store.</Text>
+            <Text style={s.emptyTitle}>{t("admin.noStores")}</Text>
+            <Text style={s.emptyBody}>{t("admin.noStoresAddFirst")}</Text>
           </Card>
         </View>
       ) : (
@@ -170,15 +171,15 @@ function StoreRow({
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={s.storeName} numberOfLines={1}>{store.storeName}</Text>
         <Text style={s.storeMeta} numberOfLines={2}>
-          Closes at {store.closeTime ?? "23:30"}
+          {t("dashboard.closesAt")} {store.closeTime ?? "23:30"}
           {store.timezone ? ` · ${store.timezone}` : ""}
           {store.address ? ` · ${store.address}` : ""}
         </Text>
       </View>
-      <TouchableOpacity onPress={onEdit} style={s.actionBtn} accessibilityLabel="Edit store">
+      <TouchableOpacity onPress={onEdit} style={s.actionBtn} accessibilityLabel={t("admin.editStore")}>
         <Text style={s.editIcon}>✏️</Text>
       </TouchableOpacity>
-      <TouchableOpacity onPress={onDelete} style={s.actionBtn} accessibilityLabel="Delete store">
+      <TouchableOpacity onPress={onDelete} style={s.actionBtn} accessibilityLabel={t("admin.removeStore")}>
         <Text style={s.deleteIcon}>🗑</Text>
       </TouchableOpacity>
     </View>
@@ -222,11 +223,11 @@ function StoreFormModal({
 
   async function submit() {
     if (!storeName.trim()) {
-      setFormError("Store name is required.");
+      setFormError(t("admin.storeNameRequired"));
       return;
     }
     if (!TIME_REGEX.test(closeTime)) {
-      setFormError("Close time must be HH:MM (24-hour), e.g. 23:30.");
+      setFormError(t("admin.closeTimeInvalid"));
       return;
     }
     setSubmitting(true);
@@ -245,7 +246,7 @@ function StoreFormModal({
       }
       await onSaved();
     } catch (err: any) {
-      setFormError(err instanceof ApiError ? err.message : err?.message || "Save failed.");
+      setFormError(err instanceof ApiError ? err.message : err?.message || t("admin.saveStoreFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -261,7 +262,7 @@ function StoreFormModal({
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <View style={modal.wrap}>
         <View style={modal.header}>
-          <Text style={modal.title}>{mode === "create" ? "New store" : `Edit ${initial?.storeName ?? ""}`}</Text>
+          <Text style={modal.title}>{mode === "create" ? t("admin.newStore") : `${t("common.edit")} ${initial?.storeName ?? ""}`}</Text>
           <TouchableOpacity onPress={onClose} style={modal.closeBtn}>
             <Text style={modal.closeText}>✕</Text>
           </TouchableOpacity>
@@ -274,28 +275,28 @@ function StoreFormModal({
             </View>
           ) : null}
 
-          <Field label="Store name">
+          <Field label={t("admin.storeName")}>
             <TextInput
               value={storeName}
               onChangeText={setStoreName}
-              placeholder="e.g. Main Street Smoke"
+              placeholder={t("admin.storeNamePlaceholder")}
               placeholderTextColor={colors.inkMuted}
               style={modal.input}
               autoFocus={mode === "create"}
             />
           </Field>
 
-          <Field label="Address (optional)">
+          <Field label={t("admin.addressOptional")}>
             <TextInput
               value={address}
               onChangeText={setAddress}
-              placeholder="123 Main St, City"
+              placeholder={t("admin.addressPlaceholder")}
               placeholderTextColor={colors.inkMuted}
               style={modal.input}
             />
           </Field>
 
-          <Field label="Daily close time (24h)">
+          <Field label={t("admin.dailyCloseTime")}>
             <TextInput
               value={closeTime}
               onChangeText={setCloseTime}
@@ -305,27 +306,27 @@ function StoreFormModal({
               keyboardType="numbers-and-punctuation"
               maxLength={5}
             />
-            <Text style={modal.help}>Hour:minute, 24-hour format (e.g. 23:30, 02:00).</Text>
+            <Text style={modal.help}>{t("admin.closeTimeHelp")}</Text>
           </Field>
 
-          <Field label="Timezone">
+          <Field label={t("admin.timezone")}>
             <TouchableOpacity style={modal.input} onPress={() => setTzPickerOpen(true)}>
               <Text style={modal.inputText} numberOfLines={1}>
                 {timezone}
-                {timezone === browserTz ? " (your device)" : ""}
+                {timezone === browserTz ? ` (${t("admin.detectedTimezone")})` : ""}
               </Text>
             </TouchableOpacity>
-            <Text style={modal.help}>Determines when the "day" rolls over for reports.</Text>
+            <Text style={modal.help}>{t("admin.timezoneHelp")}</Text>
           </Field>
         </ScrollView>
 
         <View style={modal.footer}>
           <View style={{ flex: 1 }}>
-            <Button title="Cancel" variant="secondary" onPress={onClose} />
+            <Button title={t("common.cancel")} variant="secondary" onPress={onClose} />
           </View>
           <View style={{ flex: 1 }}>
             <Button
-              title={submitting ? "Saving…" : mode === "create" ? "Create store" : "Save changes"}
+              title={submitting ? t("admin.saving") : mode === "create" ? t("admin.createStore") : t("admin.saveChanges")}
               onPress={submit}
               loading={submitting}
               disabled={submitting}
@@ -337,7 +338,7 @@ function StoreFormModal({
         <Modal visible={tzPickerOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setTzPickerOpen(false)}>
           <View style={modal.wrap}>
             <View style={modal.header}>
-              <Text style={modal.title}>Choose timezone</Text>
+              <Text style={modal.title}>{t("admin.chooseTimezone")}</Text>
               <TouchableOpacity onPress={() => setTzPickerOpen(false)} style={modal.closeBtn}>
                 <Text style={modal.closeText}>✕</Text>
               </TouchableOpacity>
@@ -346,7 +347,7 @@ function StoreFormModal({
               <TextInput
                 value={tzQuery}
                 onChangeText={setTzQuery}
-                placeholder="Search timezones…"
+                placeholder={t("admin.searchTimezones")}
                 placeholderTextColor={colors.inkMuted}
                 style={modal.input}
                 autoFocus
@@ -370,7 +371,7 @@ function StoreFormModal({
                   <Text style={[tzPicker.label, timezone === item && { color: colors.leaf }]}>
                     {item}
                   </Text>
-                  {item === browserTz ? <Text style={tzPicker.deviceTag}>YOUR DEVICE</Text> : null}
+                  {item === browserTz ? <Text style={tzPicker.deviceTag}>{t("admin.yourDevice").toUpperCase()}</Text> : null}
                   {timezone === item ? <Text style={tzPicker.check}>✓</Text> : null}
                 </Pressable>
               )}

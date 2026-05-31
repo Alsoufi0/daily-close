@@ -29,6 +29,7 @@ import {
   StoreRecord
 } from "../../api";
 import { Button, Card } from "../../ui";
+import { SkeletonRow } from "../../ui/Skeleton";
 import { colors, font, radius, spacing } from "../../theme";
 import { t } from "../../i18n";
 
@@ -151,11 +152,11 @@ export function AdminEmployeesScreen() {
     <View style={s.wrap}>
       <View style={s.header}>
         <View style={{ flex: 1 }}>
-          <Text style={s.headerTitle}>Employees</Text>
-          <Text style={s.headerSubtitle}>Invite, assign to stores, manage admin access</Text>
+          <Text style={s.headerTitle}>{t("admin.employees")}</Text>
+          <Text style={s.headerSubtitle}>{t("admin.employeesSubtitle")}</Text>
         </View>
         <TouchableOpacity onPress={() => setShowInvite(true)} style={s.newBtn}>
-          <Text style={s.newBtnText}>+ Invite</Text>
+          <Text style={s.newBtnText}>+ {t("admin.invite")}</Text>
         </TouchableOpacity>
       </View>
 
@@ -176,14 +177,14 @@ export function AdminEmployeesScreen() {
       ) : null}
 
       {loading && grouped.length === 0 ? (
-        <View style={{ padding: spacing.xl, alignItems: "center" }}>
-          <ActivityIndicator color={colors.leaf} />
+        <View style={{ padding: spacing.lg, gap: spacing.sm }}>
+          {[0, 1, 2].map((i) => <SkeletonRow key={i} />)}
         </View>
       ) : !loading && grouped.length === 0 ? (
         <View style={{ paddingHorizontal: spacing.lg }}>
           <Card style={{ alignItems: "center", paddingVertical: spacing.xl }}>
-            <Text style={s.emptyTitle}>No employees yet</Text>
-            <Text style={s.emptyBody}>Tap "+ Invite" to add your first.</Text>
+            <Text style={s.emptyTitle}>{t("admin.noEmployees")}</Text>
+            <Text style={s.emptyBody}>{t("admin.tapInvite")}</Text>
           </Card>
         </View>
       ) : (
@@ -307,16 +308,16 @@ function EmployeeCard({
 
       <View style={card.actionsRow}>
         <TouchableOpacity onPress={onAssign} style={card.actionBtn}>
-          <Text style={card.actionLabel}>+ Add store</Text>
+          <Text style={card.actionLabel}>+ {t("admin.addStoreShort")}</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={onAdmin} style={card.actionBtn}>
-          <Text style={card.actionLabel}>Admin access</Text>
+          <Text style={card.actionLabel}>{t("admin.adminAccess")}</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={onReset} style={card.actionBtn}>
-          <Text style={card.actionLabel}>Reset PW</Text>
+          <Text style={card.actionLabel}>{t("admin.resetPwShort")}</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => onRemove()} style={[card.actionBtn, card.actionBtnDanger]}>
-          <Text style={[card.actionLabel, { color: colors.warning }]}>Remove</Text>
+          <Text style={[card.actionLabel, { color: colors.warning }]}>{t("common.remove")}</Text>
         </TouchableOpacity>
       </View>
     </View>

@@ -13,16 +13,20 @@ import { formatMoney, formatMoneyExact } from "@smokeshop/shared/utils/money";
 import type { OwnerDashboardSummary } from "@smokeshop/shared/types";
 import { getOwnerDashboard } from "../api";
 import { Banner, Card, Pill } from "../ui";
+import { Skeleton, SkeletonCard } from "../ui/Skeleton";
+import { t } from "../i18n";
 import { colors, font, radius, spacing } from "../theme";
 
 type Filter = "all" | "closed" | "needs" | "open";
 
-const FILTERS: Array<{ key: Filter; label: string }> = [
-  { key: "all", label: "All" },
-  { key: "closed", label: "Closed" },
-  { key: "needs", label: "Needs closing" },
-  { key: "open", label: "Open" }
-];
+function getFilters(): Array<{ key: Filter; label: string }> {
+  return [
+    { key: "all", label: t("stores.filterAll") },
+    { key: "closed", label: t("dashboard.closed") },
+    { key: "needs", label: t("dashboard.needsClosing") },
+    { key: "open", label: t("dashboard.open") }
+  ];
+}
 
 export function AllStoresScreen() {
   const [summary, setSummary] = useState<OwnerDashboardSummary | null>(null);
@@ -39,7 +43,7 @@ export function AllStoresScreen() {
       setSummary(data);
       setError(null);
     } catch (err: any) {
-      setError(err?.message || "Could not load stores.");
+      setError(err?.message || t("admin.loadStoresFailed"));
     } finally {
       if (initial) setLoading(false);
     }
@@ -88,7 +92,7 @@ export function AllStoresScreen() {
       <TextInput
         value={query}
         onChangeText={setQuery}
-        placeholder="Search stores…"
+        placeholder={t("stores.search")}
         placeholderTextColor={colors.inkMuted}
         style={s.search}
         autoCapitalize="none"
@@ -96,7 +100,7 @@ export function AllStoresScreen() {
       />
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filterRow}>
-        {FILTERS.map((f) => {
+        {getFilters().map((f) => {
           const active = filter === f.key;
           const count = counts[f.key];
           return (
@@ -114,18 +118,18 @@ export function AllStoresScreen() {
       </ScrollView>
 
       {loading ? (
-        <View style={{ paddingVertical: spacing.xl, alignItems: "center" }}>
-          <ActivityIndicator color={colors.leaf} />
+        <View style={{ gap: spacing.sm }}>
+          {[0, 1, 2].map((i) => <SkeletonCard key={i} height={140} />)}
         </View>
       ) : null}
 
-      {error ? <Banner tone="bad" title="Could not load" body={error} /> : null}
+      {error ? <Banner tone="bad" title={t("common.error")} body={error} /> : null}
 
       {!loading && filtered.length === 0 ? (
         <Card style={{ alignItems: "center", paddingVertical: spacing.xl }}>
-          <Text style={s.emptyTitle}>No stores match</Text>
+          <Text style={s.emptyTitle}>{t("stores.noMatch")}</Text>
           <Text style={s.emptyBody}>
-            {query ? `Nothing matches "${query}".` : "Try a different filter."}
+            {query ? t("stores.noMatchSearch").replace("{query}", query) : t("stores.tryFilter")}
           </Text>
         </Card>
       ) : null}
@@ -133,7 +137,11 @@ export function AllStoresScreen() {
       {filtered.map((store) => {
         const needsClosing = !store.closedToday && Boolean(store.pastCloseTime);
         const tone = store.closedToday ? "good" : needsClosing ? "warn" : "plain";
-        const status = store.closedToday ? "CLOSED" : needsClosing ? "NEEDS CLOSING" : "OPEN";
+        const status = store.closedToday
+          ? t("dashboard.closed").toUpperCase()
+          : needsClosing
+            ? t("dashboard.needsClosing").toUpperCase()
+            : t("dashboard.open").toUpperCase();
         return (
           <Card key={store.id} style={{ gap: spacing.sm }}>
             <View style={s.rowBetween}>
@@ -143,17 +151,17 @@ export function AllStoresScreen() {
 
             <View style={s.miniRow}>
               <View style={s.miniCell}>
-                <Text style={s.miniLabel}>Gross</Text>
+                <Text style={s.miniLabel}>{t("dashboard.grossSales")}</Text>
                 <Text style={s.miniValue}>{store.closedToday ? formatMoney(store.totalSales) : "—"}</Text>
               </View>
               <View style={s.miniCell}>
-                <Text style={s.miniLabel}>Net</Text>
+                <Text style={s.miniLabel}>{t("dashboard.netProfit")}</Text>
                 <Text style={[s.miniValue, store.netProfit < 0 && { color: colors.warning }]}>
                   {store.closedToday ? formatMoney(store.netProfit) : "—"}
                 </Text>
               </View>
               <View style={s.miniCell}>
-                <Text style={s.miniLabel}>Cash diff</Text>
+                <Text style={s.miniLabel}>{t("dashboard.cashDifference")}</Text>
                 <Text style={[s.miniValue, store.difference < 0 && { color: colors.warning }]}>
                   {store.closedToday ? formatMoneyExact(store.difference) : "—"}
                 </Text>
@@ -162,10 +170,10 @@ export function AllStoresScreen() {
 
             <Text style={s.closeTime}>
               {store.closedToday
-                ? "Closed today"
+                ? t("stores.closedToday")
                 : needsClosing
-                  ? "Close not submitted yet"
-                  : `Closes at ${store.closeTime ?? "23:30"}`}
+                  ? t("dashboard.closeNotSubmitted")
+                  : `${t("dashboard.closesAt")} ${store.closeTime ?? "23:30"}`}
             </Text>
           </Card>
         );

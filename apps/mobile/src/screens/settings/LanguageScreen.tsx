@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Banner, Card } from "../../ui";
-import { getMobileLanguage, setMobileLanguage } from "../../i18n";
+import { getMobileLanguage, setMobileLanguage, t } from "../../i18n";
 import type { Language } from "@smokeshop/shared/i18n";
 import { colors, font, radius, spacing } from "../../theme";
 
@@ -37,9 +37,9 @@ export function LanguageScreen() {
       // RTL switch requires app reload to fully take effect — React Native
       // I18nManager is read at module init for the layout direction.
       Alert.alert(
-        "Restart app",
-        "Arabic uses right-to-left layout. Close and reopen the app to apply the new direction.",
-        [{ text: "OK" }]
+        t("language.restartTitle"),
+        t("language.restartBody"),
+        [{ text: t("common.ok") }]
       );
     }
   }
@@ -50,15 +50,15 @@ export function LanguageScreen() {
         <View style={s.iconRow}>
           <View style={s.iconBg}><Text style={s.iconText}>🌐</Text></View>
           <View style={{ flex: 1 }}>
-            <Text style={s.title}>App language</Text>
-            <Text style={s.subtitle}>Choose your preferred language. Affects in-app text only.</Text>
+            <Text style={s.title}>{t("language.title")}</Text>
+            <Text style={s.subtitle}>{t("language.subtitle")}</Text>
           </View>
         </View>
 
         <Banner
           tone="warn"
-          title="Translation coverage is partial"
-          body="~60 strings on mobile are still English-only. We're working through them — see the pre-publishing backlog."
+          title={t("language.partialTitle")}
+          body={t("language.partialBody")}
         />
 
         <View style={{ gap: spacing.xs }}>

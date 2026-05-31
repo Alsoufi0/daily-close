@@ -22,6 +22,8 @@ import {
   StoreRecord
 } from "../api";
 import { Banner, Button, Card } from "../ui";
+import { SkeletonRow } from "../ui/Skeleton";
+import { t } from "../i18n";
 import { colors, font, radius, spacing } from "../theme";
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
@@ -50,22 +52,22 @@ export function ReportsScreen() {
         setStores(s);
         if (s[0]) setStoreId(s[0].id);
       })
-      .catch((err) => !cancelled && setError(err?.message || "Could not load stores."))
+      .catch((err) => !cancelled && setError(err?.message || t("admin.loadStoresFailed")))
       .finally(() => !cancelled && setStoresLoading(false));
     return () => { cancelled = true; };
   }, []);
 
   const load = useCallback(async () => {
     if (!storeId) return;
-    if (from && !DATE_REGEX.test(from)) { setError("From date must be YYYY-MM-DD."); return; }
-    if (to && !DATE_REGEX.test(to)) { setError("To date must be YYYY-MM-DD."); return; }
+    if (from && !DATE_REGEX.test(from)) { setError(t("reports.dateInvalidFrom")); return; }
+    if (to && !DATE_REGEX.test(to)) { setError(t("reports.dateInvalidTo")); return; }
     setLoading(true);
     setError(null);
     try {
       const rows = await listReceipts({ storeId, from: from || undefined, to: to || undefined });
       setReceipts(rows);
     } catch (err: any) {
-      setError(err?.message || "Could not load receipts.");
+      setError(err?.message || t("reports.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -97,8 +99,8 @@ export function ReportsScreen() {
     return (
       <View style={{ padding: spacing.lg }}>
         <Card style={{ alignItems: "center", paddingVertical: spacing.xl }}>
-          <Text style={s.emptyTitle}>No stores yet</Text>
-          <Text style={s.emptyBody}>Add a store first to see its reports.</Text>
+          <Text style={s.emptyTitle}>{t("admin.noStores")}</Text>
+          <Text style={s.emptyBody}>{t("reports.noStoresBody")}</Text>
         </Card>
       </View>
     );
@@ -107,17 +109,17 @@ export function ReportsScreen() {
   return (
     <View style={s.wrap}>
       <View style={s.filters}>
-        <Text style={s.label}>Store</Text>
+        <Text style={s.label}>{t("common.store")}</Text>
         <TouchableOpacity onPress={() => setShowStorePicker(true)} style={s.storeBtn}>
           <Text style={s.storeBtnText} numberOfLines={1}>
-            {selectedStore?.storeName ?? "Pick a store"}
+            {selectedStore?.storeName ?? t("reports.pickStore")}
           </Text>
           <Text style={s.storeChevron}>▾</Text>
         </TouchableOpacity>
 
         <View style={s.dateRow}>
           <View style={{ flex: 1 }}>
-            <Text style={s.label}>From</Text>
+            <Text style={s.label}>{t("reports.from")}</Text>
             <TextInput
               value={from}
               onChangeText={setFrom}
@@ -129,7 +131,7 @@ export function ReportsScreen() {
             />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={s.label}>To</Text>
+            <Text style={s.label}>{t("reports.to")}</Text>
             <TextInput
               value={to}
               onChangeText={setTo}
@@ -144,11 +146,11 @@ export function ReportsScreen() {
 
         <View style={{ flexDirection: "row", gap: spacing.sm }}>
           <View style={{ flex: 1 }}>
-            <Button title="Apply" onPress={load} disabled={loading} />
+            <Button title={t("reports.apply")} onPress={load} disabled={loading} />
           </View>
           <View style={{ flex: 1 }}>
             <Button
-              title="Bulk export"
+              title={t("reports.bulkExport")}
               variant="secondary"
               onPress={() => {
                 if (!storeId) return;
@@ -165,19 +167,19 @@ export function ReportsScreen() {
 
       {error ? (
         <View style={{ paddingHorizontal: spacing.lg }}>
-          <Banner tone="bad" title="Couldn't load" body={error} />
+          <Banner tone="bad" title={t("common.error")} body={error} />
         </View>
       ) : null}
 
       {loading ? (
-        <View style={{ paddingVertical: spacing.xl, alignItems: "center" }}>
-          <ActivityIndicator color={colors.leaf} />
+        <View style={{ padding: spacing.lg, gap: spacing.sm }}>
+          {[0, 1, 2, 3].map((i) => <SkeletonRow key={i} />)}
         </View>
       ) : receipts.length === 0 ? (
         <View style={{ paddingHorizontal: spacing.lg }}>
           <Card style={{ alignItems: "center", paddingVertical: spacing.xl }}>
-            <Text style={s.emptyTitle}>No reports in range</Text>
-            <Text style={s.emptyBody}>Try widening the date range or pick another store.</Text>
+            <Text style={s.emptyTitle}>{t("reports.empty")}</Text>
+            <Text style={s.emptyBody}>{t("reports.emptyBody")}</Text>
           </Card>
         </View>
       ) : (
@@ -216,7 +218,7 @@ export function ReportsScreen() {
       <Modal visible={showStorePicker} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowStorePicker(false)}>
         <View style={{ flex: 1, backgroundColor: colors.bg }}>
           <View style={s.modalHeader}>
-            <Text style={s.modalTitle}>Choose store</Text>
+            <Text style={s.modalTitle}>{t("reports.chooseStore")}</Text>
             <TouchableOpacity onPress={() => setShowStorePicker(false)} style={s.closeBtn}>
               <Text style={s.closeText}>✕</Text>
             </TouchableOpacity>
@@ -258,21 +260,21 @@ export function ReportsScreen() {
             ) : null}
             {openReceipt?.dailyClose ? (
               <Card style={{ gap: spacing.sm }}>
-                <DetailRow label="Status" value={openReceipt.dailyClose.status} />
-                <DetailRow label="Total sales" value={formatMoney(openReceipt.dailyClose.totalSales)} />
-                <DetailRow label="Cash" value={formatMoney(openReceipt.dailyClose.cashSales)} />
-                <DetailRow label="Card" value={formatMoney(openReceipt.dailyClose.cardSales)} />
+                <DetailRow label={t("reports.status")} value={openReceipt.dailyClose.status} />
+                <DetailRow label={t("dashboard.totalSales")} value={formatMoney(openReceipt.dailyClose.totalSales)} />
+                <DetailRow label={t("common.cash")} value={formatMoney(openReceipt.dailyClose.cashSales)} />
+                <DetailRow label={t("common.card")} value={formatMoney(openReceipt.dailyClose.cardSales)} />
                 <DetailRow
-                  label="Cash difference"
+                  label={t("dashboard.cashDifference")}
                   value={formatMoneyExact(openReceipt.dailyClose.difference)}
                   tone={openReceipt.dailyClose.difference < 0 ? "bad" : "good"}
                 />
               </Card>
             ) : null}
             <Card style={{ gap: spacing.xs }}>
-              <Text style={s.metaLabel}>Submitted by</Text>
+              <Text style={s.metaLabel}>{t("reports.submittedBy")}</Text>
               <Text style={s.metaValue}>{openReceipt?.employeeName}</Text>
-              <Text style={[s.metaLabel, { marginTop: spacing.sm }]}>Uploaded</Text>
+              <Text style={[s.metaLabel, { marginTop: spacing.sm }]}>{t("reports.uploaded")}</Text>
               <Text style={s.metaValue}>
                 {openReceipt ? new Date(openReceipt.createdAt).toLocaleString() : ""}
               </Text>

@@ -3,13 +3,29 @@ import { AppState, AppStateStatus, StyleSheet } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { NavigationContainer } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Sentry from "@sentry/react-native";
 import { LoginScreen } from "./src/screens/LoginScreen";
 import { AppDrawer } from "./src/navigation/AppDrawer";
+import { ErrorBoundary } from "./src/components/ErrorBoundary";
+import { setMobileLanguage } from "./src/i18n";
 import { colors } from "./src/theme";
 import { clearToken, registerOutboxHandlers } from "./src/api";
 import { drainOnce } from "./src/outbox";
 import { supabase } from "./src/supabase";
+
+// Restore the user's chosen language at module load — before any screen
+// renders — so the first paint uses their preference instead of flashing
+// English. The LanguageScreen writes this same key on every change.
+AsyncStorage.getItem("dailyclose:language")
+  .then((value) => {
+    if (value === "en" || value === "es" || value === "ar" || value === "hi") {
+      setMobileLanguage(value);
+    }
+  })
+  .catch(() => {
+    /* fall back to default English */
+  });
 
 // Mobile crash reporting — mirrors the web/API Sentry setup. Initialised at
 // module load (before any screen renders) so even crashes in render paths get
@@ -101,7 +117,9 @@ function App() {
         // NavigationContainer owns its own safe-area handling. Don't wrap
         // it in SafeAreaView — that double-pads and clips drawer animations.
         <NavigationContainer>
-          <AppDrawer onSignOut={signOut} />
+          <ErrorBoundary>
+            <AppDrawer onSignOut={signOut} />
+          </ErrorBoundary>
         </NavigationContainer>
       )}
     </SafeAreaProvider>

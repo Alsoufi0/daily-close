@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { Banner, Button, Card } from "../../ui";
 import { supabase } from "../../supabase";
+import { t } from "../../i18n";
 import { colors, font, radius, spacing } from "../../theme";
 
 export function ChangePasswordScreen() {
@@ -23,9 +24,9 @@ export function ChangePasswordScreen() {
 
   async function submit() {
     setError(null);
-    if (password.length < 8) { setError("Password must be at least 8 characters."); return; }
-    if (password !== confirm) { setError("The two passwords don't match."); return; }
-    if (!supabase) { setError("Auth not configured."); return; }
+    if (password.length < 8) { setError(t("account.pwTooShort")); return; }
+    if (password !== confirm) { setError(t("account.pwMismatch")); return; }
+    if (!supabase) { setError(t("account.supabaseNotConfigured")); return; }
 
     setStatus("loading");
     const { error: err } = await supabase.auth.updateUser({ password });
@@ -46,19 +47,19 @@ export function ChangePasswordScreen() {
           <View style={s.iconRow}>
             <View style={s.iconBg}><Text style={s.iconText}>🔒</Text></View>
             <View style={{ flex: 1 }}>
-              <Text style={s.title}>Change password</Text>
-              <Text style={s.subtitle}>Use at least 8 characters. Mix in numbers + symbols.</Text>
+              <Text style={s.title}>{t("account.changePassword")}</Text>
+              <Text style={s.subtitle}>{t("account.useAtLeast8")}</Text>
             </View>
           </View>
 
           {status === "done" ? (
-            <Banner tone="good" title="Password updated" body="Use the new password next time you sign in." />
+            <Banner tone="good" title={t("account.passwordUpdated")} body={t("account.useNewPassword")} />
           ) : null}
 
-          {error ? <Banner tone="bad" title="Couldn't update" body={error} /> : null}
+          {error ? <Banner tone="bad" title={t("common.error")} body={error} /> : null}
 
           <View>
-            <Text style={s.label}>New password</Text>
+            <Text style={s.label}>{t("account.newPassword")}</Text>
             <View style={s.inputRow}>
               <TextInput
                 value={password}
@@ -77,7 +78,7 @@ export function ChangePasswordScreen() {
           </View>
 
           <View>
-            <Text style={s.label}>Confirm new password</Text>
+            <Text style={s.label}>{t("account.confirmNewPassword")}</Text>
             <TextInput
               value={confirm}
               onChangeText={setConfirm}
@@ -91,7 +92,7 @@ export function ChangePasswordScreen() {
           </View>
 
           <Button
-            title={status === "loading" ? "Updating…" : "Update password"}
+            title={status === "loading" ? t("account.updating") : t("account.updatePassword")}
             onPress={submit}
             loading={status === "loading"}
             disabled={status === "loading" || !password || !confirm}
