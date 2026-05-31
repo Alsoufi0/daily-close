@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Linking,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View
 } from "react-native";
 import { formatMoney, formatMoneyExact } from "@smokeshop/shared/utils/money";
@@ -12,9 +14,15 @@ import type { OwnerDashboardSummary } from "@smokeshop/shared/types";
 import { getOwnerDashboard } from "../api";
 import { useSession } from "../use-session";
 import { AccountFooter } from "../components/AccountFooter";
-import { Banner, Card, Header, Pill } from "../ui";
+import { Banner, Button, Card, Header, Pill } from "../ui";
 import { colors, font, radius, spacing } from "../theme";
 import { t } from "../i18n";
+
+const WEB_BASE = (process.env.EXPO_PUBLIC_APP_URL || "https://dailyclose.us").replace(/\/+$/, "");
+
+function openWeb(path: string) {
+  Linking.openURL(`${WEB_BASE}${path}`).catch(() => {});
+}
 
 const today = new Date().toLocaleDateString(undefined, {
   weekday: "long",
@@ -35,7 +43,13 @@ const EMPTY_SUMMARY: OwnerDashboardSummary = {
   alerts: []
 };
 
-export function OwnerScreen({ onSignOut }: { onSignOut: () => void }) {
+export function OwnerScreen({
+  onSignOut,
+  onCloseStore
+}: {
+  onSignOut: () => void;
+  onCloseStore: () => void;
+}) {
   const session = useSession();
   const [summary, setSummary] = useState<OwnerDashboardSummary>(EMPTY_SUMMARY);
   const [loading, setLoading] = useState(true);
@@ -85,9 +99,38 @@ export function OwnerScreen({ onSignOut }: { onSignOut: () => void }) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.leaf} />}
       >
         {/* Welcome line — small, leaf-colored, like web's top row */}
-        <Text style={s.welcome}>
-          {t("dashboard.welcome")} {ownerName}
-        </Text>
+        <View style={s.welcomeRow}>
+          <Text style={s.welcome} numberOfLines={1}>
+            {t("dashboard.welcome")} {ownerName}
+          </Text>
+          <TouchableOpacity
+            onPress={onRefresh}
+            disabled={refreshing}
+            style={[s.refreshBtn, refreshing && { opacity: 0.5 }]}
+            accessibilityLabel="Refresh"
+          >
+            {refreshing ? <ActivityIndicator size="small" color={colors.ink} /> : <Text style={s.refreshIcon}>⟳</Text>}
+          </TouchableOpacity>
+        </View>
+
+        {/* Primary CTA — owner can close a store from their phone too */}
+        <Button title="Close a store" icon="🧾" onPress={onCloseStore} />
+
+        {/* Secondary navigation — open the web for things mobile doesn't natively cover yet */}
+        <View style={s.navRow}>
+          <TouchableOpacity onPress={() => openWeb("/stores")} style={s.navTile}>
+            <Text style={s.navIcon}>🏪</Text>
+            <Text style={s.navLabel}>All stores</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => openWeb("/admin/stores")} style={s.navTile}>
+            <Text style={s.navIcon}>⚙️</Text>
+            <Text style={s.navLabel}>Admin</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => openWeb("/owner/receipts")} style={s.navTile}>
+            <Text style={s.navIcon}>📄</Text>
+            <Text style={s.navLabel}>Reports</Text>
+          </TouchableOpacity>
+        </View>
 
         {loading && !summary.totalStores ? (
           <View style={{ paddingVertical: spacing.xl, alignItems: "center" }}>
@@ -238,12 +281,13 @@ export function OwnerScreen({ onSignOut }: { onSignOut: () => void }) {
         </ScrollView>
 
         {moreStores > 0 ? (
-          <View style={s.viewAllRow}>
-            <Text style={s.viewAllText}>
-              {summary.totalStores} {t("dashboard.totalStores") || "stores total"}
-            </Text>
-            <Text style={s.viewAllHint}>{t("dashboard.scrollHint") || "Swipe cards to see more →"}</Text>
-          </View>
+          <TouchableOpacity onPress={() => openWeb("/stores")} style={s.viewAllRow}>
+            <View>
+              <Text style={s.viewAllText}>View all {summary.totalStores} stores</Text>
+              <Text style={s.viewAllHint}>Opens in browser · or swipe cards →</Text>
+            </View>
+            <Text style={s.viewAllArrow}>→</Text>
+          </TouchableOpacity>
         ) : null}
 
         <AccountFooter role="owner" onSignOut={onSignOut} />
@@ -311,7 +355,22 @@ const STORE_CARD_WIDTH = 300;
 
 const s = StyleSheet.create({
   content: { padding: spacing.lg, gap: spacing.md, paddingBottom: 40 },
-  welcome: { color: colors.leaf, fontWeight: font.black, fontSize: 12, textTransform: "uppercase", letterSpacing: 0.6 },
+  welcomeRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  welcome: { color: colors.leaf, fontWeight: font.black, fontSize: 12, textTransform: "uppercase", letterSpacing: 0.6, flex: 1, minWidth: 0 },
+  refreshBtn: {
+    width: 36, height: 36, borderRadius: radius.md,
+    backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border,
+    alignItems: "center", justifyContent: "center"
+  },
+  refreshIcon: { color: colors.ink, fontWeight: font.black, fontSize: 20, marginTop: -2 },
+  navRow: { flexDirection: "row", gap: spacing.sm },
+  navTile: {
+    flex: 1, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border,
+    borderRadius: radius.md, paddingVertical: spacing.md, paddingHorizontal: spacing.sm,
+    alignItems: "center", gap: 4
+  },
+  navIcon: { fontSize: 20 },
+  navLabel: { color: colors.ink, fontWeight: font.black, fontSize: 12, textAlign: "center" },
   heroCard: { gap: spacing.md, paddingVertical: spacing.lg },
   heroTop: { flexDirection: "row", alignItems: "flex-start", gap: spacing.md },
   heroKicker: { color: colors.inkMuted, fontWeight: font.black, fontSize: 11, textTransform: "uppercase", letterSpacing: 0.6 },
@@ -337,9 +396,14 @@ const s = StyleSheet.create({
   miniCell: { flex: 1, padding: spacing.md, backgroundColor: colors.smoke, borderRadius: radius.md },
   miniLabel: { color: colors.inkMuted, fontWeight: font.black, fontSize: 10, textTransform: "uppercase", letterSpacing: 0.4 },
   miniValue: { color: colors.ink, fontWeight: font.black, fontSize: 16, marginTop: 2 },
-  viewAllRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: spacing.xs },
-  viewAllText: { color: colors.ink, fontWeight: font.black, fontSize: 13 },
-  viewAllHint: { color: colors.inkMuted, fontWeight: font.bold, fontSize: 12 }
+  viewAllRow: {
+    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
+    paddingVertical: spacing.md, paddingHorizontal: spacing.lg,
+    backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md
+  },
+  viewAllText: { color: colors.ink, fontWeight: font.black, fontSize: 14 },
+  viewAllHint: { color: colors.inkMuted, fontWeight: font.bold, fontSize: 12, marginTop: 2 },
+  viewAllArrow: { color: colors.leaf, fontWeight: font.black, fontSize: 20 }
 });
 
 const RING_SIZE = 84;

@@ -73,8 +73,18 @@ function App() {
       <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
         <StatusBar style="dark" />
         {screen === "login" ? <LoginScreen onOpen={setScreen} /> : null}
-        {screen === "owner" ? <OwnerScreen onSignOut={signOut} /> : null}
-        {screen === "employee" ? <EmployeeScreen onSignOut={signOut} /> : null}
+        {screen === "owner" ? (
+          <OwnerScreen
+            onSignOut={signOut}
+            onCloseStore={() => setScreen("employee")}
+          />
+        ) : null}
+        {screen === "employee" ? (
+          <EmployeeScreen
+            onSignOut={signOut}
+            onBackToDashboard={() => setScreen("owner")}
+          />
+        ) : null}
       </SafeAreaView>
     </SafeAreaProvider>
   );

@@ -85,7 +85,13 @@ const initialReport: ParsedPOSReport = {
   confidence: 0
 };
 
-export function EmployeeScreen({ onSignOut }: { onSignOut: () => void }) {
+export function EmployeeScreen({
+  onSignOut,
+  onBackToDashboard
+}: {
+  onSignOut: () => void;
+  onBackToDashboard?: () => void;
+}) {
   const session = useSession();
   const [step, setStep] = useState<Step>("start");
   const [loading, setLoading] = useState(false);
@@ -352,6 +358,7 @@ export function EmployeeScreen({ onSignOut }: { onSignOut: () => void }) {
       <Header
         title={`${t("closing.closeStore")} ${activeStore.storeName}`}
         subtitle={session.profile?.name ? `${t("closing.headerHi")} ${session.profile.name}` : t("closing.headerStep")}
+        onBack={onBackToDashboard}
       />
       <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
         <OfflineBanner />
