@@ -128,13 +128,14 @@ export class NotificationsController {
     if (!prefs.phone) {
       return { sent: false, message: "Add a WhatsApp phone number first." };
     }
-    const sent = this.whatsapp.isConfigured()
+    const sentByMeta = this.whatsapp.isConfigured()
       ? await this.whatsapp.sendCloseCompletedTemplate({
           toPhone: prefs.phone,
           ownerName: user.name || "Owner",
           storeName: "Daily Close test"
         })
-      : (await this.sms.send(prefs.phone, "Daily Close: test WhatsApp message.")).sent;
+      : false;
+    const sent = sentByMeta || (await this.sms.send(prefs.phone, "Daily Close: test WhatsApp message.")).sent;
     return {
       sent,
       message: sent
