@@ -68,8 +68,11 @@ export class SmsService {
 
     const sid = process.env.TWILIO_ACCOUNT_SID!;
     const token = process.env.TWILIO_AUTH_TOKEN!;
-    const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
     const whatsapp = this.deliveryChannel() === "whatsapp";
+    const messagingServiceSid =
+      whatsapp && process.env.TWILIO_WHATSAPP_FROM
+        ? undefined
+        : process.env.TWILIO_MESSAGING_SERVICE_SID;
     const fromNumber = whatsapp
       ? process.env.TWILIO_WHATSAPP_FROM || process.env.TWILIO_FROM_NUMBER
       : process.env.TWILIO_FROM_NUMBER;

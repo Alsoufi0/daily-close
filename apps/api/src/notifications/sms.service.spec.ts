@@ -101,6 +101,21 @@ describe("SmsService", () => {
     expect(params.get("From")).toBeNull();
   });
 
+  it("send() prefers the explicit WhatsApp sender over a Messaging Service in WhatsApp mode", async () => {
+    process.env.TWILIO_ACCOUNT_SID = "AC123";
+    process.env.TWILIO_AUTH_TOKEN = "token";
+    process.env.TWILIO_DELIVERY_CHANNEL = "whatsapp";
+    process.env.TWILIO_MESSAGING_SERVICE_SID = "MG_SMS_ONLY";
+    process.env.TWILIO_WHATSAPP_FROM = "+17042015710";
+    fetchSpy.mockResolvedValue({ ok: true } as any);
+
+    await new SmsService().send("+15551234567", "x");
+    const params = new URLSearchParams(fetchSpy.mock.calls[0][1].body);
+    expect(params.get("To")).toBe("whatsapp:+15551234567");
+    expect(params.get("From")).toBe("whatsapp:+17042015710");
+    expect(params.get("MessagingServiceSid")).toBeNull();
+  });
+
   it("send() returns sent=false with the status when Twilio rejects", async () => {
     process.env.TWILIO_ACCOUNT_SID = "AC123";
     process.env.TWILIO_AUTH_TOKEN = "token";

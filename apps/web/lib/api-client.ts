@@ -97,6 +97,24 @@ export async function signupOwner(input: {
   });
 }
 
+export async function requestPhonePasswordReset(phone: string): Promise<{ sent: boolean; message: string }> {
+  return apiFetch("/auth/phone-reset/request", undefined, {
+    method: "POST",
+    body: JSON.stringify({ phone })
+  });
+}
+
+export async function confirmPhonePasswordReset(input: {
+  phone: string;
+  code: string;
+  password: string;
+}): Promise<{ reset: true }> {
+  return apiFetch("/auth/phone-reset/confirm", undefined, {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
 export interface StoreRecord {
   id: string;
   storeName: string;
