@@ -1,10 +1,13 @@
 import { useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Linking, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { Button, Pill } from "../ui";
 import { colors, font, radius, spacing } from "../theme";
 import { supabase } from "../supabase";
 import { saveToken } from "../api";
 import { t } from "../i18n";
+import { ForgotPasswordScreen } from "./ForgotPasswordScreen";
+
+const WEB_BASE = (process.env.EXPO_PUBLIC_APP_URL || "https://dailyclose.us").replace(/\/+$/, "");
 
 // FEATURES hold translation KEYS, not English strings. We resolve via t() at
 // render time so changing language re-renders without touching this array.
@@ -15,7 +18,7 @@ const FEATURES: Array<{ icon: string; titleKey: string; bodyKey: string }> = [
 ];
 
 export function LoginScreen({ onOpen }: { onOpen: () => void }) {
-  const [mode, setMode] = useState<"intro" | "signin">(supabase ? "intro" : "intro");
+  const [mode, setMode] = useState<"intro" | "signin" | "forgot">(supabase ? "intro" : "intro");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -38,6 +41,10 @@ export function LoginScreen({ onOpen }: { onOpen: () => void }) {
     // Auth gate in App.tsx will re-render via Supabase's onAuthStateChange
     // listener; onOpen is the explicit "I'm in" signal for any wrap logic.
     onOpen();
+  }
+
+  if (mode === "forgot") {
+    return <ForgotPasswordScreen onBack={() => setMode("signin")} />;
   }
 
   if (mode === "signin") {
@@ -85,6 +92,9 @@ export function LoginScreen({ onOpen }: { onOpen: () => void }) {
             onPress={signIn}
             disabled={submitting}
           />
+          <TouchableOpacity onPress={() => setMode("forgot")} style={{ alignItems: "center", paddingVertical: spacing.sm }}>
+            <Text style={s.linkText}>{t("auth.forgotPassword")}</Text>
+          </TouchableOpacity>
           <Button title={t("common.back")} variant="secondary" onPress={() => setMode("intro")} />
         </View>
       </ScrollView>
@@ -121,7 +131,17 @@ export function LoginScreen({ onOpen }: { onOpen: () => void }) {
         )}
       </View>
 
-      <Text style={s.legal}>{t("auth.termsAcceptance")}</Text>
+      <View style={s.legalRow}>
+        <Text style={s.legal}>{t("auth.byContinuingYouAgree")} </Text>
+        <TouchableOpacity onPress={() => Linking.openURL(`${WEB_BASE}/terms`)}>
+          <Text style={s.legalLink}>{t("auth.terms")}</Text>
+        </TouchableOpacity>
+        <Text style={s.legal}> & </Text>
+        <TouchableOpacity onPress={() => Linking.openURL(`${WEB_BASE}/privacy`)}>
+          <Text style={s.legalLink}>{t("auth.privacy")}</Text>
+        </TouchableOpacity>
+        <Text style={s.legal}>.</Text>
+      </View>
       {submitting ? <ActivityIndicator style={{ marginTop: 12 }} /> : null}
     </ScrollView>
   );
@@ -145,7 +165,10 @@ const s = StyleSheet.create({
   featureIcon: { fontSize: 22 },
   featureTitle: { color: colors.ink, fontWeight: font.black, fontSize: 15 },
   featureBody: { color: colors.inkSoft, fontWeight: font.bold, fontSize: 13, marginTop: 2 },
-  legal: { color: colors.inkMuted, fontWeight: font.bold, fontSize: 12, textAlign: "center", marginTop: spacing.lg },
+  legal: { color: colors.inkMuted, fontWeight: font.bold, fontSize: 12 },
+  legalLink: { color: colors.leaf, fontWeight: font.black, fontSize: 12, textDecorationLine: "underline" },
+  legalRow: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", marginTop: spacing.lg },
+  linkText: { color: colors.leaf, fontWeight: font.black, fontSize: 13 },
   label: { color: colors.ink, fontWeight: font.black, fontSize: 13, marginBottom: 6 },
   input: {
     height: 52,

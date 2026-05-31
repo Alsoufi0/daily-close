@@ -33,6 +33,8 @@ function getFilters(): Array<{ key: Filter; label: string }> {
   ];
 }
 
+const PAGE_SIZE = 9;
+
 export function AllStoresScreen() {
   const navigation = useNavigation<DrawerNavigationProp<DrawerParamList>>();
   const [summary, setSummary] = useState<OwnerDashboardSummary | null>(null);
@@ -41,6 +43,8 @@ export function AllStoresScreen() {
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
+  const [view, setView] = useState<"list" | "grid">("list");
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   // Persist the selected store + jump to the close-a-store flow. EmployeeScreen
   // reads the saved selection on mount so it picks up the right store.
@@ -97,20 +101,47 @@ export function AllStoresScreen() {
     return { all: stores.length, closed, needs, open };
   }, [stores]);
 
+  // Reset pagination whenever filter or query changes (so the user always
+  // sees results from page 1 after narrowing down).
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [query, filter]);
+
+  const visible = filtered.slice(0, visibleCount);
+  const hasMore = visibleCount < filtered.length;
+
   return (
     <ScrollView
       contentContainerStyle={s.content}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.leaf} />}
     >
-      <TextInput
-        value={query}
-        onChangeText={setQuery}
-        placeholder={t("stores.search")}
-        placeholderTextColor={colors.inkMuted}
-        style={s.search}
-        autoCapitalize="none"
-        autoCorrect={false}
-      />
+      <View style={s.searchRow}>
+        <TextInput
+          value={query}
+          onChangeText={setQuery}
+          placeholder={t("stores.search")}
+          placeholderTextColor={colors.inkMuted}
+          style={[s.search, { flex: 1 }]}
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+        <View style={s.viewToggle}>
+          <TouchableOpacity
+            onPress={() => setView("list")}
+            style={[s.viewBtn, view === "list" && s.viewBtnActive]}
+            accessibilityLabel={t("stores.list")}
+          >
+            <Text style={[s.viewBtnIcon, view === "list" && { color: colors.white }]}>☰</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setView("grid")}
+            style={[s.viewBtn, view === "grid" && s.viewBtnActive]}
+            accessibilityLabel={t("stores.grid")}
+          >
+            <Text style={[s.viewBtnIcon, view === "grid" && { color: colors.white }]}>▦</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filterRow}>
         {getFilters().map((f) => {
@@ -147,7 +178,39 @@ export function AllStoresScreen() {
         </Card>
       ) : null}
 
-      {filtered.map((store) => {
+      {view === "grid" ? (
+        <View style={s.gridWrap}>
+          {visible.map((store) => {
+            const needsClosing = !store.closedToday && Boolean(store.pastCloseTime);
+            const tone = store.closedToday ? "good" : needsClosing ? "warn" : "plain";
+            return (
+              <Pressable
+                key={store.id}
+                onPress={() => !store.closedToday && startCloseFor(store.id)}
+                style={({ pressed }) => [s.gridCard, pressed && { opacity: 0.85 }]}
+              >
+                <Pill
+                  label={
+                    store.closedToday
+                      ? t("dashboard.closed").toUpperCase()
+                      : needsClosing
+                        ? t("dashboard.needsClosing").toUpperCase()
+                        : t("dashboard.open").toUpperCase()
+                  }
+                  tone={tone}
+                />
+                <Text style={s.gridName} numberOfLines={1}>{store.storeName}</Text>
+                <Text style={s.gridSales}>{store.closedToday ? formatMoney(store.totalSales) : "—"}</Text>
+                {!store.closedToday ? (
+                  <Text style={s.gridCta}>{t("nav.closeStore")} →</Text>
+                ) : null}
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : null}
+
+      {view === "list" ? visible.map((store) => {
         const needsClosing = !store.closedToday && Boolean(store.pastCloseTime);
         const tone = store.closedToday ? "good" : needsClosing ? "warn" : "plain";
         const status = store.closedToday
@@ -202,7 +265,15 @@ export function AllStoresScreen() {
             ) : null}
           </Card>
         );
-      })}
+      }) : null}
+
+      {hasMore ? (
+        <TouchableOpacity onPress={() => setVisibleCount((c) => c + PAGE_SIZE)} style={s.showMoreBtn}>
+          <Text style={s.showMoreText}>
+            {t("common.showMore")}  ({filtered.length - visibleCount})
+          </Text>
+        </TouchableOpacity>
+      ) : null}
     </ScrollView>
   );
 }
@@ -242,6 +313,21 @@ const s = StyleSheet.create({
   closeTime: { color: colors.inkSoft, fontWeight: font.bold, fontSize: 12 },
   closeBtn: { backgroundColor: colors.leaf, paddingVertical: 10, borderRadius: radius.md, alignItems: "center", marginTop: spacing.xs },
   closeBtnText: { color: colors.white, fontWeight: font.black, fontSize: 14 },
+  searchRow: { flexDirection: "row", gap: spacing.sm, alignItems: "center" },
+  viewToggle: { flexDirection: "row", backgroundColor: colors.white, borderRadius: radius.md, borderWidth: 1, borderColor: colors.inputBorder, overflow: "hidden" },
+  viewBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
+  viewBtnActive: { backgroundColor: colors.ink },
+  viewBtnIcon: { color: colors.ink, fontSize: 16, fontWeight: font.black },
+  gridWrap: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  gridCard: { width: "48%", padding: spacing.md, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, gap: 6 },
+  gridName: { color: colors.ink, fontWeight: font.black, fontSize: 14, marginTop: 4 },
+  gridSales: { color: colors.ink, fontWeight: font.black, fontSize: 18, letterSpacing: -0.3 },
+  gridCta: { color: colors.leaf, fontWeight: font.black, fontSize: 11, marginTop: 4 },
+  showMoreBtn: {
+    paddingVertical: spacing.md, alignItems: "center",
+    backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md
+  },
+  showMoreText: { color: colors.leaf, fontWeight: font.black, fontSize: 14 },
   emptyTitle: { color: colors.ink, fontWeight: font.black, fontSize: 16 },
   emptyBody: { color: colors.inkSoft, fontWeight: font.bold, fontSize: 13, marginTop: 4, textAlign: "center" }
 });

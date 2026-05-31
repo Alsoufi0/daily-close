@@ -231,6 +231,30 @@ export async function listReceipts(filters: {
   return apiFetch<ReceiptRow[]>(`/reports/receipts?${params.toString()}`);
 }
 
+/**
+ * Returns the bulk-receipts ZIP URL + auth header so the caller can hand
+ * it to expo-file-system's downloadAsync. We can't use apiFetch here
+ * because it always JSON-parses; this endpoint returns a binary ZIP.
+ */
+export async function getReceiptsZipDownloadInfo(filters: {
+  storeId: string;
+  from?: string;
+  to?: string;
+}): Promise<{ url: string; headers: Record<string, string> }> {
+  const token = await getToken();
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL;
+  if (!apiUrl) throw new Error("API URL not configured.");
+  if (!token) throw new Error("Not signed in.");
+  const params = new URLSearchParams();
+  params.set("storeId", filters.storeId);
+  if (filters.from) params.set("from", filters.from);
+  if (filters.to) params.set("to", filters.to);
+  return {
+    url: `${apiUrl}/reports/receipts/download?${params.toString()}`,
+    headers: { Authorization: `Bearer ${token}` }
+  };
+}
+
 // ── WhatsApp settings ──────────────────────────────────────────────────────
 
 export interface WhatsAppSettings {

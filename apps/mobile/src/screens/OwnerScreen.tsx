@@ -18,6 +18,7 @@ import { AccountFooter } from "../components/AccountFooter";
 import type { DrawerParamList } from "../navigation/AppDrawer";
 import { Banner, Button, Card, Pill } from "../ui";
 import { Skeleton } from "../ui/Skeleton";
+import { SetupScreen } from "./SetupScreen";
 import { colors, font, radius, spacing } from "../theme";
 import { t } from "../i18n";
 
@@ -83,6 +84,15 @@ export function OwnerScreen({ onSignOut }: { onSignOut: () => void }) {
   const visibleStores = summary.stores.slice(0, 3);
   const moreStores = summary.stores.length > 3 ? summary.stores.length - 3 : 0;
 
+  // First-run setup: signed-in owner with zero stores → show the setup
+  // wizard instead of an empty dashboard. Once they create a store, the
+  // wizard's onComplete reloads the dashboard data.
+  const isOwner = session.profile?.role === "STORE_OWNER" || session.profile?.role === "SUPER_ADMIN";
+  const needsSetup = !loading && isOwner && session.stores.length === 0 && summary.totalStores === 0;
+  if (needsSetup) {
+    return <SetupScreen onComplete={() => { load(true); }} />;
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <ScrollView
@@ -109,7 +119,29 @@ export function OwnerScreen({ onSignOut }: { onSignOut: () => void }) {
         </View>
 
         {/* Primary CTA — anyone (owner or employee) can close a store */}
-        <Button title="Close a store" icon="🧾" onPress={() => navigation.navigate("CloseStore")} />
+        <Button title={t("nav.closeStore")} icon="🧾" onPress={() => navigation.navigate("CloseStore")} />
+
+        {/* Secondary action row — quick jump to admin/store creation, owner-only */}
+        {isOwner ? (
+          <View style={s.quickActions}>
+            <TouchableOpacity
+              onPress={() => navigation.navigate("AdminStores")}
+              style={s.quickActionBtn}
+              accessibilityLabel={t("admin.newStore")}
+            >
+              <Text style={s.quickActionIcon}>🏪</Text>
+              <Text style={s.quickActionLabel}>+ {t("admin.newStore")}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => navigation.navigate("AdminEmployees")}
+              style={s.quickActionBtn}
+              accessibilityLabel={t("admin.invite")}
+            >
+              <Text style={s.quickActionIcon}>👥</Text>
+              <Text style={s.quickActionLabel}>+ {t("admin.invite")}</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
 
         {loading && !summary.totalStores ? (
           <DashboardSkeleton />
@@ -369,6 +401,15 @@ const s = StyleSheet.create({
     alignItems: "center", justifyContent: "center"
   },
   refreshIcon: { color: colors.ink, fontWeight: font.black, fontSize: 20, marginTop: -2 },
+  quickActions: { flexDirection: "row", gap: spacing.sm },
+  quickActionBtn: {
+    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: 6, paddingVertical: 12,
+    backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border,
+    borderRadius: radius.md
+  },
+  quickActionIcon: { fontSize: 16 },
+  quickActionLabel: { color: colors.ink, fontWeight: font.black, fontSize: 13 },
   heroCard: { gap: spacing.md, paddingVertical: spacing.lg },
   heroTop: { flexDirection: "row", alignItems: "flex-start", gap: spacing.md },
   heroKicker: { color: colors.inkMuted, fontWeight: font.black, fontSize: 11, textTransform: "uppercase", letterSpacing: 0.6 },

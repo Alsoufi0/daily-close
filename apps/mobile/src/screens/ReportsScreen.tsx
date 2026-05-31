@@ -14,8 +14,12 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
+import * as FileSystem from "expo-file-system";
+import * as Sharing from "expo-sharing";
+import { Alert } from "react-native";
 import { formatMoney, formatMoneyExact } from "@smokeshop/shared/utils/money";
 import {
+  getReceiptsZipDownloadInfo,
   listReceipts,
   listStores,
   ReceiptRow,
@@ -27,8 +31,7 @@ import { t } from "../i18n";
 import { colors, font, radius, spacing } from "../theme";
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
-
-const WEB_BASE = (process.env.EXPO_PUBLIC_APP_URL || "https://dailyclose.us").replace(/\/+$/, "");
+const PAGE_SIZE = 20;
 
 export function ReportsScreen() {
   const [stores, setStores] = useState<StoreRecord[]>([]);
@@ -42,6 +45,8 @@ export function ReportsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [showStorePicker, setShowStorePicker] = useState(false);
   const [openReceipt, setOpenReceipt] = useState<ReceiptRow | null>(null);
+  const [downloadingZip, setDownloadingZip] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   // Initial: load stores, pre-select first
   useEffect(() => {
@@ -85,7 +90,47 @@ export function ReportsScreen() {
     setRefreshing(false);
   }, [load]);
 
+  // Reset pagination when filters change
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [storeId, from, to]);
+
+  async function downloadZip() {
+    if (!storeId) return;
+    setDownloadingZip(true);
+    try {
+      const { url, headers } = await getReceiptsZipDownloadInfo({
+        storeId,
+        from: from || undefined,
+        to: to || undefined
+      });
+      const dateStamp = new Date().toISOString().slice(0, 10);
+      const fileName = `receipts-${dateStamp}.zip`;
+      const dest = `${FileSystem.cacheDirectory}${fileName}`;
+      const dl = await FileSystem.downloadAsync(url, dest, { headers });
+      if (dl.status !== 200) {
+        throw new Error(`Download failed (HTTP ${dl.status})`);
+      }
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(dl.uri, {
+          mimeType: "application/zip",
+          dialogTitle: t("reports.bulkExport"),
+          UTI: "public.zip-archive"
+        });
+      } else {
+        Alert.alert(t("reports.bulkExport"), t("reports.downloadedTo").replace("{path}", dl.uri));
+      }
+    } catch (err: any) {
+      Alert.alert(t("reports.downloadFailed"), err?.message || t("common.tryAgain"));
+    } finally {
+      setDownloadingZip(false);
+    }
+  }
+
   const selectedStore = useMemo(() => stores.find((s) => s.id === storeId), [stores, storeId]);
+  const visibleReceipts = receipts.slice(0, visibleCount);
+  const hasMore = visibleCount < receipts.length;
 
   if (storesLoading) {
     return (
@@ -150,16 +195,11 @@ export function ReportsScreen() {
           </View>
           <View style={{ flex: 1 }}>
             <Button
-              title={t("reports.bulkExport")}
+              title={downloadingZip ? t("common.downloading") : t("reports.bulkExport")}
               variant="secondary"
-              onPress={() => {
-                if (!storeId) return;
-                const params = new URLSearchParams();
-                params.set("storeId", storeId);
-                if (from) params.set("from", from);
-                if (to) params.set("to", to);
-                Linking.openURL(`${WEB_BASE}/owner/receipts?${params.toString()}`).catch(() => {});
-              }}
+              onPress={downloadZip}
+              loading={downloadingZip}
+              disabled={downloadingZip || !storeId}
             />
           </View>
         </View>
@@ -184,7 +224,7 @@ export function ReportsScreen() {
         </View>
       ) : (
         <FlatList
-          data={receipts}
+          data={visibleReceipts}
           keyExtractor={(r) => r.id}
           contentContainerStyle={{ padding: spacing.lg, gap: spacing.sm, paddingBottom: 40 }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.leaf} />}
@@ -211,6 +251,15 @@ export function ReportsScreen() {
               )}
             </Pressable>
           )}
+          ListFooterComponent={
+            hasMore ? (
+              <TouchableOpacity onPress={() => setVisibleCount((c) => c + PAGE_SIZE)} style={s.showMoreBtn}>
+                <Text style={s.showMoreText}>
+                  {t("common.showMore")}  ({receipts.length - visibleCount})
+                </Text>
+              </TouchableOpacity>
+            ) : null
+          }
         />
       )}
 
@@ -344,5 +393,10 @@ const s = StyleSheet.create({
   pickerLabel: { flex: 1, color: colors.ink, fontWeight: font.bold, fontSize: 15 },
   pickerCheck: { color: colors.leaf, fontWeight: font.black, fontSize: 18 },
   metaLabel: { color: colors.inkMuted, fontWeight: font.black, fontSize: 11, textTransform: "uppercase", letterSpacing: 0.4 },
-  metaValue: { color: colors.ink, fontWeight: font.black, fontSize: 15 }
+  metaValue: { color: colors.ink, fontWeight: font.black, fontSize: 15 },
+  showMoreBtn: {
+    paddingVertical: spacing.md, alignItems: "center", marginTop: spacing.sm,
+    backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md
+  },
+  showMoreText: { color: colors.leaf, fontWeight: font.black, fontSize: 14 }
 });
