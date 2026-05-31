@@ -19,7 +19,10 @@ import type { OwnerDashboardSummary, StoreSummary } from "@smokeshop/shared/type
 import { formatMoney, formatMoneyExact } from "@smokeshop/shared/utils/money";
 import { ApiError, getOwnerDashboard } from "../../lib/api-client";
 import { useSession } from "../../lib/use-session";
+import { isAccountOwner } from "../../lib/session-roles";
+import { useShowMore } from "../../lib/use-show-more";
 import { useLanguage } from "../../components/language-provider";
+import { ShowMoreButton } from "../../components/show-more-button";
 import { RequireAuth } from "../../components/require-auth";
 
 type View = "grid" | "list";
@@ -27,7 +30,7 @@ type Filter = "all" | "closed" | "needs" | "open";
 
 export default function StoresPage() {
   return (
-    <RequireAuth allowedRoles={["STORE_OWNER", "SUPER_ADMIN"]}>
+    <RequireAuth allowedRoles={["STORE_OWNER", "SUPER_ADMIN"]} allowManagers>
       <StoresPageInner />
     </RequireAuth>
   );
@@ -42,6 +45,8 @@ function storeStatus(s: StoreSummary): Filter {
 
 function StoresPageInner() {
   const session = useSession();
+  // Only the account owner can add stores; per-store managers can't create.
+  const accountOwner = isAccountOwner(session.profile);
   const { t, dir } = useLanguage();
   const [summary, setSummary] = useState<OwnerDashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -88,6 +93,8 @@ function StoresPageInner() {
     });
   }, [stores, query, filter]);
 
+  const { visible, hasMore, remaining, showMore } = useShowMore(filtered, 9);
+
   const counts = useMemo(
     () => ({
       all: stores.length,
@@ -128,12 +135,14 @@ function StoresPageInner() {
               <span className="text-lg font-black text-ink/50 sm:text-xl">{t("stores.title")}</span>
             </h1>
           </div>
-          <Link
-            href="/admin/stores"
-            className="focus-ring inline-flex h-11 items-center gap-2 rounded-full bg-leaf px-5 font-black text-white shadow-sm transition-transform hover:-translate-y-0.5"
-          >
-            <Plus size={18} aria-hidden /> {t("dashboard.addStore")}
-          </Link>
+          {accountOwner ? (
+            <Link
+              href="/admin/stores"
+              className="focus-ring inline-flex h-11 items-center gap-2 rounded-full bg-leaf px-5 font-black text-white shadow-sm transition-transform hover:-translate-y-0.5"
+            >
+              <Plus size={18} aria-hidden /> {t("dashboard.addStore")}
+            </Link>
+          ) : null}
         </div>
       </header>
 
@@ -203,17 +212,23 @@ function StoresPageInner() {
             {t("stores.noMatch")}
           </div>
         ) : view === "grid" ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((s, i) => (
-              <StoreCard key={s.id} store={s} index={i} t={t} />
-            ))}
-          </div>
+          <>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {visible.map((s, i) => (
+                <StoreCard key={s.id} store={s} index={i} t={t} />
+              ))}
+            </div>
+            <ShowMoreButton hasMore={hasMore} remaining={remaining} onShowMore={showMore} />
+          </>
         ) : (
-          <div className="overflow-hidden rounded-2xl border border-ink/10 bg-white">
-            {filtered.map((s, i) => (
-              <StoreRow key={s.id} store={s} index={i} t={t} last={i === filtered.length - 1} />
-            ))}
-          </div>
+          <>
+            <div className="overflow-hidden rounded-2xl border border-ink/10 bg-white">
+              {visible.map((s, i) => (
+                <StoreRow key={s.id} store={s} index={i} t={t} last={i === visible.length - 1} />
+              ))}
+            </div>
+            <ShowMoreButton hasMore={hasMore} remaining={remaining} onShowMore={showMore} />
+          </>
         )}
       </section>
     </main>

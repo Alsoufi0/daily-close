@@ -27,6 +27,9 @@ export interface SessionProfile {
   ownerId?: string;
   employeeId?: string;
   storeId?: string;
+  // Stores where this user is a per-store admin (MANAGER). When non-empty, a
+  // global-role EMPLOYEE gets owner-like (but store-scoped) access in the UI.
+  managedStoreIds?: string[];
 }
 
 export interface OwnerDashboardSummary {

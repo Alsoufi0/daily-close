@@ -17,8 +17,11 @@ export class SubscriptionGuard implements CanActivate {
     const req = context.switchToHttp().getRequest<{ user?: RequestUser }>();
     const user = req.user;
     if (!user) throw new ForbiddenException("Sign in required.");
-    if (user.role !== "STORE_OWNER" || !user.ownerId) {
-      // Employees write closes but never set up billing; only owners are charged.
+    const isManager = Array.isArray(user.managedStoreIds) && user.managedStoreIds.length > 0;
+    if (!user.ownerId || (user.role !== "STORE_OWNER" && !isManager)) {
+      // Plain employees write closes but never set up billing; only owners are
+      // charged. Per-store managers act ON the owner's account, so they ARE
+      // gated by that owner's subscription (below).
       return true;
     }
     try {

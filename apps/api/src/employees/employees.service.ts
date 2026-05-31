@@ -9,6 +9,12 @@ import { randomBytes } from "crypto";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { PrismaService } from "../prisma/prisma.service";
 import { RequestUser } from "../auth/request-user";
+import {
+  assertAccountAdmin,
+  assertScopeAllowsStore,
+  resolveAdminScope,
+  storeWhereForScope
+} from "../auth/admin-scope";
 import { SmsService } from "../notifications/sms.service";
 import { EmailService } from "../notifications/email.service";
 import { InviteEmployeeDto } from "./dto/invite-employee.dto";
@@ -31,27 +37,28 @@ export class EmployeesService {
     }
   }
 
-  private assertOwner(user: RequestUser): asserts user is RequestUser & { ownerId: string } {
-    if (user.role !== "STORE_OWNER" || !user.ownerId) {
-      throw new ForbiddenException("Only owners can manage employees.");
-    }
-  }
-
   async listForOwner(user: RequestUser) {
-    this.assertOwner(user);
-    // Only EMPLOYEE-role assignments. OWNER-role rows are auto-created
-    // by migration 006 / future store-creation flow so the owner can
-    // close their own stores; they're not "employees" from the owner's
-    // POV and shouldn't appear in the employees list.
+    const scope = resolveAdminScope(user);
+    // EMPLOYEE + MANAGER assignments (a per-store admin may have ONLY MANAGER
+    // rows, so excluding them would hide that person entirely). OWNER-role rows
+    // are auto-created so the owner can close their own stores and aren't
+    // "employees" from the admin's POV, so they're excluded. The row's `role`
+    // is returned so the UI can badge which stores a person manages. A manager
+    // sees only the employees of the stores they manage (storeWhereForScope).
     return this.prisma.employee.findMany({
-      where: { store: { ownerId: user.ownerId }, deletedAt: null, role: "EMPLOYEE" },
+      where: {
+        store: storeWhereForScope(scope),
+        deletedAt: null,
+        role: { in: ["EMPLOYEE", "MANAGER"] }
+      },
       include: { user: true, store: true },
       orderBy: { user: { name: "asc" } }
     });
   }
 
   async invite(user: RequestUser, input: InviteEmployeeDto) {
-    this.assertOwner(user);
+    const scope = resolveAdminScope(user);
+    assertScopeAllowsStore(scope, input.storeId);
 
     const email = input.email?.trim() || undefined;
     const phone = input.phone?.trim() || undefined;
@@ -70,9 +77,10 @@ export class EmployeesService {
       }
     }
 
-    // Store must belong to this owner
+    // Store must be within the caller's admin scope (owner: any of their
+    // stores; manager: only stores they manage — already gated above).
     const store = await this.prisma.store.findFirst({
-      where: { id: input.storeId, ownerId: user.ownerId }
+      where: { id: input.storeId, ownerId: scope.ownerId, deletedAt: null }
     });
     if (!store) throw new BadRequestException("Store does not belong to you.");
 
@@ -214,19 +222,20 @@ export class EmployeesService {
    * (which would fail because the user's email already exists).
    */
   async assignToStore(user: RequestUser, employeeId: string, targetStoreId: string) {
-    this.assertOwner(user);
+    const scope = resolveAdminScope(user);
+    assertScopeAllowsStore(scope, targetStoreId);
 
-    // Verify the source employee belongs to one of the owner's stores
-    // (i.e. the owner has the right to "transfer/extend" this employee).
+    // Verify the source employee belongs to a store within the caller's scope
+    // (i.e. they have the right to "transfer/extend" this employee).
     const source = await this.prisma.employee.findFirst({
-      where: { id: employeeId, store: { ownerId: user.ownerId }, deletedAt: null },
+      where: { id: employeeId, store: storeWhereForScope(scope), deletedAt: null },
       include: { user: true }
     });
     if (!source) throw new NotFoundException("Employee not found.");
 
-    // Target store must also belong to the same owner.
+    // Target store must also be within scope (owner's store / managed store).
     const targetStore = await this.prisma.store.findFirst({
-      where: { id: targetStoreId, ownerId: user.ownerId, deletedAt: null }
+      where: { id: targetStoreId, ownerId: scope.ownerId, deletedAt: null }
     });
     if (!targetStore) throw new BadRequestException("Target store does not belong to you.");
 
@@ -260,11 +269,11 @@ export class EmployeesService {
    * "Maya works at: Store #1, Store #3" with per-store unassign actions.
    */
   async listAssignmentsForUser(user: RequestUser, employeeUserId: string) {
-    this.assertOwner(user);
+    const scope = resolveAdminScope(user);
     return this.prisma.employee.findMany({
       where: {
         userId: employeeUserId,
-        store: { ownerId: user.ownerId },
+        store: storeWhereForScope(scope),
         deletedAt: null,
         role: "EMPLOYEE"
       },
@@ -274,10 +283,10 @@ export class EmployeesService {
   }
 
   async resetPassword(user: RequestUser, employeeId: string) {
-    this.assertOwner(user);
+    const scope = resolveAdminScope(user);
 
     const emp = await this.prisma.employee.findFirst({
-      where: { id: employeeId, store: { ownerId: user.ownerId } },
+      where: { id: employeeId, store: storeWhereForScope(scope) },
       include: { user: true }
     });
     if (!emp) throw new NotFoundException("Employee not found.");
@@ -304,10 +313,12 @@ export class EmployeesService {
   }
 
   async setAdminAccess(user: RequestUser, employeeId: string, isAdmin: boolean) {
-    this.assertOwner(user);
+    // Granting ACCOUNT-WIDE admin is reserved for the account owner. Managers
+    // (per-store admins) cannot mint other admins.
+    const scope = assertAccountAdmin(user);
 
     const emp = await this.prisma.employee.findFirst({
-      where: { id: employeeId, store: { ownerId: user.ownerId }, deletedAt: null },
+      where: { id: employeeId, store: { ownerId: scope.ownerId }, deletedAt: null },
       include: { user: true }
     });
     if (!emp) throw new NotFoundException("Employee not found.");
@@ -340,23 +351,101 @@ export class EmployeesService {
     };
   }
 
+  /**
+   * Set the EXACT set of stores a user is a per-store admin (MANAGER) of.
+   * Account-owner only — managers can't delegate manager access.
+   *
+   * For each store in `storeIds` (which must all belong to the owner) we ensure
+   * a MANAGER assignment row exists (creating or undeleting + upgrading from
+   * EMPLOYEE as needed). Any store the user currently manages that's NOT in the
+   * list is downgraded back to EMPLOYEE (the assignment row is kept so they stay
+   * assigned to the store, just without admin powers).
+   *
+   * Returns the resulting set of managed store ids so the UI can reconcile.
+   */
+  async setManagerStores(user: RequestUser, employeeUserId: string, storeIds: string[]) {
+    const scope = assertAccountAdmin(user);
+
+    if (employeeUserId === user.id) {
+      throw new BadRequestException("You cannot change your own access.");
+    }
+
+    // Validate every requested store belongs to the owner.
+    const desired = Array.from(new Set(storeIds));
+    if (desired.length > 0) {
+      const owned = await this.prisma.store.findMany({
+        where: { id: { in: desired }, ownerId: scope.ownerId, deletedAt: null },
+        select: { id: true }
+      });
+      if (owned.length !== desired.length) {
+        throw new BadRequestException("One or more stores are not yours.");
+      }
+    }
+
+    // The target must already be an employee under this owner (you delegate
+    // admin to someone who works for you, not to an arbitrary user).
+    const existing = await this.prisma.employee.findMany({
+      where: { userId: employeeUserId, store: { ownerId: scope.ownerId }, deletedAt: null }
+    });
+    if (existing.length === 0) {
+      throw new NotFoundException("Employee not found.");
+    }
+    const target = await this.prisma.user.findUnique({ where: { id: employeeUserId } });
+    if (target && target.role === "STORE_OWNER") {
+      throw new BadRequestException("This person already has account-wide admin.");
+    }
+
+    const desiredSet = new Set(desired);
+    const existingByStore = new Map(existing.map((e) => [e.storeId, e]));
+
+    await this.prisma.$transaction(async (tx) => {
+      // Promote / create MANAGER rows for desired stores.
+      for (const storeId of desired) {
+        const row = existingByStore.get(storeId);
+        if (row) {
+          if (row.role !== "MANAGER") {
+            await tx.employee.update({ where: { id: row.id }, data: { role: "MANAGER" } });
+          }
+        } else {
+          await tx.employee.create({
+            data: { userId: employeeUserId, storeId, role: "MANAGER" }
+          });
+        }
+      }
+      // Downgrade any currently-managed store no longer desired back to EMPLOYEE.
+      for (const row of existing) {
+        if (row.role === "MANAGER" && !desiredSet.has(row.storeId)) {
+          await tx.employee.update({ where: { id: row.id }, data: { role: "EMPLOYEE" } });
+        }
+      }
+    });
+
+    return { userId: employeeUserId, managedStoreIds: desired };
+  }
+
   async remove(user: RequestUser, employeeId: string) {
-    this.assertOwner(user);
+    const scope = resolveAdminScope(user);
 
     const emp = await this.prisma.employee.findFirst({
-      where: { id: employeeId, store: { ownerId: user.ownerId }, deletedAt: null },
+      where: { id: employeeId, store: storeWhereForScope(scope), deletedAt: null },
       include: { user: true }
     });
     if (!emp) throw new NotFoundException("Employee not found.");
 
-    // Soft-delete the employee row (preserves daily_close FK history)
+    // Soft-delete THIS assignment row (preserves daily_close FK history).
     await this.prisma.employee.update({
       where: { id: employeeId },
       data: { deletedAt: new Date() }
     });
 
-    // Block sign-in by deleting the Supabase auth user (if any)
-    if (this.supabase && emp.user.authUserId) {
+    // Only kill the login when this was their LAST active assignment. A
+    // multi-store employee unassigned from one store must keep signing in for
+    // the stores that remain — deleting the Supabase auth user here used to
+    // lock them out of everything.
+    const remaining = await this.prisma.employee.count({
+      where: { userId: emp.userId, deletedAt: null }
+    });
+    if (remaining === 0 && this.supabase && emp.user.authUserId) {
       try {
         await this.supabase.auth.admin.deleteUser(emp.user.authUserId);
       } catch {
@@ -364,6 +453,6 @@ export class EmployeesService {
       }
     }
 
-    return { employeeId, deleted: true };
+    return { employeeId, deleted: true, loginRevoked: remaining === 0 };
   }
 }

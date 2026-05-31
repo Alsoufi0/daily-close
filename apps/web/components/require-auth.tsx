@@ -5,18 +5,25 @@ import { Loader2 } from "lucide-react";
 import type { UserRole } from "@smokeshop/shared/types";
 import { ApiError, getProfile } from "../lib/api-client";
 import { createBrowserSupabase } from "../lib/supabase-browser";
+import { isManager, landingPath } from "../lib/session-roles";
 
 const TOKEN_KEY = "dailyclose-token";
 
 export function RequireAuth({
   children,
-  allowedRoles
+  allowedRoles,
+  // When true, a per-store manager (global role EMPLOYEE with MANAGER stores)
+  // is allowed through even if EMPLOYEE isn't in allowedRoles. Used on the
+  // owner-style admin pages (dashboard, receipts, stores, employees) but NOT
+  // on account-only pages (billing, WhatsApp, setup).
+  allowManagers = false
 }: {
   children: React.ReactNode;
   allowedRoles?: UserRole[];
+  allowManagers?: boolean;
 }) {
   const [ready, setReady] = useState(false);
-  const allowedRoleKey = allowedRoles?.join("|") ?? "";
+  const allowedRoleKey = `${allowedRoles?.join("|") ?? ""}:${allowManagers}`;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -59,8 +66,9 @@ export function RequireAuth({
 
       try {
         const profile = await getProfile(token);
-        if (allowedRoles?.length && !allowedRoles.includes(profile.role)) {
-          window.location.replace(profile.role === "EMPLOYEE" ? "/close" : "/owner");
+        const managerAllowed = allowManagers && isManager(profile);
+        if (allowedRoles?.length && !allowedRoles.includes(profile.role) && !managerAllowed) {
+          window.location.replace(landingPath(profile));
           return;
         }
       } catch (err) {

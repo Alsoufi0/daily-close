@@ -3,6 +3,7 @@ import { PDFDocument, rgb } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import { loadFontsForLang } from "./pdf-fonts";
 import { RequestUser } from "../auth/request-user";
+import { resolveAdminScope, scopeAllowsStore, storeWhereForScope } from "../auth/admin-scope";
 import { DashboardService } from "../dashboard/dashboard.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { SupabaseStorageService } from "../supabase/supabase-storage.service";
@@ -216,9 +217,18 @@ export class ReportsService {
     const range = this.resolveRange(query);
     const baseWhere: any = {};
 
-    if (user.ownerId) {
+    if (user.role === "STORE_OWNER" && user.ownerId) {
       baseWhere.store = { ownerId: user.ownerId, deletedAt: null };
       if (query.storeId) baseWhere.storeId = query.storeId;
+      if (query.employeeId) baseWhere.employeeId = query.employeeId;
+    } else if (user.managedStoreIds && user.managedStoreIds.length > 0 && user.ownerId) {
+      // Per-store manager: reports limited to the stores they manage.
+      const managed = user.managedStoreIds;
+      if (query.storeId && !managed.includes(query.storeId)) {
+        throw new ForbiddenException("That store is outside your admin access.");
+      }
+      baseWhere.store = { ownerId: user.ownerId, deletedAt: null };
+      baseWhere.storeId = query.storeId ? query.storeId : { in: managed };
       if (query.employeeId) baseWhere.employeeId = query.employeeId;
     } else if (user.storeId) {
       if (query.storeId && query.storeId !== user.storeId) throw new ForbiddenException("Employees can only export their assigned store.");
@@ -453,11 +463,10 @@ export class ReportsService {
     redirectUrl: string | null;
     contentType: string;
   }> {
-    if (user.role !== "STORE_OWNER" || !user.ownerId) {
-      throw new ForbiddenException("Only owners can download receipts.");
-    }
+    // Owners + per-store managers (scoped to their stores) can download.
+    const scope = resolveAdminScope(user);
     const row = await this.prisma.uploadedReport.findFirst({
-      where: { id, store: { ownerId: user.ownerId, deletedAt: null } },
+      where: { id, store: storeWhereForScope(scope) },
       include: { store: true, dailyClose: true }
     });
     if (!row || !row.store) throw new NotFoundException("Receipt not found.");
@@ -490,11 +499,12 @@ export class ReportsService {
     storeName: string;
     items: Array<{ filename: string; storagePath: string | null; imageUrl: string }>;
   }> {
-    if (user.role !== "STORE_OWNER" || !user.ownerId) {
-      throw new ForbiddenException("Only owners can download receipts.");
+    const scope = resolveAdminScope(user);
+    if (!query.storeId || !scopeAllowsStore(scope, query.storeId)) {
+      throw new ForbiddenException("This store is not yours.");
     }
     const store = await this.prisma.store.findFirst({
-      where: { id: query.storeId, ownerId: user.ownerId, deletedAt: null },
+      where: { id: query.storeId, ownerId: scope.ownerId, deletedAt: null },
       select: { id: true, storeName: true, timezone: true }
     });
     if (!store) throw new ForbiddenException("This store is not yours.");
@@ -542,11 +552,13 @@ export class ReportsService {
    * flow, not the historical receipts grid.
    */
   async listReceipts(query: ReceiptsQueryDto, user: RequestUser) {
-    if (user.role !== "STORE_OWNER" || !user.ownerId) {
-      throw new ForbiddenException("Only owners can view receipts.");
+    // Owners + per-store managers (scoped to their stores) can view receipts.
+    const scope = resolveAdminScope(user);
+    if (!query.storeId || !scopeAllowsStore(scope, query.storeId)) {
+      throw new ForbiddenException("This store is not yours.");
     }
     const store = await this.prisma.store.findFirst({
-      where: { id: query.storeId, ownerId: user.ownerId, deletedAt: null },
+      where: { id: query.storeId, ownerId: scope.ownerId, deletedAt: null },
       select: { id: true, storeName: true, timezone: true }
     });
     if (!store) throw new ForbiddenException("This store is not yours.");

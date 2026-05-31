@@ -1,5 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { RequestUser } from "../auth/request-user";
+import { assertScopeAllowsStore, resolveAdminScope } from "../auth/admin-scope";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateStoreDto } from "./dto/create-store.dto";
 import { UpdateStoreDto } from "./dto/update-store.dto";
@@ -21,11 +22,13 @@ export class StoresService {
       // assignments. Return every store the user is assigned to (not
       // just the primary one from user.storeId, which was the only
       // store the legacy single-employee-row model could represent).
+      // Any assignment role counts (EMPLOYEE close access OR MANAGER
+      // per-store admin) so a manager sees the stores they administer.
       return this.prisma.store.findMany({
         where: {
           deletedAt: null,
           employees: {
-            some: { userId: user.id, deletedAt: null, role: "EMPLOYEE" }
+            some: { userId: user.id, deletedAt: null, role: { in: ["EMPLOYEE", "MANAGER"] } }
           }
         },
         orderBy: { storeName: "asc" }
@@ -89,11 +92,12 @@ export class StoresService {
   }
 
   async updateForOwner(user: RequestUser, storeId: string, input: UpdateStoreDto) {
-    if (user.role !== "STORE_OWNER" || !user.ownerId) {
-      throw new ForbiddenException("Only owners can edit stores.");
-    }
+    // Account owners edit any of their stores; per-store managers edit only the
+    // stores they manage. (Store create/delete stays owner-only — see above.)
+    const scope = resolveAdminScope(user);
+    assertScopeAllowsStore(scope, storeId);
     const existing = await this.prisma.store.findFirst({
-      where: { id: storeId, ownerId: user.ownerId, deletedAt: null }
+      where: { id: storeId, ownerId: scope.ownerId, deletedAt: null }
     });
     if (!existing) throw new NotFoundException("Store not found.");
 

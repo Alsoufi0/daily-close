@@ -39,6 +39,21 @@ export class EmployeesController {
     return this.employees.setAdminAccess(user, id, Boolean(body?.isAdmin));
   }
 
+  /**
+   * Set the exact set of stores a user is a per-store admin (MANAGER) of.
+   * Account-owner only. `:userId` is the USER id (a user spans many
+   * assignment rows). Body: { storeIds: string[] } — the full desired set;
+   * stores omitted from the list are downgraded back to plain employee.
+   */
+  @Patch("by-user/:userId/manager-stores")
+  setManagerStores(
+    @CurrentUser() user: RequestUser,
+    @Param("userId") userId: string,
+    @Body() body: { storeIds?: string[] }
+  ) {
+    return this.employees.setManagerStores(user, userId, body?.storeIds ?? []);
+  }
+
   @Delete(":id")
   remove(@CurrentUser() user: RequestUser, @Param("id") id: string) {
     return this.employees.remove(user, id);

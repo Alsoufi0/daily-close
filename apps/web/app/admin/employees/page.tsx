@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Copy, Key, Loader2, Plus, ShieldCheck, Store, Trash2, User, X } from "lucide-react";
 import { useSession } from "../../../lib/use-session";
+import { useShowMore } from "../../../lib/use-show-more";
 import { useLanguage } from "../../../components/language-provider";
+import { ShowMoreButton } from "../../../components/show-more-button";
 import {
   ApiError,
   assignEmployeeToStore,
@@ -11,7 +13,8 @@ import {
   inviteEmployee,
   listEmployees,
   resetEmployeePassword,
-  setEmployeeAdminAccess
+  setEmployeeAdminAccess,
+  setEmployeeManagerStores
 } from "../../../lib/api-client";
 
 export default function EmployeesAdminPage() {
@@ -35,11 +38,16 @@ export default function EmployeesAdminPage() {
   const [resettingId, setResettingId] = useState<string | null>(null);
   const [resetResult, setResetResult] = useState<{ email: string; tempPassword: string } | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [adminChangingId, setAdminChangingId] = useState<string | null>(null);
   // Phase 2: multi-store assignment UI. `assignTarget` is the user we're
   // about to add a store to (the modal opens with them pre-selected).
   const [assignTarget, setAssignTarget] = useState<{ employeeId: string; userId: string; name: string; assignedStoreIds: Set<string> } | null>(null);
   const [assigning, setAssigning] = useState(false);
+  // Admin-access chooser: account-wide vs specific stores. Opens with the
+  // user's current state (isAdmin + which stores they already manage).
+  const [adminTarget, setAdminTarget] = useState<
+    { primaryEmployeeId: string; userId: string; name: string; isAdmin: boolean; managerStoreIds: string[] } | null
+  >(null);
+  const [savingAdmin, setSavingAdmin] = useState(false);
 
   // Group the flat list of assignment rows by user so a multi-store
   // employee appears as ONE card with a chip per store, not as
@@ -55,7 +63,9 @@ export default function EmployeesAdminPage() {
     // (reset password, toggle admin, fully remove user) since those
     // operate on user-level state, not per-store.
     primaryEmployeeId: string;
-    assignments: Array<{ id: string; storeId: string; storeName: string }>;
+    assignments: Array<{ id: string; storeId: string; storeName: string; role: string }>;
+    // Store ids where this user is a per-store admin (MANAGER assignment).
+    managerStoreIds: string[];
   };
   const grouped: EmployeeGroup[] = useMemo(() => {
     const byUser = new Map<string, EmployeeGroup>();
@@ -70,18 +80,24 @@ export default function EmployeesAdminPage() {
           email: e.user?.email ?? e.email ?? "",
           isAdmin: e.user?.role === "STORE_OWNER",
           primaryEmployeeId: e.id,
-          assignments: []
+          assignments: [],
+          managerStoreIds: []
         };
         byUser.set(userId, g);
       }
+      const storeId = e.storeId ?? e.store?.id;
       g.assignments.push({
         id: e.id,
-        storeId: e.storeId ?? e.store?.id,
-        storeName: e.store?.storeName ?? ""
+        storeId,
+        storeName: e.store?.storeName ?? "",
+        role: e.role ?? "EMPLOYEE"
       });
+      if (e.role === "MANAGER" && storeId) g.managerStoreIds.push(storeId);
     }
     return Array.from(byUser.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [employees]);
+
+  const { visible, hasMore, remaining, showMore } = useShowMore(grouped, 10);
 
   async function remove(employeeId: string, name: string) {
     if (!session.token) return;
@@ -133,26 +149,50 @@ export default function EmployeesAdminPage() {
     }
   }
 
-  async function toggleAdmin(employee: any) {
-    if (!session.token) return;
-    const employeeId = employee.id;
-    const isAdmin = employee.user?.role === "STORE_OWNER";
-    setAdminChangingId(employeeId);
+  async function applyAdminAccess(result: { kind: "account" | "stores" | "none"; storeIds?: string[] }) {
+    if (!session.token || !adminTarget) return;
+    setSavingAdmin(true);
     setError(null);
     try {
-      const result = await setEmployeeAdminAccess(session.token, employeeId, !isAdmin);
-      setEmployees((prev) =>
-        prev.map((row: any) =>
-          row.id === employeeId
-            ? { ...row, user: { ...row.user, role: result.role } }
-            : row
-        )
-      );
-      setInfo(!isAdmin ? "Admin access turned on." : "Admin access turned off.");
+      if (result.kind === "account") {
+        // Account-wide admin. Clear any per-store manager rows first so the two
+        // models don't overlap, then promote to account admin.
+        if (adminTarget.managerStoreIds.length > 0) {
+          await setEmployeeManagerStores(session.token, adminTarget.userId, []);
+        }
+        if (!adminTarget.isAdmin) {
+          await setEmployeeAdminAccess(session.token, adminTarget.primaryEmployeeId, true);
+        }
+        setInfo(`${adminTarget.name} is now an admin for the whole account.`);
+      } else if (result.kind === "stores") {
+        // Per-store admin. If they were account admin, step them down first.
+        if (adminTarget.isAdmin) {
+          await setEmployeeAdminAccess(session.token, adminTarget.primaryEmployeeId, false);
+        }
+        await setEmployeeManagerStores(session.token, adminTarget.userId, result.storeIds ?? []);
+        const count = result.storeIds?.length ?? 0;
+        setInfo(
+          count > 0
+            ? `${adminTarget.name} is now an admin for ${count} store${count === 1 ? "" : "s"}.`
+            : `${adminTarget.name}'s admin access was removed.`
+        );
+      } else {
+        if (adminTarget.isAdmin) {
+          await setEmployeeAdminAccess(session.token, adminTarget.primaryEmployeeId, false);
+        }
+        if (adminTarget.managerStoreIds.length > 0) {
+          await setEmployeeManagerStores(session.token, adminTarget.userId, []);
+        }
+        setInfo(`${adminTarget.name}'s admin access was removed.`);
+      }
+      setAdminTarget(null);
+      // Re-fetch so role/manager badges reconcile with the server.
+      const rows = await listEmployees(session.token);
+      setEmployees(rows);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not update admin access");
     } finally {
-      setAdminChangingId(null);
+      setSavingAdmin(false);
     }
   }
 
@@ -238,9 +278,19 @@ export default function EmployeesAdminPage() {
             };
       const result = await inviteEmployee(session.token, payload);
       const contactDisplay = result.email || result.phone || "";
+      // Push a row that matches the shape the grouping expects: the assignment
+      // id is `employeeId` (NOT the user id), plus a real `store` object so the
+      // store chip renders immediately instead of showing blank until reload.
+      const newStoreName = session.stores.find((s) => s.id === storeId)?.storeName ?? "";
       setEmployees((prev) => [
         ...prev,
-        { id: result.id, user: { name, email: contactDisplay }, storeId }
+        {
+          id: result.employeeId,
+          userId: result.id,
+          storeId,
+          user: { id: result.id, name, email: contactDisplay, role: "EMPLOYEE" },
+          store: { id: storeId, storeName: newStoreName }
+        }
       ]);
 
       // When the welcome SMS was sent we skip the share-this-password modal —
@@ -413,7 +463,7 @@ export default function EmployeesAdminPage() {
             No employees yet.
           </div>
         ) : (
-          grouped.map((g) => (
+          visible.map((g) => (
             <div
               key={g.userId}
               className="space-y-3 rounded-xl border border-ink/10 bg-white p-4 shadow-sm"
@@ -434,9 +484,14 @@ export default function EmployeesAdminPage() {
                 {g.assignments.map((a) => (
                   <span
                     key={a.id}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-smoke px-2.5 py-1 text-xs font-black text-ink"
+                    className={
+                      a.role === "MANAGER"
+                        ? "inline-flex items-center gap-1.5 rounded-full bg-leaf/10 px-2.5 py-1 text-xs font-black text-leaf"
+                        : "inline-flex items-center gap-1.5 rounded-full bg-smoke px-2.5 py-1 text-xs font-black text-ink"
+                    }
+                    title={a.role === "MANAGER" ? `${g.name} is an admin for ${a.storeName}` : undefined}
                   >
-                    <Store size={12} aria-hidden />
+                    {a.role === "MANAGER" ? <ShieldCheck size={12} aria-hidden /> : <Store size={12} aria-hidden />}
                     {a.storeName}
                     <button
                       onClick={() => unassignFromStore(a.id, g.name, a.storeName)}
@@ -465,17 +520,28 @@ export default function EmployeesAdminPage() {
 
               <div className="flex flex-wrap gap-2 pt-1">
                 <button
-                  onClick={() => toggleAdmin({ id: g.primaryEmployeeId, user: { role: g.isAdmin ? "STORE_OWNER" : "EMPLOYEE" } })}
-                  disabled={adminChangingId === g.primaryEmployeeId}
+                  onClick={() =>
+                    setAdminTarget({
+                      primaryEmployeeId: g.primaryEmployeeId,
+                      userId: g.userId,
+                      name: g.name,
+                      isAdmin: g.isAdmin,
+                      managerStoreIds: g.managerStoreIds
+                    })
+                  }
                   className={
-                    g.isAdmin
+                    g.isAdmin || g.managerStoreIds.length > 0
                       ? "focus-ring inline-flex h-9 items-center gap-1.5 rounded-lg bg-leaf px-3 text-xs font-black text-white disabled:opacity-60"
                       : "focus-ring inline-flex h-9 items-center gap-1.5 rounded-lg border border-ink/15 px-3 text-xs font-black text-ink hover:bg-smoke disabled:opacity-60"
                   }
-                  aria-label={g.isAdmin ? "Remove admin access" : "Give admin access"}
+                  aria-label="Manage admin access"
                 >
-                  {adminChangingId === g.primaryEmployeeId ? <Loader2 className="animate-spin" size={14} /> : <ShieldCheck size={14} />}
-                  {g.isAdmin ? "Admin" : "Make Admin"}
+                  <ShieldCheck size={14} />
+                  {g.isAdmin
+                    ? "Account admin"
+                    : g.managerStoreIds.length > 0
+                      ? `Store admin (${g.managerStoreIds.length})`
+                      : "Make admin"}
                 </button>
                 <button
                   onClick={() => reset(g.primaryEmployeeId)}
@@ -493,6 +559,7 @@ export default function EmployeesAdminPage() {
             </div>
           ))
         )}
+        <ShowMoreButton hasMore={hasMore} remaining={remaining} onShowMore={showMore} />
       </div>
 
       {resetResult ? (
@@ -512,6 +579,160 @@ export default function EmployeesAdminPage() {
           onConfirm={confirmAssign}
         />
       ) : null}
+
+      {adminTarget ? (
+        <AdminAccessModal
+          target={adminTarget}
+          stores={session.stores}
+          submitting={savingAdmin}
+          onCancel={() => setAdminTarget(null)}
+          onApply={applyAdminAccess}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function AdminAccessModal({
+  target,
+  stores,
+  submitting,
+  onCancel,
+  onApply
+}: {
+  target: { name: string; isAdmin: boolean; managerStoreIds: string[] };
+  stores: Array<{ id: string; storeName: string }>;
+  submitting: boolean;
+  onCancel: () => void;
+  onApply: (result: { kind: "account" | "stores" | "none"; storeIds?: string[] }) => void;
+}) {
+  // Three mutually-exclusive levels: no admin, admin of specific stores, or
+  // admin of the whole account. Pre-select the user's current state.
+  type Mode = "none" | "stores" | "account";
+  const [mode, setMode] = useState<Mode>(
+    target.isAdmin ? "account" : target.managerStoreIds.length > 0 ? "stores" : "none"
+  );
+  const [picked, setPicked] = useState<Set<string>>(new Set(target.managerStoreIds));
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onCancel();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onCancel]);
+
+  function toggleStore(id: string) {
+    setPicked((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function save() {
+    if (mode === "account") onApply({ kind: "account" });
+    else if (mode === "stores") onApply({ kind: "stores", storeIds: Array.from(picked) });
+    else onApply({ kind: "none" });
+  }
+
+  const Choice = ({ value, title, desc }: { value: Mode; title: string; desc: string }) => (
+    <button
+      type="button"
+      onClick={() => setMode(value)}
+      className={
+        mode === value
+          ? "focus-ring w-full rounded-xl border-2 border-leaf bg-leaf/5 p-3 text-left"
+          : "focus-ring w-full rounded-xl border-2 border-ink/10 bg-white p-3 text-left hover:bg-smoke"
+      }
+    >
+      <p className="text-sm font-black text-ink">{title}</p>
+      <p className="text-xs font-bold text-ink/55">{desc}</p>
+    </button>
+  );
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="admin-access-title"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4"
+      onClick={onCancel}
+    >
+      <div
+        className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <h3 id="admin-access-title" className="text-lg font-black text-ink">
+            Admin access for {target.name}
+          </h3>
+          <button
+            type="button"
+            onClick={onCancel}
+            aria-label="Close"
+            className="focus-ring rounded-lg p-1 text-ink/40 hover:bg-smoke hover:text-ink"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="mt-4 space-y-2">
+          <Choice value="none" title="No admin access" desc="Can close their assigned stores only." />
+          <Choice
+            value="stores"
+            title="Admin for specific stores"
+            desc="Full admin — but only for the stores you pick below. No billing, can't delete stores."
+          />
+          <Choice value="account" title="Admin for the whole account" desc="Full access to every store and setting (except billing)." />
+        </div>
+
+        {mode === "stores" ? (
+          <div className="mt-4">
+            <p className="mb-2 text-xs font-black uppercase tracking-wide text-ink/55">Choose stores</p>
+            <div className="max-h-48 space-y-1.5 overflow-y-auto rounded-lg border border-ink/10 p-2">
+              {stores.length === 0 ? (
+                <p className="p-2 text-sm font-bold text-ink/55">You have no stores yet.</p>
+              ) : (
+                stores.map((s) => (
+                  <label
+                    key={s.id}
+                    className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-smoke"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={picked.has(s.id)}
+                      onChange={() => toggleStore(s.id)}
+                      className="h-4 w-4 accent-leaf"
+                    />
+                    <span className="text-sm font-bold text-ink">{s.storeName}</span>
+                  </label>
+                ))
+              )}
+            </div>
+          </div>
+        ) : null}
+
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="focus-ring h-10 rounded-lg border border-ink/15 bg-white px-4 text-sm font-black text-ink hover:bg-smoke"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={save}
+            disabled={submitting || (mode === "stores" && picked.size === 0)}
+            className="focus-ring inline-flex h-10 items-center gap-1.5 rounded-lg bg-leaf px-4 text-sm font-black text-white disabled:opacity-60"
+          >
+            {submitting ? <Loader2 className="animate-spin" size={14} /> : <ShieldCheck size={14} />}
+            Save
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

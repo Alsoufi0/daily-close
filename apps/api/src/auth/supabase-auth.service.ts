@@ -47,12 +47,12 @@ export class SupabaseAuthService {
       },
       include: {
         owner: true,
-        // Post migration 006: a user can have MANY assignment rows.
-        // Pick EMPLOYEE-role assignments only here; OWNER rows are auto-
-        // created for the owner's own stores and don't represent the
-        // user being "an employee" at those stores.
+        // Post migration 006: a user can have MANY assignment rows. We need
+        // EMPLOYEE rows (the close flow) AND MANAGER rows (per-store admin) —
+        // OWNER rows are auto-created for the owner's own stores and don't
+        // represent delegated access, so they're excluded.
         employees: {
-          where: { deletedAt: null, role: "EMPLOYEE" },
+          where: { deletedAt: null, role: { in: ["EMPLOYEE", "MANAGER"] } },
           include: { store: true }
         }
       }
@@ -67,11 +67,14 @@ export class SupabaseAuthService {
       });
     }
 
-    // For back-compat with callers that still use the legacy single-
-    // store RequestUser fields, expose the FIRST EMPLOYEE assignment.
-    // New code should query assignments directly (e.g. DailyCloseService
-    // looks up by (userId, storeId) instead of trusting these fields).
-    const primaryAssignment = user.employees[0];
+    // Split assignments: EMPLOYEE rows drive the close flow; MANAGER rows grant
+    // per-store admin. For back-compat the legacy single-store fields expose the
+    // first EMPLOYEE assignment (falling back to a manager row for pure managers
+    // who have no plain-employee assignment).
+    const employeeAssignments = user.employees.filter((a) => a.role === "EMPLOYEE");
+    const managerAssignments = user.employees.filter((a) => a.role === "MANAGER");
+    const primaryAssignment = employeeAssignments[0] ?? managerAssignments[0];
+    const managedStoreIds = managerAssignments.map((a) => a.storeId);
 
     const requestUser: RequestUser = {
       id: user.id,
@@ -79,9 +82,12 @@ export class SupabaseAuthService {
       name: user.name,
       email: user.email,
       role: user.role,
+      // Managers belong to the owner whose stores they manage; derive ownerId
+      // from any assignment's store so admin-scope queries can filter by it.
       ownerId: user.owner?.id || primaryAssignment?.store?.ownerId,
       employeeId: primaryAssignment?.id,
-      storeId: primaryAssignment?.storeId
+      storeId: primaryAssignment?.storeId,
+      managedStoreIds: managedStoreIds.length > 0 ? managedStoreIds : undefined
     };
 
     // Cache and trim

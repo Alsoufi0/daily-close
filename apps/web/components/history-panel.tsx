@@ -5,7 +5,9 @@ import { CalendarDays, Loader2, Pencil, Trash2, X } from "lucide-react";
 import { clsx } from "clsx";
 import { formatMoney, formatMoneyExact } from "@smokeshop/shared/utils/money";
 import { deleteDailyClose, getOwnerHistory, HistoryRow } from "../lib/api-client";
+import { useShowMore } from "../lib/use-show-more";
 import { EditCloseModal } from "./edit-close-modal";
+import { ShowMoreButton } from "./show-more-button";
 import { useLanguage } from "./language-provider";
 
 const ranges = [7, 14, 30] as const;
@@ -36,6 +38,7 @@ export function HistoryPanel({ token }: { token?: string }) {
 
   const totalSales = rows.reduce((sum, r) => sum + r.totalSales, 0);
   const totalShortage = rows.reduce((sum, r) => sum + Math.min(r.difference, 0), 0);
+  const { visible, hasMore, remaining, showMore } = useShowMore(rows, 10);
 
   function requestDelete(row: HistoryRow) {
     if (!token) return;
@@ -125,7 +128,7 @@ export function HistoryPanel({ token }: { token?: string }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-ink/5 text-sm font-bold">
-                {rows.map((r) => (
+                {visible.map((r) => (
                   <tr key={r.id}>
                     <td className="px-4 py-2.5 text-ink/70 whitespace-nowrap">{r.date}</td>
                     <td className="px-4 py-2.5 text-ink">{r.storeName}</td>
@@ -164,7 +167,7 @@ export function HistoryPanel({ token }: { token?: string }) {
             </table>
           </div>
           <div className="divide-y divide-ink/5 sm:hidden">
-            {rows.map((r) => (
+            {visible.map((r) => (
               <div key={r.id} className="flex items-center gap-2 px-3 py-2.5">
                 <div className="min-w-0 flex-1">
                   <div className="flex min-w-0 items-center gap-1.5">
@@ -205,6 +208,9 @@ export function HistoryPanel({ token }: { token?: string }) {
                 </div>
               </div>
             ))}
+          </div>
+          <div className="p-3">
+            <ShowMoreButton hasMore={hasMore} remaining={remaining} onShowMore={showMore} />
           </div>
           </>
         )}

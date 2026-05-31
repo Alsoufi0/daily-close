@@ -7,17 +7,20 @@ import { Leaf, LogOut, Menu, X } from "lucide-react";
 import { clsx } from "clsx";
 import { createBrowserSupabase } from "../lib/supabase-browser";
 import { useSession } from "../lib/use-session";
+import { isAccountOwner, isAdminLike } from "../lib/session-roles";
 import { LanguageSelect, useLanguage } from "./language-provider";
 
+// `adminOnly`: owner OR per-store manager (store-scoped admin pages).
+// `accountOnly`: true account owner only (billing + account-level settings).
 const NAV = [
-  { href: "/owner", labelKey: "nav.owner", ownerOnly: true },
-  { href: "/owner/receipts", labelKey: "nav.receipts", ownerOnly: true },
+  { href: "/owner", labelKey: "nav.owner", adminOnly: true },
+  { href: "/owner/receipts", labelKey: "nav.receipts", adminOnly: true },
   { href: "/close", labelKey: "nav.close" },
-  { href: "/admin", labelKey: "nav.admin", ownerOnly: true },
-  { href: "/billing", labelKey: "nav.billing", ownerOnly: true },
-  { href: "/account/whatsapp", labelKey: "nav.whatsapp", ownerOnly: true },
+  { href: "/admin", labelKey: "nav.admin", adminOnly: true },
+  { href: "/billing", labelKey: "nav.billing", accountOnly: true },
+  { href: "/account/whatsapp", labelKey: "nav.whatsapp", accountOnly: true },
   { href: "/account/password", labelKey: "nav.password" }
-];
+] as Array<{ href: string; labelKey: string; adminOnly?: boolean; accountOnly?: boolean }>;
 
 export function TopBar() {
   const pathname = usePathname() || "/";
@@ -54,8 +57,13 @@ export function TopBar() {
     pathname.startsWith("/admin") ||
     pathname.startsWith("/billing") ||
     pathname.startsWith("/account");
-  const isOwnerLike = session.profile?.role === "STORE_OWNER" || session.profile?.role === "SUPER_ADMIN";
-  const navItems = NAV.filter((item) => !item.ownerOnly || isOwnerLike);
+  const adminLike = isAdminLike(session.profile);
+  const accountOwner = isAccountOwner(session.profile);
+  const navItems = NAV.filter((item) => {
+    if (item.accountOnly) return accountOwner;
+    if (item.adminOnly) return adminLike;
+    return true;
+  });
 
   return (
     <header className="sticky top-0 z-30 border-b border-ink/10 bg-white/90 backdrop-blur">

@@ -47,7 +47,8 @@ export class AuthController {
       role: user.role,
       ownerId: user.ownerId,
       employeeId: user.employeeId,
-      storeId: user.storeId
+      storeId: user.storeId,
+      managedStoreIds: user.managedStoreIds
     };
   }
 
@@ -71,7 +72,8 @@ export class AuthController {
       role: user.role,
       ownerId: user.ownerId,
       employeeId: user.employeeId,
-      storeId: user.storeId
+      storeId: user.storeId,
+      managedStoreIds: user.managedStoreIds
     };
   }
 

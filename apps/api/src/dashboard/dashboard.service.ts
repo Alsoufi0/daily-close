@@ -8,6 +8,16 @@ import { PrismaService } from "../prisma/prisma.service";
 export class DashboardService {
   constructor(private readonly prisma: PrismaService) {}
 
+  // Account owners (STORE_OWNER) see every store under their ownerId → no
+  // restriction. A per-store manager (global role EMPLOYEE with managedStoreIds)
+  // is limited to the stores they manage. Returns undefined for "no restriction".
+  private restrictStoreIdsFor(user: RequestUser): string[] | undefined {
+    if (user.role === "STORE_OWNER") return undefined;
+    return user.managedStoreIds && user.managedStoreIds.length > 0
+      ? user.managedStoreIds
+      : [];
+  }
+
   // Returns the current local wall-clock minutes-since-midnight in the given IANA timezone.
   static minutesNowInTimezone(timezone: string, now = new Date()): number {
     try {
@@ -167,9 +177,18 @@ export class DashboardService {
     );
   }
 
-  async getOwnerToday(ownerId: string, date = new Date()): Promise<OwnerDashboardSummary["stores"]> {
+  async getOwnerToday(
+    ownerId: string,
+    date = new Date(),
+    restrictStoreIds?: string[]
+  ): Promise<OwnerDashboardSummary["stores"]> {
     const stores = await this.prisma.store.findMany({
-      where: { ownerId, deletedAt: null },
+      where: {
+        ownerId,
+        deletedAt: null,
+        // A per-store manager only sees the stores they manage.
+        ...(restrictStoreIds ? { id: { in: restrictStoreIds } } : {})
+      },
       include: {
         dailyCloses: {
           // Wide UTC window covers any timezone's "today"; we filter
@@ -214,6 +233,7 @@ export class DashboardService {
 
   async getHistory(user: RequestUser, days = 7) {
     if (!user.ownerId) return [];
+    const restrictStoreIds = this.restrictStoreIdsFor(user);
     const end = new Date();
     end.setHours(23, 59, 59, 999);
     const start = new Date(end);
@@ -222,7 +242,10 @@ export class DashboardService {
 
     const closes = await this.prisma.dailyClose.findMany({
       where: {
-        store: { ownerId: user.ownerId },
+        store: {
+          ownerId: user.ownerId,
+          ...(restrictStoreIds ? { id: { in: restrictStoreIds } } : {})
+        },
         date: { gte: start, lte: end }
       },
       include: { store: true },
@@ -264,7 +287,7 @@ export class DashboardService {
       };
     }
 
-    const stores = await this.getOwnerToday(ownerId, date);
+    const stores = await this.getOwnerToday(ownerId, date, this.restrictStoreIdsFor(user));
     const alerts = await this.prisma.notification.findMany({
       where: { userId: user.id, status: { in: ["PENDING", "SENT"] } },
       orderBy: { createdAt: "desc" },

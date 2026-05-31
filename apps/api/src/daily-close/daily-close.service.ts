@@ -10,6 +10,7 @@ import type { DailyCloseResult, ParsedPOSReport } from "@shared/types";
 import { OCRService } from "../ocr/ocr.service";
 import { PosParserService } from "../pos-parsers/pos-parser.service";
 import { RequestUser } from "../auth/request-user";
+import { assertScopeAllowsStore, resolveAdminScope } from "../auth/admin-scope";
 import { SupabaseStorageService } from "../supabase/supabase-storage.service";
 import { CreateDailyCloseDto } from "./dto/create-daily-close.dto";
 import { ScanReportDto } from "./dto/scan-report.dto";
@@ -254,11 +255,11 @@ export class DailyCloseService {
     patch: Record<string, any>,
     user: RequestUser
   ) {
-    if (user.role !== "STORE_OWNER" || !user.ownerId) {
-      throw new ForbiddenException("Only owners can edit a submitted close.");
-    }
-    const existing = await this.repository.findByIdForOwner(id, user.ownerId);
+    // Account owners + per-store managers (scoped to their stores) can edit.
+    const scope = resolveAdminScope(user);
+    const existing = await this.repository.findByIdForOwner(id, scope.ownerId);
     if (!existing) throw new NotFoundException("Close not found.");
+    assertScopeAllowsStore(scope, existing.storeId);
 
     const existingExpectedCash = Number(existing.expectedCash ?? (Number(existing.cashSales) - Number(existing.refunds) - Number(existing.expenses)));
     const existingSafeDropAmount = Number(existing.difference ?? 0) + existingExpectedCash - Number(existing.countedCash);
@@ -315,11 +316,11 @@ export class DailyCloseService {
   }
 
   async deleteClosing(id: string, user: RequestUser) {
-    if (user.role !== "STORE_OWNER" || !user.ownerId) {
-      throw new ForbiddenException("Only owners can delete a submitted close.");
-    }
-    const existing = await this.repository.findByIdForOwner(id, user.ownerId);
+    // Account owners + per-store managers (scoped to their stores) can delete.
+    const scope = resolveAdminScope(user);
+    const existing = await this.repository.findByIdForOwner(id, scope.ownerId);
     if (!existing) throw new NotFoundException("Close not found.");
+    assertScopeAllowsStore(scope, existing.storeId);
 
     const deleted = await this.repository.deleteClose(id);
     await this.repository.writeAudit({
@@ -395,9 +396,11 @@ export class DailyCloseService {
       });
       if (!store) throw new ForbiddenException("This store is not yours.");
     } else if (user.role === "EMPLOYEE") {
-      // Employee assignments live in the same `employees` table; check there.
+      // Employee + manager assignments live in the same `employees` table;
+      // either role authorises closing the store (a per-store manager has
+      // full admin for their stores, which includes submitting closes).
       const assignment = await this.prisma.employee.findFirst({
-        where: { userId: user.id, storeId, deletedAt: null, role: "EMPLOYEE" },
+        where: { userId: user.id, storeId, deletedAt: null, role: { in: ["EMPLOYEE", "MANAGER"] } },
         select: { id: true }
       });
       if (!assignment) {

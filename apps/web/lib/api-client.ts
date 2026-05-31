@@ -158,6 +158,22 @@ export async function setEmployeeAdminAccess(
   });
 }
 
+/**
+ * Set the exact set of stores a user is a per-store admin (MANAGER) of.
+ * `userId` is the USER id. Pass the full desired set — omitted stores are
+ * downgraded back to plain employee. Account-owner only (server-enforced).
+ */
+export async function setEmployeeManagerStores(
+  token: string,
+  userId: string,
+  storeIds: string[]
+): Promise<{ userId: string; managedStoreIds: string[] }> {
+  return apiFetch(`/employees/by-user/${userId}/manager-stores`, token, {
+    method: "PATCH",
+    body: JSON.stringify({ storeIds })
+  });
+}
+
 export async function deleteStore(token: string, storeId: string) {
   return apiFetch(`/stores/${storeId}`, token, { method: "DELETE" });
 }

@@ -19,15 +19,29 @@ const employee: RequestUser = {
   storeId: "s-1"
 };
 
+// A per-store admin: global role EMPLOYEE, but manages stores s-1 and s-2.
+const manager: RequestUser = {
+  id: "u-mgr",
+  name: "Manny",
+  email: "mgr@demo.com",
+  role: "EMPLOYEE",
+  ownerId: "owner-1",
+  managedStoreIds: ["s-1", "s-2"]
+};
+
 function build(prismaOverrides: Record<string, any> = {}) {
   const prisma = {
     employee: {
       findMany: jest.fn().mockResolvedValue([]),
       findFirst: jest.fn().mockResolvedValue(null),
+      update: jest.fn().mockResolvedValue({}),
+      create: jest.fn().mockResolvedValue({ id: "emp-x" }),
+      count: jest.fn().mockResolvedValue(0),
       ...(prismaOverrides.employee || {})
     },
     store: {
       findFirst: jest.fn().mockResolvedValue({ id: "s-1", ownerId: "owner-1" }),
+      findMany: jest.fn().mockResolvedValue([]),
       ...(prismaOverrides.store || {})
     },
     user: {
@@ -47,6 +61,9 @@ function build(prismaOverrides: Record<string, any> = {}) {
       ...(prismaOverrides.phoneConsent || {})
     }
   } as any;
+  // Default $transaction runs the callback against the same prisma mock so
+  // tx.employee.update/create resolve against the stubs above.
+  prisma.$transaction = prismaOverrides.$transaction || jest.fn((cb: any) => cb(prisma));
   // SMS isn't exercised by these tests; the stub keeps the constructor honest
   // without pulling in env vars or hitting the network.
   const sms = { sendEmployeeWelcome: jest.fn().mockResolvedValue({ sent: false }) } as any;
@@ -172,6 +189,118 @@ describe("EmployeesService", () => {
     const { service } = build({ employee: { findFirst: jest.fn().mockResolvedValue(null) } });
     const { NotFoundException } = require("@nestjs/common");
     await expect(service.resetPassword(owner, "e-1")).rejects.toThrow(NotFoundException);
+  });
+
+  it("listForOwner allows a manager and scopes to their managed stores", async () => {
+    const findMany = jest.fn().mockResolvedValue([]);
+    const { service } = build({ employee: { findMany } });
+    await service.listForOwner(manager);
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          store: { ownerId: "owner-1", id: { in: ["s-1", "s-2"] }, deletedAt: null },
+          role: { in: ["EMPLOYEE", "MANAGER"] }
+        })
+      })
+    );
+  });
+
+  it("invite lets a manager invite to a store they manage", async () => {
+    const { service, prisma } = build();
+    const result = await service.invite(manager, { name: "New", email: "new@demo.com", storeId: "s-1" });
+    expect(result.employeeId).toBe("emp-new");
+    expect(prisma.user.create).toHaveBeenCalled();
+  });
+
+  it("invite forbids a manager inviting to a store outside their scope", async () => {
+    const { service } = build();
+    await expect(
+      service.invite(manager, { name: "X", email: "x@x.com", storeId: "s-99" })
+    ).rejects.toThrow(ForbiddenException);
+  });
+
+  it("setManagerStores forbids a manager (only the account owner can delegate)", async () => {
+    const { service } = build();
+    await expect(service.setManagerStores(manager, "u-emp", ["s-1"])).rejects.toThrow(ForbiddenException);
+  });
+
+  it("setManagerStores upserts MANAGER rows for the owner and downgrades the rest", async () => {
+    const update = jest.fn().mockResolvedValue({});
+    const create = jest.fn().mockResolvedValue({ id: "emp-new2" });
+    const { service, prisma } = build({
+      store: { findMany: jest.fn().mockResolvedValue([{ id: "s-1" }, { id: "s-2" }]) },
+      employee: {
+        // Existing rows: s-1 already EMPLOYEE (→ promote to MANAGER),
+        // s-3 currently MANAGER but not in the desired set (→ downgrade).
+        findMany: jest.fn().mockResolvedValue([
+          { id: "a1", storeId: "s-1", role: "EMPLOYEE" },
+          { id: "a3", storeId: "s-3", role: "MANAGER" }
+        ]),
+        update,
+        create
+      },
+      user: { findUnique: jest.fn().mockResolvedValue({ id: "u-emp", role: "EMPLOYEE" }) }
+    });
+
+    const result = await service.setManagerStores(owner, "u-emp", ["s-1", "s-2"]);
+    expect(result.managedStoreIds).toEqual(["s-1", "s-2"]);
+    // s-1 promoted to MANAGER
+    expect(update).toHaveBeenCalledWith({ where: { id: "a1" }, data: { role: "MANAGER" } });
+    // s-2 had no row → created as MANAGER
+    expect(create).toHaveBeenCalledWith({ data: { userId: "u-emp", storeId: "s-2", role: "MANAGER" } });
+    // s-3 downgraded back to EMPLOYEE
+    expect(update).toHaveBeenCalledWith({ where: { id: "a3" }, data: { role: "EMPLOYEE" } });
+    void prisma;
+  });
+
+  it("setManagerStores rejects stores that aren't the owner's", async () => {
+    const { service } = build({
+      store: { findMany: jest.fn().mockResolvedValue([{ id: "s-1" }]) } // only 1 of 2 owned
+    });
+    await expect(service.setManagerStores(owner, "u-emp", ["s-1", "s-foreign"])).rejects.toThrow(
+      BadRequestException
+    );
+  });
+
+  it("remove keeps the login when the employee still has other store assignments", async () => {
+    process.env.SUPABASE_URL = "https://x.supabase.co";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "svc";
+    const deleteUser = jest.fn();
+    const { service } = build({
+      employee: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: "e-1",
+          userId: "u-emp",
+          user: { authUserId: "auth-1" }
+        }),
+        // Still assigned to 1 other store after this soft-delete.
+        count: jest.fn().mockResolvedValue(1)
+      }
+    });
+    (service as any).supabase = { auth: { admin: { deleteUser } } };
+    const r = await service.remove(owner, "e-1");
+    expect(r.loginRevoked).toBe(false);
+    expect(deleteUser).not.toHaveBeenCalled();
+  });
+
+  it("remove revokes the login when it was the LAST assignment", async () => {
+    process.env.SUPABASE_URL = "https://x.supabase.co";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "svc";
+    const deleteUser = jest.fn().mockResolvedValue({});
+    const { service } = build({
+      employee: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: "e-1",
+          userId: "u-emp",
+          user: { authUserId: "auth-1" }
+        }),
+        count: jest.fn().mockResolvedValue(0)
+      }
+    });
+    (service as any).supabase = { auth: { admin: { deleteUser } } };
+    const r = await service.remove(owner, "e-1");
+    expect(r.loginRevoked).toBe(true);
+    expect(deleteUser).toHaveBeenCalledWith("auth-1");
   });
 
   it("resetPassword returns a temporary password without Supabase configured", async () => {
