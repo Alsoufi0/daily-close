@@ -1,5 +1,5 @@
 {
-  "name": "@smokeshop/web",
+  "name": "@dailyclose/web",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@sentry/nextjs": "^10.53.1",
-    "@smokeshop/shared": "0.1.0",
+    "@dailyclose/shared": "0.1.0",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.47.10",
     "clsx": "^2.1.1",

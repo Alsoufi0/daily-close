@@ -1,4 +1,4 @@
-import type { SessionProfile } from "@smokeshop/shared/types";
+import type { SessionProfile } from "@dailyclose/shared/types";
 
 /**
  * Role helpers shared across routing + nav gating.

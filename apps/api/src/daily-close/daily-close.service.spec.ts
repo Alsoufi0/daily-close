@@ -288,7 +288,7 @@ describe("DailyCloseService.finishClosing", () => {
     prisma.store.findUnique
       .mockResolvedValueOnce({ timezone: "UTC" })
       .mockResolvedValueOnce({
-        storeName: "Main Street Smoke Shop",
+        storeName: "Main Street Market",
         ownerId: "owner-1",
         owner: { user: { name: "Owner" } }
       });
@@ -303,7 +303,7 @@ describe("DailyCloseService.finishClosing", () => {
     expect(whatsapp.sendCloseCompletedTemplate).toHaveBeenCalledWith({
       toPhone: "+15551234567",
       ownerName: "Owner",
-      storeName: "Main Street Smoke Shop"
+      storeName: "Main Street Market"
     });
   });
 });

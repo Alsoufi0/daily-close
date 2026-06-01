@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { languageDir, languages, normalizeLanguage, translate, type Language } from "@smokeshop/shared/i18n";
+import { languageDir, languages, normalizeLanguage, translate, type Language } from "@dailyclose/shared/i18n";
 
 interface LanguageContextValue {
   lang: Language;

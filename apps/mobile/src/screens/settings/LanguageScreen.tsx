@@ -3,7 +3,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-nati
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Banner, Card } from "../../ui";
 import { getMobileLanguage, setMobileLanguage, t } from "../../i18n";
-import type { Language } from "@smokeshop/shared/i18n";
+import type { Language } from "@dailyclose/shared/i18n";
 import { colors, font, radius, spacing } from "../../theme";
 
 const LANGUAGES: Array<{ code: Language; label: string; native: string; flag: string }> = [

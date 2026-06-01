@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
-import type { UserRole } from "@smokeshop/shared/types";
+import type { UserRole } from "@dailyclose/shared/types";
 import { ApiError, getProfile } from "../lib/api-client";
 import { createBrowserSupabase } from "../lib/supabase-browser";
 import { isManager, landingPath } from "../lib/session-roles";

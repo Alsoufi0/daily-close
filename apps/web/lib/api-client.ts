@@ -3,7 +3,7 @@ import type {
   OwnerDashboardSummary,
   ParsedPOSReport,
   SessionProfile
-} from "@smokeshop/shared/types";
+} from "@dailyclose/shared/types";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 

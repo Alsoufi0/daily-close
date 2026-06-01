@@ -17,7 +17,7 @@ import {
 import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { Alert } from "react-native";
-import { formatMoney, formatMoneyExact } from "@smokeshop/shared/utils/money";
+import { formatMoney, formatMoneyExact } from "@dailyclose/shared/utils/money";
 import {
   getReceiptsZipDownloadInfo,
   listReceipts,

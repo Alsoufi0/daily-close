@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { SessionProfile } from "@smokeshop/shared/types";
+import type { SessionProfile } from "@dailyclose/shared/types";
 import { ApiError, bootstrapOwner, getProfile, listStores, StoreRecord } from "./api-client";
 import { createBrowserSupabase } from "./supabase-browser";
 

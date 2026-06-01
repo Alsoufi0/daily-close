@@ -23,7 +23,7 @@ const close = {
   expenses: 20,
   status: "SHORT",
   notes: "Register was short, needs review",
-  store: { storeName: "Main Street Smoke Shop", timezone: "America/New_York" },
+  store: { storeName: "Main Street Market", timezone: "America/New_York" },
   employee: { user: { name: "Maya" } }
 };
 
@@ -51,7 +51,7 @@ describe("ReportsService", () => {
 
       expect(csv.charCodeAt(0)).toBe(0xfeff);
       expect(csv).toContain("\"Store\"");
-      expect(csv).toContain("\"Main Street Smoke Shop\"");
+      expect(csv).toContain("\"Main Street Market\"");
       expect(csv).toContain("\"$5,000.00\"");
       expect(csv).toContain("\"Register was short, needs review\"");
     } finally {
@@ -119,7 +119,7 @@ describe("ReportsService.listReceipts", () => {
       store: {
         findFirst: jest.fn().mockResolvedValue({
           id: "store-1",
-          storeName: "Main Street Smoke Shop",
+          storeName: "Main Street Market",
           timezone: "America/New_York"
         })
       },
@@ -155,7 +155,7 @@ describe("ReportsService.listReceipts", () => {
       owner
     );
     expect(rows).toHaveLength(1);
-    expect(rows[0].storeName).toBe("Main Street Smoke Shop");
+    expect(rows[0].storeName).toBe("Main Street Market");
     expect(rows[0].employeeName).toBe("Maya");
     expect(rows[0].dailyClose?.totalSales).toBe(100);
   });

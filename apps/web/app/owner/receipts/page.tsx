@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Download, ImageIcon, Loader2, X } from "lucide-react";
-import { formatMoney, formatMoneyExact } from "@smokeshop/shared/utils/money";
+import { formatMoney, formatMoneyExact } from "@dailyclose/shared/utils/money";
 import {
   ApiError,
   downloadAllReceipts,

@@ -10,8 +10,8 @@ import {
   X,
   XCircle
 } from "lucide-react";
-import { formatMoney, formatMoneyExact } from "@smokeshop/shared/utils/money";
-import type { OwnerDashboardSummary } from "@smokeshop/shared/types";
+import { formatMoney, formatMoneyExact } from "@dailyclose/shared/utils/money";
+import type { OwnerDashboardSummary } from "@dailyclose/shared/types";
 import {
   ApiError,
   getOwnerDashboard,

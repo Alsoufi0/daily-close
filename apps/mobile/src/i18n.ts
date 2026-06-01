@@ -1,5 +1,5 @@
 import { I18nManager } from "react-native";
-import { normalizeLanguage, translate, type Language } from "@smokeshop/shared/i18n";
+import { normalizeLanguage, translate, type Language } from "@dailyclose/shared/i18n";
 
 let currentLanguage: Language = normalizeLanguage(undefined);
 

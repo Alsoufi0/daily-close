@@ -15,8 +15,8 @@ import {
   TrendingDown,
   TrendingUp
 } from "lucide-react";
-import type { OwnerDashboardSummary, StoreSummary } from "@smokeshop/shared/types";
-import { formatMoney, formatMoneyExact } from "@smokeshop/shared/utils/money";
+import type { OwnerDashboardSummary, StoreSummary } from "@dailyclose/shared/types";
+import { formatMoney, formatMoneyExact } from "@dailyclose/shared/utils/money";
 import { ApiError, getOwnerDashboard } from "../../lib/api-client";
 import { useSession } from "../../lib/use-session";
 import { isAccountOwner } from "../../lib/session-roles";

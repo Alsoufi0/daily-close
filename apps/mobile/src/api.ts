@@ -4,7 +4,7 @@ import type {
   OwnerDashboardSummary,
   ParsedPOSReport,
   SessionProfile
-} from "@smokeshop/shared/types";
+} from "@dailyclose/shared/types";
 import * as SecureStore from "expo-secure-store";
 
 const apiUrl = process.env.EXPO_PUBLIC_API_URL;

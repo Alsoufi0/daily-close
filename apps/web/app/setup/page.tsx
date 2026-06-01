@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Check, Loader2, Store, UserPlus } from "lucide-react";
-import { getBrowserTimeZone, getSupportedTimeZones } from "@smokeshop/shared/timezones";
+import { getBrowserTimeZone, getSupportedTimeZones } from "@dailyclose/shared/timezones";
 import { useSession } from "../../lib/use-session";
 import { ApiError, createStore, inviteEmployee } from "../../lib/api-client";
 import { RequireAuth } from "../../components/require-auth";

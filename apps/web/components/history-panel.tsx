@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { CalendarDays, Loader2, Pencil, Trash2, X } from "lucide-react";
 import { clsx } from "clsx";
-import { formatMoney, formatMoneyExact } from "@smokeshop/shared/utils/money";
+import { formatMoney, formatMoneyExact } from "@dailyclose/shared/utils/money";
 import { deleteDailyClose, getOwnerHistory, HistoryRow } from "../lib/api-client";
 import { useShowMore } from "../lib/use-show-more";
 import { EditCloseModal } from "./edit-close-modal";

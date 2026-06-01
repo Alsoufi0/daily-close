@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, Pencil, Plus, Store, Trash2 } from "lucide-react";
-import { getBrowserTimeZone, getSupportedTimeZones } from "@smokeshop/shared/timezones";
+import { getBrowserTimeZone, getSupportedTimeZones } from "@dailyclose/shared/timezones";
 import { useLanguage } from "../../../components/language-provider";
 import { useSession } from "../../../lib/use-session";
 import {

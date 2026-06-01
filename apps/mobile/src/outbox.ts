@@ -4,7 +4,7 @@ import { generateIdempotencyKey } from "./api";
 /**
  * Offline-safe outbox queue for write operations (audit fix #5 phase 2).
  *
- * The problem: smoke shops have flaky Wi-Fi. An employee finishes a close,
+ * The problem: stores have flaky Wi-Fi. An employee finishes a close,
  * taps Submit, and the request hangs on a dead network — they're stuck.
  * Worse, the longer they wait, the more likely they retry, which without
  * idempotency would duplicate the close.

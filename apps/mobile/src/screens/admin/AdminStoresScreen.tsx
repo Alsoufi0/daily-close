@@ -13,7 +13,7 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
-import { getBrowserTimeZone, getSupportedTimeZones } from "@smokeshop/shared/timezones";
+import { getBrowserTimeZone, getSupportedTimeZones } from "@dailyclose/shared/timezones";
 import {
   ApiError,
   createStore,

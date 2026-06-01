@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { SessionProfile } from "@smokeshop/shared/types";
+import type { SessionProfile } from "@dailyclose/shared/types";
 import { getProfile, listStores, StoreRecord } from "./api";
 
 export interface MobileSession {

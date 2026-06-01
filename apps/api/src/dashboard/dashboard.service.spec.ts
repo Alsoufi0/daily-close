@@ -99,7 +99,7 @@ describe("DashboardService", () => {
     const prisma = makePrisma([
       {
         id: "s1",
-        storeName: "Main Street Smoke Shop",
+        storeName: "Main Street Market",
         timezone: "America/New_York",
         closeTime: "23:30",
         dailyCloses: [

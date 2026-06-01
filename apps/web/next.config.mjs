@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  transpilePackages: ["@smokeshop/shared"]
+  transpilePackages: ["@dailyclose/shared"]
 };
 
 export default nextConfig;

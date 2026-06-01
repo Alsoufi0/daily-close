@@ -50,7 +50,10 @@ const WEB_URL = (process.env.EXPO_PUBLIC_APP_URL || "https://dailyclose.us").rep
 // URL.createObjectURL so the Blob survives the page's immediate revokeObjectURL.
 const INJECTED_DOWNLOAD_JS = `
 (function () {
-  if (window.__dcDownloadPatched) return;
+  if (window.__dcDownloadPatched) {
+    try { window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'dc-ready' })); } catch (e) {}
+    return;
+  }
   window.__dcDownloadPatched = true;
 
   var blobs = {};
@@ -87,6 +90,14 @@ const INJECTED_DOWNLOAD_JS = `
       .then(function (blob) { deliver(blob, filename); })
       .catch(function () { post({ type: 'dc-download-error', filename: filename }); });
   }, true);
+
+  function ready() { post({ type: 'dc-ready' }); }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', ready, { once: true });
+  } else {
+    ready();
+  }
+  setTimeout(ready, 750);
 })();
 true;
 `;
@@ -139,6 +150,14 @@ function App() {
     return () => sub.remove();
   }, [canGoBack]);
 
+  useEffect(() => {
+    if (firstLoadDone || error) return;
+    const timer = setTimeout(() => {
+      setError(true);
+    }, 25000);
+    return () => clearTimeout(timer);
+  }, [firstLoadDone, error]);
+
   const onNav = useCallback((nav: WebViewNavigation) => {
     setCanGoBack(nav.canGoBack);
   }, []);
@@ -169,6 +188,11 @@ function App() {
     try {
       msg = JSON.parse(event.nativeEvent.data);
     } catch {
+      return;
+    }
+    if (msg?.type === "dc-ready") {
+      setFirstLoadDone(true);
+      setError(false);
       return;
     }
     if (!msg || msg.type !== "dc-download" || typeof msg.dataUrl !== "string") return;
@@ -225,7 +249,10 @@ function App() {
             allowFileAccess
             allowsBackForwardNavigationGestures
             // ── loading / error ──
-            onLoadEnd={() => setFirstLoadDone(true)}
+            onLoadStart={() => {
+              setError(false);
+              setFirstLoadDone(false);
+            }}
             onError={(e: WebViewErrorEvent) => {
               // Only treat top-level navigation failures as fatal; sub-resource
               // errors (an image, a tracking pixel) shouldn't blank the app.

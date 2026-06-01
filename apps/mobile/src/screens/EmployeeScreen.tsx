@@ -14,10 +14,10 @@ import {
   View
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import { formatMoney, formatMoneyExact, netProfit, toMoney } from "@smokeshop/shared/utils/money";
-import type { ParsedPOSReport } from "@smokeshop/shared/types";
+import { formatMoney, formatMoneyExact, netProfit, toMoney } from "@dailyclose/shared/utils/money";
+import type { ParsedPOSReport } from "@dailyclose/shared/types";
 import { ApiError, finishClose, generateIdempotencyKey, uploadReport } from "../api";
-import { suggestBusinessDate, storeLocalDateToUtcNoon } from "@smokeshop/shared/timezones";
+import { suggestBusinessDate, storeLocalDateToUtcNoon } from "@dailyclose/shared/timezones";
 import { QueuedForRetryError } from "../outbox";
 import { clearDraft, loadDraft, loadSelectedStoreId, saveDraft, saveSelectedStoreId } from "../persistence";
 import { AccountFooter } from "../components/AccountFooter";

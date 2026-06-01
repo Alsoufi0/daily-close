@@ -213,12 +213,12 @@ function makeSystem() {
   return { prisma, stores, dashboard, reports, dailyClose, ocr, storage };
 }
 
-describe("SmokeShop Daily Close system workflow", () => {
+describe("Daily Close system workflow", () => {
   it("keeps owner store actions in sync across admin list, dashboard, close, history, exports, and delete", async () => {
     const system = makeSystem();
 
     const created = await system.stores.createForOwner(owner, {
-      storeName: "Main Street Smoke Shop",
+      storeName: "Main Street Market",
       timezone: "America/New_York",
       closeTime: "23:30"
     });
@@ -290,7 +290,7 @@ describe("SmokeShop Daily Close system workflow", () => {
 
     const csv = await system.reports.buildFilteredCsv(owner, { from: "2026-05-23", to: "2026-05-24", lang: "es" });
     expect(csv).toContain("Tienda");
-    expect(csv).toContain("Main Street Smoke Shop");
+    expect(csv).toContain("Main Street Market");
     expect(csv).toContain("End-to-end close");
 
     await system.dailyClose.deleteClosing(close.id, owner);

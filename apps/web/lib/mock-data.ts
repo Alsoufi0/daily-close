@@ -1,4 +1,4 @@
-import type { ParsedPOSReport, StoreSummary } from "@smokeshop/shared/types";
+import type { ParsedPOSReport, StoreSummary } from "@dailyclose/shared/types";
 
 export const demoOwner = {
   id: "owner-1",

@@ -12,8 +12,8 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { DrawerNavigationProp } from "@react-navigation/drawer";
-import { formatMoney, formatMoneyExact } from "@smokeshop/shared/utils/money";
-import type { OwnerDashboardSummary } from "@smokeshop/shared/types";
+import { formatMoney, formatMoneyExact } from "@dailyclose/shared/utils/money";
+import type { OwnerDashboardSummary } from "@dailyclose/shared/types";
 import { getOwnerDashboard } from "../api";
 import { saveSelectedStoreId } from "../persistence";
 import type { DrawerParamList } from "../navigation/AppDrawer";

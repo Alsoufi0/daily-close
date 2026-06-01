@@ -37,7 +37,7 @@ describe("PosParserService", () => {
     expect(result.lottery).toBe(120);
   });
 
-  it("parses rotated terminal report OCR text like the uploaded smoke shop sample", () => {
+  it("parses rotated terminal report OCR text like the uploaded uploaded store sample", () => {
     const result = service.parse(`
       Smokers World 4
       Terminal Reports

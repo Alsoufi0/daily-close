@@ -16,8 +16,8 @@ import {
   Upload
 } from "lucide-react";
 import { clsx } from "clsx";
-import { formatMoney, formatMoneyExact, netProfit, toMoney } from "@smokeshop/shared/utils/money";
-import { suggestBusinessDate, shouldConfirmBusinessDate, storeLocalDateToUtcNoon } from "@smokeshop/shared/timezones";
+import { formatMoney, formatMoneyExact, netProfit, toMoney } from "@dailyclose/shared/utils/money";
+import { suggestBusinessDate, shouldConfirmBusinessDate, storeLocalDateToUtcNoon } from "@dailyclose/shared/timezones";
 import { scannedReport } from "../lib/mock-data";
 import { ApiError, finishDailyClose, uploadReport } from "../lib/api-client";
 import { preprocessReceipt } from "../lib/preprocess-image";

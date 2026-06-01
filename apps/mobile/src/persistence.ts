@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import type { ParsedPOSReport } from "@smokeshop/shared/types";
+import type { ParsedPOSReport } from "@dailyclose/shared/types";
 
 /**
  * Offline persistence for the in-progress daily close (audit fix #5).

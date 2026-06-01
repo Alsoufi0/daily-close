@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Loader2, X } from "lucide-react";
-import { formatMoneyExact, toMoney } from "@smokeshop/shared/utils/money";
+import { formatMoneyExact, toMoney } from "@dailyclose/shared/utils/money";
 import { ApiError, editDailyClose, HistoryRow } from "../lib/api-client";
 import { useLanguage } from "./language-provider";
 

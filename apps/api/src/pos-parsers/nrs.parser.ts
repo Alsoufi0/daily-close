@@ -6,7 +6,7 @@ export class NRSParser implements POSParser {
   readonly type = "NRS" as const;
 
   canParse(text: string): boolean {
-    return /national retail solutions|\bnrs\b|nrs pos|z report|x report|register close|day close|shift close|smoke shop|tobacco/i.test(
+    return /national retail solutions|\bnrs\b|nrs pos|z report|x report|register close|day close|shift close|tobacco/i.test(
       text
     );
   }
