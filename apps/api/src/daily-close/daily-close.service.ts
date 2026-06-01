@@ -360,6 +360,7 @@ export class DailyCloseService {
       if (!store) return;
       const prefs = await this.notifications.getOwnerWhatsAppPreferences(store.ownerId);
       if (!prefs.closeAlertsEnabled || !prefs.phone) return;
+      // Path 1: Meta WhatsApp Cloud API (only if Meta creds are configured).
       if (this.whatsapp.isConfigured()) {
         const sent = await this.whatsapp.sendCloseCompletedTemplate({
           toPhone: prefs.phone,
@@ -368,6 +369,21 @@ export class DailyCloseService {
         });
         if (sent) return;
       }
+      // Path 2: Twilio. A business-initiated WhatsApp message MUST use an
+      // approved Content Template (ContentSid) — freeform text is rejected by
+      // WhatsApp with error 63016. The daily_close_completed template takes
+      // {{1}} = owner name, {{2}} = store name.
+      const closeCompletedSid = process.env.TWILIO_TEMPLATE_CLOSE_COMPLETED;
+      if (closeCompletedSid) {
+        await this.sms.sendWhatsAppTemplate(prefs.phone, closeCompletedSid, {
+          "1": store.owner.user.name,
+          "2": store.storeName
+        });
+        return;
+      }
+      // No template configured — last-resort freeform. Works for plain SMS;
+      // WhatsApp will reject it, but that's preferable to silently sending
+      // nothing in a dev/preview env where the template SID isn't set.
       await this.sms.send(
         prefs.phone,
         `Daily Close: ${store.storeName} closing was completed. Open Daily Close to view details.`

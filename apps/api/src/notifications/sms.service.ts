@@ -112,6 +112,71 @@ export class SmsService {
   }
 
   /**
+   * Send an APPROVED WhatsApp Content Template via Twilio.
+   *
+   * Business-initiated WhatsApp messages (an alert the user didn't ask for
+   * within the last 24h — e.g. "your store's close was completed") MUST use a
+   * pre-approved template referenced by its ContentSid. Freeform `Body` text
+   * is rejected by WhatsApp with error 63016. `variables` maps the template's
+   * {{1}}, {{2}}… placeholders, e.g. { "1": ownerName, "2": storeName }.
+   */
+  async sendWhatsAppTemplate(
+    toPhone: string,
+    contentSid: string,
+    variables: Record<string, string>
+  ): Promise<{ sent: boolean; error?: string }> {
+    if (!this.isConfigured()) {
+      this.logger.warn(
+        `WhatsApp not configured — would have sent template ${contentSid} to ${toPhone}`
+      );
+      return { sent: false, error: "WhatsApp not configured" };
+    }
+
+    const sid = process.env.TWILIO_ACCOUNT_SID!;
+    const token = process.env.TWILIO_AUTH_TOKEN!;
+    // Templates are WhatsApp-only; address + sender always use the WhatsApp
+    // variants. Prefer a Messaging Service if no explicit WhatsApp From is set.
+    const messagingServiceSid = process.env.TWILIO_WHATSAPP_FROM
+      ? undefined
+      : process.env.TWILIO_MESSAGING_SERVICE_SID;
+    const fromNumber = process.env.TWILIO_WHATSAPP_FROM || process.env.TWILIO_FROM_NUMBER;
+
+    const params = new URLSearchParams();
+    params.set("To", this.whatsAppAddress(toPhone));
+    params.set("ContentSid", contentSid);
+    params.set("ContentVariables", JSON.stringify(variables));
+    if (messagingServiceSid) {
+      params.set("MessagingServiceSid", messagingServiceSid);
+    } else if (fromNumber) {
+      params.set("From", this.whatsAppAddress(fromNumber));
+    }
+
+    const auth = Buffer.from(`${sid}:${token}`).toString("base64");
+    try {
+      const res = await fetch(
+        `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Basic ${auth}`,
+            "Content-Type": "application/x-www-form-urlencoded"
+          },
+          body: params.toString()
+        }
+      );
+      if (!res.ok) {
+        const errBody = await res.text().catch(() => "");
+        this.logger.warn(`Twilio WhatsApp template failed (${res.status}): ${errBody.slice(0, 200)}`);
+        return { sent: false, error: `Twilio ${res.status}` };
+      }
+      return { sent: true };
+    } catch (err: any) {
+      this.logger.warn(`Twilio WhatsApp template error: ${err?.message || err}`);
+      return { sent: false, error: err?.message || "Network error" };
+    }
+  }
+
+  /**
    * Welcome SMS for a phone-invited employee. The owner shares the temp
    * password out-of-band today — over SMS this becomes automatic.
    *
