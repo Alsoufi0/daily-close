@@ -13,6 +13,7 @@ import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { WebView, WebViewNavigation } from "react-native-webview";
 import type { WebViewErrorEvent, WebViewHttpErrorEvent } from "react-native-webview/lib/WebViewTypes";
+import * as ImagePicker from "expo-image-picker";
 import * as Sentry from "@sentry/react-native";
 import { colors, font, spacing, radius } from "./src/theme";
 
@@ -52,6 +53,23 @@ function App() {
   const [canGoBack, setCanGoBack] = useState(false);
   const [firstLoadDone, setFirstLoadDone] = useState(false);
   const [error, setError] = useState(false);
+
+  // Request camera + media-library permissions up front. The web close flow
+  // uses <input type="file" capture="environment">, and react-native-webview's
+  // Android file chooser only offers the camera if the host app already holds
+  // the runtime CAMERA permission. Declaring it in the manifest isn't enough —
+  // Android requires an explicit runtime grant, which we trigger here on mount
+  // so the camera is ready by the time the user reaches the upload step.
+  useEffect(() => {
+    (async () => {
+      try {
+        await ImagePicker.requestCameraPermissionsAsync();
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      } catch {
+        /* permission prompt failures are non-fatal; user can grant later */
+      }
+    })();
+  }, []);
 
   // Android hardware back → step back through web history instead of exiting
   // the app. Only falls through to default (exit) when there's nowhere to go.
