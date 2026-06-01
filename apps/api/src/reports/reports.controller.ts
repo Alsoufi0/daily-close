@@ -1,10 +1,9 @@
-import { Controller, Get, Header, Param, Query, Res, UseGuards } from "@nestjs/common";
+import { Controller, Get, Header, Logger, Param, Query, Res, UseGuards } from "@nestjs/common";
 import archiver from "archiver";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { RequestUser } from "../auth/request-user";
 import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
-import { SubscriptionGuard } from "../subscriptions/subscription.guard";
 import { SupabaseStorageService } from "../supabase/supabase-storage.service";
 import { ReportQueryDto } from "./dto/report-query.dto";
 import { ReceiptsQueryDto } from "./dto/receipts-query.dto";
@@ -13,8 +12,16 @@ import { ReportsService } from "./reports.service";
 @ApiTags("Reports")
 @ApiBearerAuth()
 @Controller("reports")
-@UseGuards(SupabaseAuthGuard, SubscriptionGuard)
+// Read-only report endpoints (receipts list/download, CSV/PDF export) are NOT
+// behind SubscriptionGuard: an owner must always be able to read and export
+// their OWN historical data, even if billing lapses — you never ransom a
+// customer's own records. The paywall is enforced on the value-generating
+// WRITE actions instead (daily-close submit, add store, manage employees,
+// dashboard, notifications) — see those controllers.
+@UseGuards(SupabaseAuthGuard)
 export class ReportsController {
+  private readonly logger = new Logger(ReportsController.name);
+
   constructor(
     private readonly reports: ReportsService,
     private readonly storage: SupabaseStorageService
@@ -34,7 +41,53 @@ export class ReportsController {
     @Query() query: ReceiptsQueryDto,
     @Res() res: any
   ) {
-    const { storeName, items } = await this.reports.listReceiptsForDownload(query, user);
+    // Resolve the file list BEFORE touching the response. If this throws (bad
+    // query / scope error), it happens before any header is set, so Nest's
+    // exception filter returns a clean JSON error instead of a corrupt stream.
+    let storeName: string;
+    let items: Array<{ filename: string; storagePath: string | null; imageUrl: string }>;
+    try {
+      ({ storeName, items } = await this.reports.listReceiptsForDownload(query, user));
+    } catch (err: any) {
+      this.logger.error(`Bulk receipt listing failed: ${err?.message || err}`, err?.stack);
+      throw err;
+    }
+
+    // Download every file's bytes FIRST, in parallel (concurrency-capped),
+    // THEN build the zip. The old code downloaded one-at-a-time inside the
+    // stream loop; a store with several receipts could exceed the request
+    // timeout → the client saw "Internal server error". Each fetch is
+    // best-effort — a missing/expired object resolves to null and is skipped,
+    // never thrown.
+    const fetchOne = async (
+      item: { filename: string; storagePath: string | null; imageUrl: string }
+    ): Promise<{ name: string; buf: Buffer } | null> => {
+      if (item.storagePath) {
+        try {
+          const buf = await this.storage.download(item.storagePath);
+          if (buf) return { name: item.filename, buf };
+        } catch (err: any) {
+          this.logger.warn(`Receipt storage download failed (${item.filename}): ${err?.message || err}`);
+        }
+      }
+      if (item.imageUrl) {
+        try {
+          const r = await fetch(item.imageUrl);
+          if (r.ok) return { name: item.filename, buf: Buffer.from(await r.arrayBuffer()) };
+        } catch (err: any) {
+          this.logger.warn(`Receipt url fetch failed (${item.filename}): ${err?.message || err}`);
+        }
+      }
+      return null;
+    };
+
+    const CONCURRENCY = 6;
+    const fetched: Array<{ name: string; buf: Buffer } | null> = [];
+    for (let i = 0; i < items.length; i += CONCURRENCY) {
+      fetched.push(...(await Promise.all(items.slice(i, i + CONCURRENCY).map(fetchOne))));
+    }
+    const files = fetched.filter((f): f is { name: string; buf: Buffer } => f !== null);
+
     const safeStore = storeName.replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "store";
     res.setHeader("Content-Type", "application/zip");
     res.setHeader(
@@ -43,35 +96,13 @@ export class ReportsController {
     );
 
     const zip = archiver("zip", { zlib: { level: 6 } });
-    zip.on("warning", (err: any) => {
-      if (err?.code !== "ENOENT") throw err;
-    });
+    // Log warnings/errors — never throw. A throw inside these listeners fires
+    // AFTER headers are sent, which corrupts the response into an "internal
+    // server error" instead of a usable (partial) zip.
+    zip.on("warning", (err: any) => this.logger.warn(`zip warning: ${err?.message || err}`));
+    zip.on("error", (err: any) => this.logger.error(`zip error: ${err?.message || err}`));
     zip.pipe(res);
-
-    for (const item of items) {
-      let buf: Buffer | null = null;
-      // Best-effort per file: a single missing/expired object must NOT throw,
-      // because the zip stream has already started (headers + zip.pipe). An
-      // uncaught throw here can't produce a clean error response — the client
-      // just sees a broken stream / "Internal server error". Skip bad files
-      // and still deliver a zip of everything that IS downloadable.
-      if (item.storagePath) {
-        try {
-          buf = await this.storage.download(item.storagePath);
-        } catch {
-          /* skip — best-effort, fall through to the imageUrl path below */
-        }
-      }
-      if (!buf && item.imageUrl) {
-        try {
-          const r = await fetch(item.imageUrl);
-          if (r.ok) buf = Buffer.from(await r.arrayBuffer());
-        } catch {
-          /* skip — best-effort */
-        }
-      }
-      if (buf) zip.append(buf, { name: item.filename });
-    }
+    for (const f of files) zip.append(f.buf, { name: f.name });
     await zip.finalize();
   }
 
