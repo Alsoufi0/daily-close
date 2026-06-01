@@ -23,20 +23,8 @@
       "infoPlist": {
         "NSCameraUsageDescription": "Employees take a photo of the POS report to fill daily closing numbers.",
         "NSPhotoLibraryUsageDescription": "Employees can upload a POS report image from their phone.",
-        "ITSAppUsesNonExemptEncryption": false,
-        "CFBundleLocalizations": [
-          "en",
-          "es",
-          "ar",
-          "hi"
-        ]
+        "ITSAppUsesNonExemptEncryption": false
       }
-    },
-    "locales": {
-      "en": "./locales/en.json",
-      "es": "./locales/es.json",
-      "ar": "./locales/ar.json",
-      "hi": "./locales/hi.json"
     },
     "android": {
       "package": "com.dailyclose.app",

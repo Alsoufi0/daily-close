@@ -1,5 +1,0 @@
-{
-  "CFBundleDisplayName": "Daily Close",
-  "NSCameraUsageDescription": "Los empleados toman una foto del reporte del POS para llenar los números del cierre diario.",
-  "NSPhotoLibraryUsageDescription": "Los empleados pueden subir una imagen del reporte del POS desde su teléfono."
-}
