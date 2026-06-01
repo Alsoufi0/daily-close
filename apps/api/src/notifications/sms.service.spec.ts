@@ -209,4 +209,33 @@ describe("SmsService", () => {
       where: { phone: "+15551234567", optedOutAt: null }
     });
   });
+
+  it("sendEmployeeWelcome uses the approved WhatsApp welcome template in WhatsApp mode", async () => {
+    process.env.TWILIO_ACCOUNT_SID = "AC123";
+    process.env.TWILIO_AUTH_TOKEN = "token";
+    process.env.TWILIO_DELIVERY_CHANNEL = "whatsapp";
+    process.env.TWILIO_WHATSAPP_FROM = "+17042015710";
+    fetchSpy.mockResolvedValue({ ok: true } as any);
+    const prisma = {
+      phoneConsent: {
+        findFirst: jest
+          .fn()
+          .mockResolvedValue({ id: "c1", phone: "+15551234567", optedOutAt: null })
+      }
+    } as any;
+    const svc = new SmsService(prisma);
+    const result = await svc.sendEmployeeWelcome({
+      phone: "+15551234567",
+      name: "Maya",
+      storeName: "Store",
+      tempPassword: "x"
+    });
+    expect(result.sent).toBe(true);
+    const params = new URLSearchParams(fetchSpy.mock.calls[0][1].body);
+    expect(params.get("To")).toBe("whatsapp:+15551234567");
+    expect(params.get("From")).toBe("whatsapp:+17042015710");
+    expect(params.get("ContentSid")).toBe("HX949e489663d0a7e61c94e3e152bbfcfd");
+    expect(params.get("ContentVariables")).toBe(JSON.stringify({ "1": "Maya", "2": "Store" }));
+    expect(params.get("Body")).toBeNull();
+  });
 });

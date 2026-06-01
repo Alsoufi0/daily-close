@@ -440,7 +440,7 @@ export class SupabaseAuthService {
     const phone = this.normalizePhone(input.phone || "");
     const user = await this.findUserByPhone(phone);
     if (!user?.authUserId) {
-      return { sent: true, message: "If that number exists, a sign-in code was sent." };
+      throw new BadRequestException("No Daily Close account uses this phone yet. Use Get Started or ask the owner to invite this number.");
     }
 
     if (this.isTwilioVerifyConfigured()) {

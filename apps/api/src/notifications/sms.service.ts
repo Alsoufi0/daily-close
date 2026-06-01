@@ -201,6 +201,15 @@ export class SmsService {
       return { sent: false, error: "No active SMS consent on record" };
     }
 
+    if (this.deliveryChannel() === "whatsapp") {
+      const welcomeContentSid =
+        process.env.TWILIO_TEMPLATE_WELCOME || "HX949e489663d0a7e61c94e3e152bbfcfd";
+      return this.sendWhatsAppTemplate(opts.phone, welcomeContentSid, {
+        "1": opts.name,
+        "2": opts.storeName
+      });
+    }
+
     const appUrl = (process.env.APP_URL || "the Daily Close app").replace(/\/+$/, "");
     const body =
       `Daily Close: Hi ${opts.name}, you're set up to close ${opts.storeName}. ` +
