@@ -24,7 +24,12 @@
         "NSCameraUsageDescription": "Employees take a photo of the POS report to fill daily closing numbers.",
         "NSPhotoLibraryUsageDescription": "Employees can upload a POS report image from their phone.",
         "ITSAppUsesNonExemptEncryption": false,
-        "CFBundleLocalizations": ["en", "es", "ar", "hi"]
+        "CFBundleLocalizations": [
+          "en",
+          "es",
+          "ar",
+          "hi"
+        ]
       }
     },
     "locales": {
@@ -46,17 +51,7 @@
       ]
     },
     "plugins": [
-      "expo-image-picker",
-      "expo-secure-store",
-      "@sentry/react-native/expo",
-      [
-        "expo-build-properties",
-        {
-          "android": {
-            "kotlinVersion": "1.9.25"
-          }
-        }
-      ]
+      "expo-image-picker"
     ],
     "extra": {
       "eas": {

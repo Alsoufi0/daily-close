@@ -14,7 +14,6 @@ import { StatusBar } from "expo-status-bar";
 import { WebView, WebViewNavigation } from "react-native-webview";
 import type { WebViewErrorEvent, WebViewHttpErrorEvent } from "react-native-webview/lib/WebViewTypes";
 import * as ImagePicker from "expo-image-picker";
-import * as Sentry from "@sentry/react-native";
 import { colors, font, spacing, radius } from "./src/theme";
 
 // ── WebView shell ───────────────────────────────────────────────────────────
@@ -26,27 +25,18 @@ import { colors, font, spacing, radius } from "./src/theme";
 //
 // What makes it "app-like" (and clears Apple Guideline 4.2):
 //   - Native splash + status bar handling
-//   - Native crash reporting (Sentry)
 //   - Persistent login (cookies + localStorage survive app restarts)
 //   - Hardware back button navigates web history, doesn't kill the app
 //   - Camera + file upload bridged through to the close-a-store flow
 //   - (Next: native push notifications — the strongest 4.2 signal)
 //
+// Crash reporting is handled by the web app's own Sentry (this is a WebView),
+// so the native @sentry/react-native SDK is intentionally not bundled here.
+//
 // The hand-built native screens live on the `staging` branch; this branch is
 // the WebView alternative for side-by-side comparison.
 
 const WEB_URL = (process.env.EXPO_PUBLIC_APP_URL || "https://dailyclose.us").replace(/\/+$/, "");
-
-const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN;
-if (SENTRY_DSN) {
-  Sentry.init({
-    dsn: SENTRY_DSN,
-    environment: process.env.EXPO_PUBLIC_ENV || "production",
-    tracesSampleRate: 0.05,
-    enableAutoSessionTracking: true,
-    sendDefaultPii: false
-  });
-}
 
 function App() {
   const webRef = useRef<WebView>(null);
@@ -192,4 +182,4 @@ const styles = StyleSheet.create({
   splashBrand: { color: colors.leaf, fontWeight: font.black, fontSize: 28, letterSpacing: -0.5 }
 });
 
-export default SENTRY_DSN ? Sentry.wrap(App) : App;
+export default App;
