@@ -102,8 +102,7 @@ export class DailyCloseService {
 
     // Persist the upload so the owner Receipts page can show it. The row is
     // intentionally created BEFORE finishClosing — daily_close_id stays null
-    // until the close lands (it's never reverse-linked, but joining via
-    // store + created_at is enough for the Receipts UI).
+    // until the close lands and finishClosing links the newest matching upload.
     try {
       await this.prisma.uploadedReport.create({
         data: {

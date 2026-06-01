@@ -160,6 +160,43 @@ describe("ReportsService.listReceipts", () => {
     expect(rows[0].dailyClose?.totalSales).toBe(100);
   });
 
+  it("keeps legacy unlinked store receipt uploads visible", async () => {
+    const prisma = makeReceiptsPrisma();
+    prisma.uploadedReport.findMany.mockResolvedValueOnce([
+      {
+        id: "ur-legacy",
+        imageUrl: "https://storage.example/legacy-receipt.jpg",
+        storagePath: null,
+        parsedJson: { totalSales: 125 },
+        createdAt: new Date("2026-05-29T14:00:00Z"),
+        uploadedBy: { name: "Maya" },
+        dailyClose: null
+      }
+    ]);
+    const service = new ReportsService({} as any, prisma as any);
+    const rows = await service.listReceipts(
+      { storeId: "store-1", from: "2026-05-25", to: "2026-05-30" },
+      owner
+    );
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].id).toBe("ur-legacy");
+    expect(rows[0].employeeName).toBe("Maya");
+    expect(rows[0].dailyClose).toBeNull();
+    expect(prisma.uploadedReport.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          OR: expect.arrayContaining([
+            expect.objectContaining({
+              dailyCloseId: null,
+              storeId: "store-1"
+            })
+          ])
+        })
+      })
+    );
+  });
+
   it("forbids employees from listing receipts", async () => {
     const prisma = makeReceiptsPrisma();
     const service = new ReportsService({} as any, prisma as any);
