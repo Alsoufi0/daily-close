@@ -49,7 +49,13 @@ export class EmployeesService {
       where: {
         store: storeWhereForScope(scope),
         deletedAt: null,
-        role: { in: ["EMPLOYEE", "MANAGER"] }
+        role: { in: ["EMPLOYEE", "MANAGER"] },
+        // Never list the account owner as an employee — even if they somehow
+        // hold an EMPLOYEE/MANAGER-role row (e.g. self-invite or legacy data).
+        // The owner can still close stores (closing uses their OWNER-role row,
+        // which this list already excludes); they just shouldn't appear in the
+        // employees roster.
+        userId: { not: scope.ownerId }
       },
       include: { user: true, store: true },
       orderBy: { user: { name: "asc" } }

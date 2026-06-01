@@ -112,7 +112,7 @@ export const translations: Record<Language, Dictionary> = {
     "closing.submitFailed": "Could not submit close. Try again.",
     "auth.signIn": "Sign in",
     "auth.signOut": "Sign Out"
-    ,"nav.owner": "Owner",
+    ,"nav.owner": "Dashboard",
     "nav.contact": "Contact",
     "nav.employee": "Employee",
     "nav.close": "Close",
@@ -341,7 +341,7 @@ export const translations: Record<Language, Dictionary> = {
     "closing.submitFailed": "تعذر إرسال الإغلاق. حاول مرة أخرى.",
     "auth.signIn": "تسجيل الدخول",
     "auth.signOut": "تسجيل الخروج"
-    ,"nav.owner": "المالك",
+    ,"nav.owner": "لوحة التحكم",
     "nav.contact": "تواصل",
     "nav.employee": "الموظف",
     "nav.close": "إغلاق",
@@ -559,7 +559,7 @@ export const translations: Record<Language, Dictionary> = {
     "closing.submitFailed": "No se pudo enviar el cierre. Inténtalo de nuevo.",
     "auth.signIn": "Iniciar sesión",
     "auth.signOut": "Cerrar sesión"
-    ,"nav.owner": "Dueño",
+    ,"nav.owner": "Panel",
     "nav.contact": "Contacto",
     "nav.employee": "Empleado",
     "nav.close": "Cerrar",
@@ -777,7 +777,7 @@ export const translations: Record<Language, Dictionary> = {
     "closing.submitFailed": "क्लोज भेजा नहीं गया. फिर कोशिश करें.",
     "auth.signIn": "साइन इन",
     "auth.signOut": "साइन आउट"
-    ,"nav.owner": "मालिक",
+    ,"nav.owner": "डैशबोर्ड",
     "nav.contact": "संपर्क",
     "nav.employee": "कर्मचारी",
     "nav.close": "क्लोज",

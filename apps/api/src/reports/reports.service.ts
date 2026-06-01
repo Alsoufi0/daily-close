@@ -522,10 +522,11 @@ export class ReportsService {
 
     const rows = await this.prisma.uploadedReport.findMany({
       where: {
-        OR: [
-          { storeId: store.id, createdAt: { gte: fromRange.start, lte: toRange.end } },
-          { dailyClose: { storeId: store.id, date: { gte: fromRange.start, lte: toRange.end } } }
-        ]
+        // Only receipts from CONCLUDED closes — a row is linked to its
+        // dailyClose at close time, so unlinked step-1/abandoned uploads
+        // never appear here.
+        dailyCloseId: { not: null },
+        dailyClose: { storeId: store.id, date: { gte: fromRange.start, lte: toRange.end } }
       },
       include: { dailyClose: true },
       orderBy: { createdAt: "desc" },
@@ -578,10 +579,10 @@ export class ReportsService {
 
     const rows = await this.prisma.uploadedReport.findMany({
       where: {
-        OR: [
-          { storeId: store.id, createdAt: { gte: fromRange.start, lte: toRange.end } },
-          { dailyClose: { storeId: store.id, date: { gte: fromRange.start, lte: toRange.end } } }
-        ]
+        // Only receipts from CONCLUDED closes — see the matching note in
+        // listReceiptsForDownload. Unlinked step-1/abandoned uploads are hidden.
+        dailyCloseId: { not: null },
+        dailyClose: { storeId: store.id, date: { gte: fromRange.start, lte: toRange.end } }
       },
       include: {
         dailyClose: {

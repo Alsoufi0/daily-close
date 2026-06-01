@@ -44,7 +44,9 @@ function makeService(overrides: Partial<{
       update: jest.fn().mockResolvedValue({ id: "employee-existing", storeId: "store-1", deletedAt: null })
     },
     uploadedReport: {
-      create: jest.fn().mockResolvedValue({ id: "report-1" })
+      create: jest.fn().mockResolvedValue({ id: "report-1" }),
+      findFirst: jest.fn().mockResolvedValue(null),
+      update: jest.fn().mockResolvedValue({ id: "report-1" })
     }
   };
   const notifications = {

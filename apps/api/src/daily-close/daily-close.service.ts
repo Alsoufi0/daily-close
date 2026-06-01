@@ -240,6 +240,34 @@ export class DailyCloseService {
       });
     }
 
+    // A receipt is only "recorded" once the close actually concludes. The
+    // upload step stores the image and creates an UploadedReport row, but that
+    // row stays UNLINKED (dailyCloseId = null) until here. We now link the most
+    // recent unlinked upload for this store + user to the close. The Receipts
+    // page only lists LINKED rows, so step-1 images the employee abandoned or
+    // re-selected never show up — only the image that backed a completed close.
+    try {
+      const latestUpload = await this.prisma.uploadedReport.findFirst({
+        where: {
+          storeId: input.storeId,
+          uploadedByUserId: submittedByUserId,
+          dailyCloseId: null
+        },
+        orderBy: { createdAt: "desc" },
+        select: { id: true }
+      });
+      if (latestUpload) {
+        await this.prisma.uploadedReport.update({
+          where: { id: latestUpload.id },
+          data: { dailyCloseId: created.id }
+        });
+      }
+    } catch (err: any) {
+      // Non-fatal: the close is already persisted. A missing receipt link just
+      // means that close won't have a thumbnail on the Receipts page.
+      this.logger.warn(`Receipt link to close skipped: ${err?.message || err}`);
+    }
+
     await this.sendCloseCompletedWhatsApp(input.storeId);
 
     return {
