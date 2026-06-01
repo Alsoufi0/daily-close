@@ -19,6 +19,9 @@
     "prisma:generate": "prisma generate --schema database/schema/schema.prisma"
   },
   "devDependencies": {
+    "expo": "^52.0.0",
+    "metro": "0.81.5",
+    "metro-config": "0.81.5",
     "prisma": "^5.22.0",
     "typescript": "^5.6.3"
   },
