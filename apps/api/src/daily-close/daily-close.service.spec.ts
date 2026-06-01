@@ -59,7 +59,10 @@ function makeService(overrides: Partial<{
     isConfigured: jest.fn().mockReturnValue(false),
     sendCloseCompletedTemplate: jest.fn().mockResolvedValue(false)
   };
-  const sms = { send: jest.fn().mockResolvedValue({ sent: true }) };
+  const sms = {
+    send: jest.fn().mockResolvedValue({ sent: true }),
+    sendWhatsAppTemplate: jest.fn().mockResolvedValue({ sent: true })
+  };
   const service = new DailyCloseService(
     repository as any,
     posParser as any,
@@ -309,7 +312,7 @@ describe("DailyCloseService.finishClosing", () => {
     });
   });
 
-  it("falls back to Twilio WhatsApp/SMS when Meta WhatsApp is not configured", async () => {
+  it("falls back to the Twilio WhatsApp template when Meta WhatsApp is not configured", async () => {
     const { service, prisma, notifications, sms } = makeService();
     prisma.store.findUnique
       .mockResolvedValueOnce({ timezone: "UTC" })
@@ -325,10 +328,16 @@ describe("DailyCloseService.finishClosing", () => {
       reportsEnabled: false
     });
     await service.finishClosing(baseInput, employeeUser);
-    expect(sms.send).toHaveBeenCalledWith(
+    // Business-initiated WhatsApp must use an approved Content Template, not
+    // freeform text (which WhatsApp rejects with 63016). The ContentSid
+    // defaults to the approved daily_close_completed_v2 template; variables
+    // map {{1}}=owner, {{2}}=store.
+    expect(sms.sendWhatsAppTemplate).toHaveBeenCalledWith(
       "+15551234567",
-      expect.stringContaining("Main Street Smoke Shop")
+      expect.stringMatching(/^HX/),
+      { "1": "Owner", "2": "Main Street Smoke Shop" }
     );
+    expect(sms.send).not.toHaveBeenCalled();
   });
 });
 

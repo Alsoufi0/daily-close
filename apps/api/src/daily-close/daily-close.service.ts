@@ -373,7 +373,14 @@ export class DailyCloseService {
       // approved Content Template (ContentSid) — freeform text is rejected by
       // WhatsApp with error 63016. The daily_close_completed template takes
       // {{1}} = owner name, {{2}} = store name.
-      const closeCompletedSid = process.env.TWILIO_TEMPLATE_CLOSE_COMPLETED;
+      //
+      // Defaults to the approved daily_close_completed_v2 ContentSid so the
+      // alert works even if TWILIO_TEMPLATE_CLOSE_COMPLETED isn't set in the
+      // environment — mirrors how the Meta template names default (e.g.
+      // WHATSAPP_TEMPLATE_MISSED || "missed_close"). A ContentSid is a template
+      // identifier, not a secret; override via env if the template changes.
+      const closeCompletedSid =
+        process.env.TWILIO_TEMPLATE_CLOSE_COMPLETED || "HX16407e71f4d576b8f355376dee7d609c";
       if (closeCompletedSid) {
         await this.sms.sendWhatsAppTemplate(prefs.phone, closeCompletedSid, {
           "1": store.owner.user.name,
