@@ -10,7 +10,6 @@
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "scheme": "dailyclose",
-    "newArchEnabled": false,
     "icon": "./assets/icon.png",
     "splash": {
       "image": "./assets/splash.png",
@@ -24,8 +23,15 @@
       "infoPlist": {
         "NSCameraUsageDescription": "Employees take a photo of the POS report to fill daily closing numbers.",
         "NSPhotoLibraryUsageDescription": "Employees can upload a POS report image from their phone.",
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "CFBundleLocalizations": ["en", "es", "ar", "hi"]
       }
+    },
+    "locales": {
+      "en": "./locales/en.json",
+      "es": "./locales/es.json",
+      "ar": "./locales/ar.json",
+      "hi": "./locales/hi.json"
     },
     "android": {
       "package": "com.dailyclose.app",
@@ -40,7 +46,17 @@
       ]
     },
     "plugins": [
-      "expo-image-picker"
+      "expo-image-picker",
+      "expo-secure-store",
+      "@sentry/react-native/expo",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "kotlinVersion": "1.9.25"
+          }
+        }
+      ]
     ],
     "extra": {
       "eas": {
