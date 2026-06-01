@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException, Optional } from "@nestjs/common";
+import { ForbiddenException, Injectable, Logger, NotFoundException, Optional } from "@nestjs/common";
 import { PDFDocument, rgb } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import { loadFontsForLang } from "./pdf-fonts";
@@ -142,6 +142,8 @@ const labels: Record<ReportLang, Record<string, string>> = {
 
 @Injectable()
 export class ReportsService {
+  private readonly logger = new Logger(ReportsService.name);
+
   constructor(
     private readonly dashboard: DashboardService,
     private readonly prisma: PrismaService,
@@ -516,13 +518,25 @@ export class ReportsService {
     const contentType = ext === "png" ? "image/png" : ext === "pdf" ? "application/pdf" : "image/jpeg";
 
     if (row.storagePath && this.storage) {
-      const buf = await this.storage.download(row.storagePath);
-      if (buf) return { filename, buffer: buf, redirectUrl: null, contentType };
-      // Storage configured but fetch failed — fall through to redirect.
-      const fresh = await this.storage.signPath(row.storagePath, 300);
-      if (fresh) return { filename, buffer: null, redirectUrl: fresh, contentType };
+      // Both storage calls must be guarded: a missing/expired object makes
+      // them THROW, not just return null. An uncaught throw here surfaces to
+      // the client as a 500 "internal error" instead of a graceful fallback.
+      try {
+        const buf = await this.storage.download(row.storagePath);
+        if (buf) return { filename, buffer: buf, redirectUrl: null, contentType };
+      } catch (err: any) {
+        this.logger.warn(`Receipt storage download failed (${row.id}): ${err?.message || err}`);
+      }
+      try {
+        const fresh = await this.storage.signPath(row.storagePath, 300);
+        if (fresh) return { filename, buffer: null, redirectUrl: fresh, contentType };
+      } catch (err: any) {
+        this.logger.warn(`Receipt re-sign failed (${row.id}): ${err?.message || err}`);
+      }
     }
-    // No storage path / no storage configured: 302 to the stored URL.
+    // No storage path / no storage configured / all storage calls failed:
+    // 302 to the last-known stored URL (may be an expired signed URL, but a
+    // redirect is a far cleaner failure than a 500).
     return { filename, buffer: null, redirectUrl: row.imageUrl, contentType };
   }
 
