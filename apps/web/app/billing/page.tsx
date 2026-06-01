@@ -78,7 +78,14 @@ function BillingPageInner() {
   }
 
   const trialStatus = sub.status === "TRIALING";
-  const expired = !sub.active;
+  const pastDue = sub.status === "PAST_DUE";
+  // "Expired" = no usable subscription (canceled/incomplete), NOT merely a
+  // failed renewal — past-due still has portal access to fix the card.
+  const expired = !sub.active && !pastDue;
+  // An existing Stripe customer (active or past-due) manages/updates their card
+  // through the billing PORTAL — never a brand-new checkout (which would try to
+  // charge again). Only new/expired subscriptions go through checkout.
+  const portalAction = (sub.status === "ACTIVE" || pastDue) && !!sub.portalUrl;
   const unitPrice = `$${(sub.unitAmountCents / 100).toFixed(2)}`;
 
   return (
@@ -125,18 +132,33 @@ function BillingPageInner() {
             ) : null}
           </div>
           <div className="flex flex-col items-end gap-2 sm:flex-row">
-            <button
-              onClick={startCheckout}
-              disabled={starting || !session.token}
-              className="focus-ring inline-flex h-12 items-center gap-2 rounded-lg bg-leaf px-4 font-black text-white disabled:opacity-60"
-            >
-              {starting ? <Loader2 className="animate-spin" size={18} /> : <CreditCard size={18} />}
-              {starting ? "Starting…" : expired ? "Choose plan" : trialStatus ? "Start paid plan" : "Update payment"}
-            </button>
+            {portalAction ? (
+              // Active or past-due → send them to the Stripe billing portal to
+              // update their card / fix a failed renewal. No new charge.
+              <a
+                href={sub.portalUrl as string}
+                className="focus-ring inline-flex h-12 items-center gap-2 rounded-lg bg-leaf px-4 font-black text-white"
+              >
+                <CreditCard size={18} />
+                {pastDue ? "Update payment" : "Update card"}
+              </a>
+            ) : (
+              // New / trialing / expired → start (or restart) a checkout.
+              <button
+                onClick={startCheckout}
+                disabled={starting || !session.token}
+                className="focus-ring inline-flex h-12 items-center gap-2 rounded-lg bg-leaf px-4 font-black text-white disabled:opacity-60"
+              >
+                {starting ? <Loader2 className="animate-spin" size={18} /> : <CreditCard size={18} />}
+                {starting ? "Starting…" : expired ? "Choose plan" : "Start paid plan"}
+              </button>
+            )}
             {startError ? (
               <span className="text-xs font-bold text-warning">{startError}</span>
             ) : null}
-            {sub.portalUrl ? (
+            {/* Secondary portal link only when the primary action ISN'T already
+                the portal — avoids two identical buttons for active subs. */}
+            {sub.portalUrl && !portalAction ? (
               <a
                 href={sub.portalUrl}
                 className="focus-ring inline-flex h-12 items-center gap-2 rounded-lg border border-ink/15 bg-white px-4 font-black text-ink hover:bg-smoke"
