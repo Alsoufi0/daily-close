@@ -45,19 +45,7 @@
         "android.permission.READ_MEDIA_IMAGES"
       ]
     },
-    "plugins": [
-      "expo-image-picker",
-      "expo-secure-store",
-      "@sentry/react-native/expo",
-      [
-        "expo-build-properties",
-        {
-          "android": {
-            "kotlinVersion": "1.9.25"
-          }
-        }
-      ]
-    ],
+    "plugins": [],
     "extra": {
       "eas": {
         "projectId": "3bf4a9e8-3ec5-42c7-b7d1-71b37185f4b4"
