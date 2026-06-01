@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Component, ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   BackHandler,
@@ -19,35 +19,8 @@ import * as Sharing from "expo-sharing";
 import * as Sentry from "@sentry/react-native";
 import { colors, font, spacing, radius } from "./src/theme";
 
-// ── WebView shell ───────────────────────────────────────────────────────────
-//
-// This build is a NATIVE APP that renders the real Daily Close web UI inside
-// a full-screen WebView (no browser chrome — no URL bar, no share button).
-// The user sees exactly what the website shows, identical forever, because it
-// IS the website. Web ships a change → this app has it instantly, no rebuild.
-//
-// What makes it "app-like" (and clears Apple Guideline 4.2):
-//   - Native splash + status bar handling
-//   - Native crash reporting (Sentry)
-//   - Persistent login (cookies + localStorage survive app restarts)
-//   - Hardware back button navigates web history, doesn't kill the app
-//   - Camera + file upload bridged through to the close-a-store flow
-//   - (Next: native push notifications — the strongest 4.2 signal)
-//
-// The hand-built native screens live on the `staging` branch; this branch is
-// the WebView alternative for side-by-side comparison.
-
 const WEB_URL = (process.env.EXPO_PUBLIC_APP_URL || "https://dailyclose.us").replace(/\/+$/, "");
 
-// ── Download bridge ─────────────────────────────────────────────────────────
-//
-// A plain WebView has no download manager: the web app's CSV/PDF export, single
-// receipt download, and "Download all" zip all work by fetching a Blob and
-// clicking an `<a download>` on a blob: URL — which does nothing inside a
-// WebView. This injected script captures those clicks, reads the Blob as a
-// base64 data URL, and posts it to native (onMessage), which writes a temp file
-// and opens the OS share sheet (Save to Files, etc.). It also patches
-// URL.createObjectURL so the Blob survives the page's immediate revokeObjectURL.
 const INJECTED_DOWNLOAD_JS = `
 (function () {
   if (window.__dcDownloadPatched) {
@@ -67,6 +40,7 @@ const INJECTED_DOWNLOAD_JS = `
   function post(o) {
     try { window.ReactNativeWebView.postMessage(JSON.stringify(o)); } catch (e) {}
   }
+
   function deliver(blob, filename) {
     var r = new FileReader();
     r.onload = function () { post({ type: 'dc-download', filename: filename, dataUrl: r.result }); };
@@ -113,31 +87,53 @@ if (SENTRY_DSN) {
   });
 }
 
+type NativeErrorBoundaryProps = { children: ReactNode };
+type NativeErrorBoundaryState = { hasError: boolean };
+
+class NativeErrorBoundary extends Component<NativeErrorBoundaryProps, NativeErrorBoundaryState> {
+  state: NativeErrorBoundaryState = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error) {
+    Sentry.captureException(error);
+  }
+
+  render() {
+    if (!this.state.hasError) return this.props.children;
+    return (
+      <SafeAreaProvider>
+        <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
+          <View style={styles.center}>
+            <Text style={styles.brand}>Daily Close</Text>
+            <Text style={styles.errTitle}>App needs to restart</Text>
+            <Text style={styles.errBody}>Close and reopen the app. If it keeps happening, install the latest build.</Text>
+          </View>
+        </SafeAreaView>
+      </SafeAreaProvider>
+    );
+  }
+}
+
 function App() {
   const webRef = useRef<WebView>(null);
   const [canGoBack, setCanGoBack] = useState(false);
   const [firstLoadDone, setFirstLoadDone] = useState(false);
   const [error, setError] = useState(false);
 
-  // Request camera + media-library permissions up front. The web close flow
-  // uses <input type="file" capture="environment">, and react-native-webview's
-  // Android file chooser only offers the camera if the host app already holds
-  // the runtime CAMERA permission. Declaring it in the manifest isn't enough —
-  // Android requires an explicit runtime grant, which we trigger here on mount
-  // so the camera is ready by the time the user reaches the upload step.
   useEffect(() => {
     (async () => {
       try {
         await ImagePicker.requestCameraPermissionsAsync();
         await ImagePicker.requestMediaLibraryPermissionsAsync();
       } catch {
-        /* permission prompt failures are non-fatal; user can grant later */
+        /* Non-fatal. The OS can prompt again when the user uploads. */
       }
     })();
   }, []);
 
-  // Android hardware back → step back through web history instead of exiting
-  // the app. Only falls through to default (exit) when there's nowhere to go.
   useEffect(() => {
     if (Platform.OS !== "android") return;
     const sub = BackHandler.addEventListener("hardwareBackPress", () => {
@@ -162,27 +158,21 @@ function App() {
     setCanGoBack(nav.canGoBack);
   }, []);
 
-  function retry() {
+  const retry = useCallback(() => {
     setError(false);
     setFirstLoadDone(false);
     webRef.current?.reload();
-  }
+  }, []);
 
-  // Keep links inside the app for our own domain + Stripe (checkout flows in
-  // the same web session). Hand off mailto:/tel: + clearly-external domains to
-  // the OS so they don't get trapped in the WebView.
   const onShouldStartLoad = useCallback((req: { url: string }) => {
     const url = req.url;
     if (url.startsWith("mailto:") || url.startsWith("tel:") || url.startsWith("sms:")) {
       Linking.openURL(url).catch(() => {});
       return false;
     }
-    // Everything on our domain + Supabase auth + Stripe stays in-app.
     return true;
   }, []);
 
-  // Receive an intercepted download from the page (base64 data URL), write it
-  // to a temp file, and open the OS share sheet so the user can save/open it.
   const onMessage = useCallback(async (event: { nativeEvent: { data: string } }) => {
     let msg: any;
     try {
@@ -190,11 +180,13 @@ function App() {
     } catch {
       return;
     }
+
     if (msg?.type === "dc-ready") {
       setFirstLoadDone(true);
       setError(false);
       return;
     }
+
     if (!msg || msg.type !== "dc-download" || typeof msg.dataUrl !== "string") return;
     try {
       const comma = msg.dataUrl.indexOf(",");
@@ -221,9 +213,7 @@ function App() {
           <View style={styles.center}>
             <Text style={styles.brand}>Daily Close</Text>
             <Text style={styles.errTitle}>Can't reach Daily Close</Text>
-            <Text style={styles.errBody}>
-              Check your internet connection and try again.
-            </Text>
+            <Text style={styles.errBody}>Check your internet connection and try again.</Text>
             <TouchableOpacity style={styles.retry} onPress={retry}>
               <Text style={styles.retryText}>Retry</Text>
             </TouchableOpacity>
@@ -235,10 +225,8 @@ function App() {
             originWhitelist={["*"]}
             onNavigationStateChange={onNav}
             onShouldStartLoadWithRequest={onShouldStartLoad}
-            // Bridge browser downloads (export/receipts/zip) to native save+share.
             injectedJavaScript={INJECTED_DOWNLOAD_JS}
             onMessage={onMessage}
-            // ── capability flags ──
             javaScriptEnabled
             domStorageEnabled
             thirdPartyCookiesEnabled
@@ -248,25 +236,29 @@ function App() {
             mediaCapturePermissionGrantType="grant"
             allowFileAccess
             allowsBackForwardNavigationGestures
-            // ── loading / error ──
             onLoadStart={() => {
-              setError(false);
+              if (!firstLoadDone) setError(false);
+            }}
+            onLoadProgress={(event) => {
+              if (event.nativeEvent.progress >= 0.9) {
+                setFirstLoadDone(true);
+              }
+            }}
+            onContentProcessDidTerminate={() => {
               setFirstLoadDone(false);
+              setError(false);
+              webRef.current?.reload();
             }}
             onError={(e: WebViewErrorEvent) => {
-              // Only treat top-level navigation failures as fatal; sub-resource
-              // errors (an image, a tracking pixel) shouldn't blank the app.
               if (e.nativeEvent.url?.startsWith(WEB_URL)) setError(true);
             }}
             onHttpError={(_e: WebViewHttpErrorEvent) => {
-              /* leave HTTP errors to the web app's own error pages */
+              /* The web app handles HTTP error pages. */
             }}
             style={styles.web}
           />
         )}
 
-        {/* Branded first-load splash — covers the WebView until the web app's
-            first paint lands, so the user never sees a white flash. */}
         {!firstLoadDone && !error ? (
           <View style={styles.splash} pointerEvents="none">
             <Text style={styles.splashBrand}>Daily Close</Text>
@@ -275,6 +267,14 @@ function App() {
         ) : null}
       </SafeAreaView>
     </SafeAreaProvider>
+  );
+}
+
+function Root() {
+  return (
+    <NativeErrorBoundary>
+      <App />
+    </NativeErrorBoundary>
   );
 }
 
@@ -299,7 +299,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center"
   },
-  splashBrand: { color: colors.leaf, fontWeight: font.black, fontSize: 28, letterSpacing: -0.5 }
+  splashBrand: { color: colors.leaf, fontWeight: font.black, fontSize: 28, letterSpacing: 0 }
 });
 
-export default SENTRY_DSN ? Sentry.wrap(App) : App;
+export default SENTRY_DSN ? Sentry.wrap(Root) : Root;
