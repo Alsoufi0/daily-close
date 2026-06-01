@@ -202,10 +202,42 @@ export function EmployeeClose() {
     }
   }
 
+  // Clear ALL close-specific fields. Used after a completed close AND when the
+  // user switches stores — previously reset() only touched step/reportReady,
+  // so the prior store's photo, OCR numbers, expenses, and notes bled into the
+  // next store's close (wrong + dangerous: an employee could submit Store B
+  // with Store A's figures).
+  function resetForm() {
+    setReportReady(false);
+    setCashSales("0");
+    setCardSales("0");
+    setTotalSales("0");
+    setTax("0");
+    setRefunds("0");
+    setCashCounted("0");
+    setSafeDrop("0");
+    setExpenseItems([]);
+    setNotes("");
+    setPreviewUrl(null);
+    setOcrRawText(null);
+    setUploadError(null);
+    setSubmitError(null);
+    setConfirmingBusinessDate(false);
+    setBusinessDate("");
+  }
+
   function reset() {
     setStep("start");
-    setReportReady(false);
-    setSubmitError(null);
+    resetForm();
+  }
+
+  function changeStore(idx: number) {
+    if (idx === storeIdx) return;
+    setStoreIdx(idx);
+    // Starting a fresh store → wipe the form and return to step 1 so nothing
+    // carries over from the previous store's close.
+    setStep("start");
+    resetForm();
   }
 
   return (
@@ -219,7 +251,7 @@ export function EmployeeClose() {
             <select
               className="focus-ring rounded-lg border border-ink/15 bg-white px-2 py-1 font-black"
               value={storeIdx}
-              onChange={(e) => setStoreIdx(Number(e.target.value))}
+              onChange={(e) => changeStore(Number(e.target.value))}
             >
               {availableStores.map((s, i) => (
                 <option key={s.id} value={i}>{s.storeName}</option>

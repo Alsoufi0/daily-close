@@ -50,8 +50,17 @@ export class ReportsController {
 
     for (const item of items) {
       let buf: Buffer | null = null;
+      // Best-effort per file: a single missing/expired object must NOT throw,
+      // because the zip stream has already started (headers + zip.pipe). An
+      // uncaught throw here can't produce a clean error response — the client
+      // just sees a broken stream / "Internal server error". Skip bad files
+      // and still deliver a zip of everything that IS downloadable.
       if (item.storagePath) {
-        buf = await this.storage.download(item.storagePath);
+        try {
+          buf = await this.storage.download(item.storagePath);
+        } catch {
+          /* skip — best-effort, fall through to the imageUrl path below */
+        }
       }
       if (!buf && item.imageUrl) {
         try {
