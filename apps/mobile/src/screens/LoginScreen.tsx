@@ -3,7 +3,7 @@ import { ActivityIndicator, Linking, ScrollView, StyleSheet, Text, TextInput, To
 import { Button, Pill } from "../ui";
 import { colors, font, radius, spacing } from "../theme";
 import { supabase } from "../supabase";
-import { saveToken } from "../api";
+import { confirmPhoneLogin, requestPhoneLogin, saveToken } from "../api";
 import { t } from "../i18n";
 import { ForgotPasswordScreen } from "./ForgotPasswordScreen";
 
@@ -20,8 +20,10 @@ const FEATURES: Array<{ icon: string; titleKey: string; bodyKey: string }> = [
 export function LoginScreen({ onOpen }: { onOpen: () => void }) {
   const [mode, setMode] = useState<"intro" | "signin" | "forgot">(supabase ? "intro" : "intro");
   const [authMode, setAuthMode] = useState<"email" | "phone">("email");
+  const [phoneStep, setPhoneStep] = useState<"password" | "code">("password");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [phoneCode, setPhoneCode] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -59,6 +61,48 @@ export function LoginScreen({ onOpen }: { onOpen: () => void }) {
     onOpen();
   }
 
+  async function sendPhoneCode() {
+    setSubmitting(true);
+    setError(null);
+    try {
+      await requestPhoneLogin(phone.trim());
+      setPhoneStep("code");
+    } catch (err: any) {
+      setError(err?.message || t("auth.phoneCodeFailed"));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function verifyPhoneCode() {
+    if (!supabase) {
+      setError(t("auth.demoFallback"));
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    try {
+      const result = await confirmPhoneLogin({
+        phone: phone.trim(),
+        code: phoneCode.trim()
+      });
+      const verified = await supabase.auth.verifyOtp({
+        token_hash: result.tokenHash,
+        type: result.type
+      });
+      if (verified.error || !verified.data.session) {
+        setError(verified.error?.message || t("auth.couldNotSignIn"));
+        return;
+      }
+      await saveToken(verified.data.session.access_token);
+      onOpen();
+    } catch (err: any) {
+      setError(err?.message || t("auth.phoneCodeFailed"));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   if (mode === "forgot") {
     return <ForgotPasswordScreen onBack={() => setMode("signin")} />;
   }
@@ -73,7 +117,7 @@ export function LoginScreen({ onOpen }: { onOpen: () => void }) {
         <View style={{ gap: spacing.md, marginTop: spacing.lg }}>
           <View style={s.segment}>
             <TouchableOpacity
-              onPress={() => setAuthMode("email")}
+              onPress={() => { setAuthMode("email"); setPhoneStep("password"); }}
               style={[s.segmentBtn, authMode === "email" && s.segmentBtnActive]}
             >
               <Text style={[s.segmentText, authMode === "email" && s.segmentTextActive]}>{t("auth.email")}</Text>
@@ -100,20 +144,52 @@ export function LoginScreen({ onOpen }: { onOpen: () => void }) {
               />
             </View>
           ) : (
-            <View>
-              <Text style={s.label}>{t("auth.phoneNumber")}</Text>
-              <TextInput
-                style={s.input}
-                autoCapitalize="none"
-                keyboardType="phone-pad"
-                autoComplete="tel"
-                value={phone}
-                onChangeText={setPhone}
-                placeholder="+15551234567"
-                placeholderTextColor={colors.inkMuted}
-              />
+            <View style={{ gap: spacing.md }}>
+              <View>
+                <Text style={s.label}>{t("auth.phoneNumber")}</Text>
+                <TextInput
+                  style={s.input}
+                  autoCapitalize="none"
+                  keyboardType="phone-pad"
+                  autoComplete="tel"
+                  value={phone}
+                  onChangeText={setPhone}
+                  placeholder="+15551234567"
+                  placeholderTextColor={colors.inkMuted}
+                />
+              </View>
+              <View style={s.segment}>
+                <TouchableOpacity
+                  onPress={() => setPhoneStep("code")}
+                  style={[s.segmentBtn, phoneStep === "code" && s.segmentBtnActive]}
+                >
+                  <Text style={[s.segmentText, phoneStep === "code" && s.segmentTextActive]}>{t("auth.whatsappCode")}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setPhoneStep("password")}
+                  style={[s.segmentBtn, phoneStep === "password" && s.segmentBtnActive]}
+                >
+                  <Text style={[s.segmentText, phoneStep === "password" && s.segmentTextActive]}>{t("auth.password")}</Text>
+                </TouchableOpacity>
+              </View>
+              {phoneStep === "code" ? (
+                <View>
+                  <Text style={s.label}>{t("auth.sixDigitCode")}</Text>
+                  <TextInput
+                    style={s.input}
+                    keyboardType="number-pad"
+                    autoComplete="one-time-code"
+                    value={phoneCode}
+                    onChangeText={(value) => setPhoneCode(value.replace(/[^0-9]/g, ""))}
+                    maxLength={6}
+                    placeholder="123456"
+                    placeholderTextColor={colors.inkMuted}
+                  />
+                </View>
+              ) : null}
             </View>
           )}
+          {authMode === "email" || phoneStep === "password" ? (
           <View>
             <Text style={s.label}>{t("auth.password")}</Text>
             <TextInput
@@ -126,6 +202,7 @@ export function LoginScreen({ onOpen }: { onOpen: () => void }) {
               placeholderTextColor={colors.inkMuted}
             />
           </View>
+          ) : null}
 
           {error ? (
             <View style={s.errorBox}>
@@ -134,8 +211,16 @@ export function LoginScreen({ onOpen }: { onOpen: () => void }) {
           ) : null}
 
           <Button
-            title={submitting ? t("auth.signingIn") : t("auth.signIn")}
-            onPress={signIn}
+            title={
+              submitting
+                ? t("auth.signingIn")
+                : authMode === "phone" && phoneStep === "code" && phoneCode.length >= 6
+                  ? t("auth.verifyContinue")
+                  : authMode === "phone" && phoneStep === "code"
+                    ? t("auth.sendWhatsappCode")
+                    : t("auth.signIn")
+            }
+            onPress={authMode === "phone" && phoneStep === "code" && phoneCode.length >= 6 ? verifyPhoneCode : authMode === "phone" && phoneStep === "code" ? sendPhoneCode : signIn}
             disabled={submitting}
           />
           <TouchableOpacity onPress={() => setMode("forgot")} style={{ alignItems: "center", paddingVertical: spacing.sm }}>

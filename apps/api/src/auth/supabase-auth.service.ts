@@ -342,6 +342,16 @@ export class SupabaseAuthService {
       return { sent: true, message: "If that number exists, a reset code was sent." };
     }
 
+    if (this.isTwilioVerifyConfigured()) {
+      const sent = await this.startTwilioVerify(phone);
+      return {
+        sent,
+        message: sent
+          ? "Reset code sent."
+          : "Reset code could not be sent. Check Twilio WhatsApp setup."
+      };
+    }
+
     const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
     await this.ensurePhoneResetTable();
     await this.prisma.$executeRawUnsafe(
@@ -379,6 +389,19 @@ export class SupabaseAuthService {
     if (code.length !== 6) throw new BadRequestException("Enter the 6 digit code.");
     if (password.length < 8) throw new BadRequestException("Password must be at least 8 characters.");
 
+    const user = await this.findUserByPhone(phone);
+    if (!user?.authUserId) throw new BadRequestException("Code is invalid or expired.");
+
+    if (this.isTwilioVerifyConfigured()) {
+      const verified = await this.checkTwilioVerify(phone, code);
+      if (!verified) throw new BadRequestException("Code is invalid or expired.");
+      const { error } = await this.supabase.auth.admin.updateUserById(user.authUserId, {
+        password
+      });
+      if (error) throw new BadRequestException(error.message);
+      return { reset: true };
+    }
+
     await this.ensurePhoneResetTable();
     const rows = await this.prisma.$queryRawUnsafe<Array<{
       id: string;
@@ -412,6 +435,99 @@ export class SupabaseAuthService {
     return { reset: true };
   }
 
+  async requestPhoneLogin(input: { phone?: string }): Promise<{ sent: boolean; message: string }> {
+    if (!this.supabase) throw new UnauthorizedException("Supabase is not configured.");
+    const phone = this.normalizePhone(input.phone || "");
+    const user = await this.findUserByPhone(phone);
+    if (!user?.authUserId) {
+      return { sent: true, message: "If that number exists, a sign-in code was sent." };
+    }
+
+    if (this.isTwilioVerifyConfigured()) {
+      const sent = await this.startTwilioVerify(phone);
+      return {
+        sent,
+        message: sent
+          ? "Sign-in code sent."
+          : "Sign-in code could not be sent. Check Twilio WhatsApp setup."
+      };
+    }
+
+    const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
+    await this.ensurePhoneLoginTable();
+    await this.prisma.$executeRawUnsafe(
+      `insert into public.phone_login_codes
+         (id, phone, user_id, auth_user_id, code_hash, expires_at)
+       values ($1, $2, $3, $4, $5, now() + interval '10 minutes')`,
+      randomBytes(16).toString("hex"),
+      phone,
+      user.id,
+      user.authUserId,
+      this.hashResetCode(phone, code)
+    );
+
+    const sent = await this.sendTwilioPhoneMessage(
+      phone,
+      `Daily Close sign-in code: ${code}. This code expires in 10 minutes.`
+    );
+    return {
+      sent,
+      message: sent
+        ? "Sign-in code sent."
+        : "Sign-in code could not be sent. Check Twilio WhatsApp setup."
+    };
+  }
+
+  async confirmPhoneLogin(input: {
+    phone?: string;
+    code?: string;
+  }): Promise<{ tokenHash: string; type: "magiclink" }> {
+    if (!this.supabase) throw new UnauthorizedException("Supabase is not configured.");
+    const phone = this.normalizePhone(input.phone || "");
+    const code = String(input.code || "").replace(/\D/g, "");
+    if (code.length !== 6) throw new BadRequestException("Enter the 6 digit code.");
+
+    const user = await this.findUserByPhone(phone);
+    if (!user?.authUserId || !user.email) throw new BadRequestException("Code is invalid or expired.");
+
+    if (this.isTwilioVerifyConfigured()) {
+      const verified = await this.checkTwilioVerify(phone, code);
+      if (!verified) throw new BadRequestException("Code is invalid or expired.");
+    } else {
+      await this.ensurePhoneLoginTable();
+      const rows = await this.prisma.$queryRawUnsafe<Array<{ id: string }>>(
+        `select id
+           from public.phone_login_codes
+          where phone = $1
+            and code_hash = $2
+            and consumed_at is null
+            and expires_at > now()
+          order by created_at desc
+          limit 1`,
+        phone,
+        this.hashResetCode(phone, code)
+      );
+      const row = rows[0];
+      if (!row) throw new BadRequestException("Code is invalid or expired.");
+      await this.prisma.$executeRawUnsafe(
+        `update public.phone_login_codes
+            set consumed_at = now()
+          where id = $1`,
+        row.id
+      );
+    }
+
+    const { data, error } = await this.supabase.auth.admin.generateLink({
+      type: "magiclink",
+      email: user.email
+    });
+    if (error || !data.properties?.hashed_token) {
+      throw new BadRequestException(error?.message || "Could not create sign-in session.");
+    }
+
+    return { tokenHash: data.properties.hashed_token, type: "magiclink" };
+  }
+
   private primaryEmailForAuthUser(user: { email?: string | null; phone?: string | null }): string | null {
     return this.emailsForAuthUser(user)[0] || null;
   }
@@ -431,7 +547,7 @@ export class SupabaseAuthService {
     return `phone_${phone.replace(/\D/g, "")}@${namespace}.dailyclose.local`;
   }
 
-  private async findUserByPhone(phone: string): Promise<{ id: string; authUserId: string | null } | null> {
+  private async findUserByPhone(phone: string): Promise<{ id: string; email: string; authUserId: string | null } | null> {
     return this.prisma.user.findFirst({
       where: {
         OR: [
@@ -439,7 +555,7 @@ export class SupabaseAuthService {
           { email: this.syntheticPhoneEmail(phone, "invites") }
         ]
       },
-      select: { id: true, authUserId: true }
+      select: { id: true, email: true, authUserId: true }
     });
   }
 
@@ -459,6 +575,25 @@ export class SupabaseAuthService {
     await this.prisma.$executeRawUnsafe(
       `create index if not exists phone_password_reset_codes_phone_idx
          on public.phone_password_reset_codes (phone, created_at desc)`
+    );
+  }
+
+  private async ensurePhoneLoginTable() {
+    await this.prisma.$executeRawUnsafe(
+      `create table if not exists public.phone_login_codes (
+        id text primary key,
+        phone text not null,
+        user_id text not null references public.users(id) on delete cascade,
+        auth_user_id text not null,
+        code_hash text not null,
+        expires_at timestamptz not null,
+        consumed_at timestamptz,
+        created_at timestamptz not null default now()
+      )`
+    );
+    await this.prisma.$executeRawUnsafe(
+      `create index if not exists phone_login_codes_phone_idx
+         on public.phone_login_codes (phone, created_at desc)`
     );
   }
 
@@ -495,6 +630,64 @@ export class SupabaseAuthService {
       body: params.toString()
     });
     return res.ok;
+  }
+
+  private isTwilioVerifyConfigured(): boolean {
+    return Boolean(
+      process.env.TWILIO_ACCOUNT_SID &&
+        process.env.TWILIO_AUTH_TOKEN &&
+        process.env.TWILIO_VERIFY_SERVICE_SID
+    );
+  }
+
+  private async startTwilioVerify(phone: string): Promise<boolean> {
+    const sid = process.env.TWILIO_ACCOUNT_SID!;
+    const token = process.env.TWILIO_AUTH_TOKEN!;
+    const serviceSid = process.env.TWILIO_VERIFY_SERVICE_SID!;
+    const channel = this.twilioVerifyChannel();
+    const params = new URLSearchParams();
+    params.set("To", phone);
+    params.set("Channel", channel);
+    const res = await fetch(
+      `https://verify.twilio.com/v2/Services/${serviceSid}/Verifications`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${Buffer.from(`${sid}:${token}`).toString("base64")}`,
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: params.toString()
+      }
+    );
+    return res.ok;
+  }
+
+  private async checkTwilioVerify(phone: string, code: string): Promise<boolean> {
+    const sid = process.env.TWILIO_ACCOUNT_SID!;
+    const token = process.env.TWILIO_AUTH_TOKEN!;
+    const serviceSid = process.env.TWILIO_VERIFY_SERVICE_SID!;
+    const params = new URLSearchParams();
+    params.set("To", phone);
+    params.set("Code", code);
+    const res = await fetch(
+      `https://verify.twilio.com/v2/Services/${serviceSid}/VerificationCheck`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${Buffer.from(`${sid}:${token}`).toString("base64")}`,
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: params.toString()
+      }
+    );
+    if (!res.ok) return false;
+    const data = await res.json().catch(() => null);
+    return data?.status === "approved";
+  }
+
+  private twilioVerifyChannel(): "sms" | "whatsapp" {
+    const channel = String(process.env.TWILIO_DELIVERY_CHANNEL || process.env.TWILIO_CHANNEL || "sms").toLowerCase();
+    return channel === "whatsapp" ? "whatsapp" : "sms";
   }
 
   private whatsAppAddress(phone: string): string {

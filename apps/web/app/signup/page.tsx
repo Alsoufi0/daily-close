@@ -12,7 +12,7 @@ import {
   UserPlus
 } from "lucide-react";
 import { createBrowserSupabase } from "../../lib/supabase-browser";
-import { ApiError, bootstrapOwner, signupOwner } from "../../lib/api-client";
+import { ApiError, bootstrapOwner, confirmPhoneLogin, requestPhoneLogin, signupOwner } from "../../lib/api-client";
 import { useLanguage } from "../../components/language-provider";
 
 type Status = "idle" | "loading" | "needs_confirm" | "done" | "error";
@@ -24,8 +24,10 @@ export default function SignupPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [phoneCode, setPhoneCode] = useState("");
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState<Status>("idle");
+  const [verifyingPhone, setVerifyingPhone] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   async function submit(event: React.FormEvent) {
@@ -62,16 +64,19 @@ export default function SignupPage() {
     let data;
     let error;
     try {
-      const created = await signupOwner({
+      await signupOwner({
         name,
         email: mode === "email" ? trimmedEmail : undefined,
         phone: mode === "phone" ? trimmedPhone : undefined,
         password
       });
+      if (mode === "phone") {
+        await requestPhoneLogin(trimmedPhone);
+        setStatus("needs_confirm");
+        return;
+      }
       const signIn =
-        mode === "email"
-          ? await supabase.auth.signInWithPassword({ email: trimmedEmail, password })
-          : await supabase.auth.signInWithPassword({ email: created.email, password });
+        await supabase.auth.signInWithPassword({ email: trimmedEmail, password });
       data = signIn.data;
       error = signIn.error;
     } catch (err) {
@@ -101,6 +106,42 @@ export default function SignupPage() {
     }
   }
 
+  async function verifyPhoneSignup(event: React.FormEvent) {
+    event.preventDefault();
+    setVerifyingPhone(true);
+    setMessage(null);
+    const supabase = createBrowserSupabase();
+    if (!supabase) {
+      setVerifyingPhone(false);
+      setStatus("error");
+      setMessage("Supabase is not configured in this environment.");
+      return;
+    }
+    try {
+      const result = await confirmPhoneLogin({
+        phone: phone.trim(),
+        code: phoneCode.trim()
+      });
+      const verified = await supabase.auth.verifyOtp({
+        token_hash: result.tokenHash,
+        type: result.type
+      });
+      if (verified.error || !verified.data.session) {
+        setVerifyingPhone(false);
+        setStatus("needs_confirm");
+        setMessage(verified.error?.message || t("auth.phoneCodeFailed"));
+        return;
+      }
+      await bootstrapOwner(verified.data.session.access_token, name);
+      window.localStorage.setItem("dailyclose-token", verified.data.session.access_token);
+      window.location.href = "/setup";
+    } catch (err: any) {
+      setVerifyingPhone(false);
+      setStatus("needs_confirm");
+      setMessage(err?.message || t("auth.phoneCodeFailed"));
+    }
+  }
+
   if (status === "needs_confirm") {
     return (
       <main className="mx-auto w-full max-w-md px-4 py-12 sm:px-6">
@@ -122,12 +163,39 @@ export default function SignupPage() {
               </>
             )}
           </p>
-          <Link
-            href="/"
-            className="focus-ring mt-5 inline-flex h-12 items-center justify-center gap-2 rounded-lg border-2 border-ink/15 bg-white px-5 font-black text-ink"
-          >
-            Back to sign in
-          </Link>
+          {mode === "phone" ? (
+            <form onSubmit={verifyPhoneSignup} className="mt-5 space-y-3 text-left">
+              <label className="block">
+                <span className="text-sm font-black">{t("auth.sixDigitCode")}</span>
+                <input
+                  required
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  className="focus-ring mt-2 h-12 w-full rounded-lg border border-ink/15 px-4 text-center text-xl font-black tracking-widest"
+                  value={phoneCode}
+                  onChange={(e) => setPhoneCode(e.target.value.replace(/[^0-9]/g, ""))}
+                />
+              </label>
+              {message ? (
+                <div className="rounded-lg bg-red-50 p-3 text-sm font-bold text-warning">{message}</div>
+              ) : null}
+              <button
+                type="submit"
+                disabled={verifyingPhone || phoneCode.length < 6}
+                className="focus-ring flex h-12 w-full items-center justify-center rounded-lg bg-leaf font-black text-white disabled:opacity-60"
+              >
+                {verifyingPhone ? t("auth.verifying") : t("auth.verifyContinue")}
+              </button>
+            </form>
+          ) : (
+            <Link
+              href="/"
+              className="focus-ring mt-5 inline-flex h-12 items-center justify-center gap-2 rounded-lg border-2 border-ink/15 bg-white px-5 font-black text-ink"
+            >
+              Back to sign in
+            </Link>
+          )}
         </div>
       </main>
     );

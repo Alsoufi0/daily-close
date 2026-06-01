@@ -83,6 +83,23 @@ export async function confirmPhonePasswordReset(input: {
   });
 }
 
+export async function requestPhoneLogin(phone: string): Promise<{ sent: boolean; message: string }> {
+  return apiFetch<{ sent: boolean; message: string }>("/auth/phone-login/request", {
+    method: "POST",
+    body: JSON.stringify({ phone })
+  });
+}
+
+export async function confirmPhoneLogin(input: {
+  phone: string;
+  code: string;
+}): Promise<{ tokenHash: string; type: "magiclink" }> {
+  return apiFetch<{ tokenHash: string; type: "magiclink" }>("/auth/phone-login/confirm", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
 export interface StoreRecord {
   id: string;
   storeName: string;

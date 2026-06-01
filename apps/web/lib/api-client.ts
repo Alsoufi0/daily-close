@@ -115,6 +115,23 @@ export async function confirmPhonePasswordReset(input: {
   });
 }
 
+export async function requestPhoneLogin(phone: string): Promise<{ sent: boolean; message: string }> {
+  return apiFetch("/auth/phone-login/request", undefined, {
+    method: "POST",
+    body: JSON.stringify({ phone })
+  });
+}
+
+export async function confirmPhoneLogin(input: {
+  phone: string;
+  code: string;
+}): Promise<{ tokenHash: string; type: "magiclink" }> {
+  return apiFetch("/auth/phone-login/confirm", undefined, {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
 export interface StoreRecord {
   id: string;
   storeName: string;

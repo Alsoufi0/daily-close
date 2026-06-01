@@ -14,6 +14,7 @@ import {
   TrendingUp
 } from "lucide-react";
 import { createBrowserSupabase } from "../lib/supabase-browser";
+import { confirmPhoneLogin, requestPhoneLogin } from "../lib/api-client";
 import { useLanguage, LanguageSelect } from "./language-provider";
 
 const FEATURES = [
@@ -30,7 +31,9 @@ export function ProductionLogin() {
   const { t, dir } = useLanguage();
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [phoneCode, setPhoneCode] = useState("");
   const [authMode, setAuthMode] = useState<"email" | "phone">("email");
+  const [phoneStep, setPhoneStep] = useState<"password" | "code">("password");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [message, setMessage] = useState("");
@@ -86,6 +89,51 @@ export function ProductionLogin() {
 
     window.localStorage.setItem("dailyclose-token", session.access_token);
     window.location.href = "/owner";
+  }
+
+  async function sendWhatsAppCode() {
+    setLoading(true);
+    setMessage("");
+    try {
+      await requestPhoneLogin(phone.trim());
+      setPhoneStep("code");
+      setMessage(t("auth.phoneCodeSent"));
+    } catch (err: any) {
+      setMessage(err?.message || t("auth.phoneCodeFailed"));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function verifyWhatsAppCode() {
+    setLoading(true);
+    setMessage("");
+    const supabase = createBrowserSupabase();
+    if (!supabase) {
+      setMessage(t("auth.demoFallback"));
+      setLoading(false);
+      return;
+    }
+    try {
+      const result = await confirmPhoneLogin({
+        phone: phone.trim(),
+        code: phoneCode.trim()
+      });
+      const verified = await supabase.auth.verifyOtp({
+        token_hash: result.tokenHash,
+        type: result.type
+      });
+      if (verified.error || !verified.data.session) {
+        setMessage(verified.error?.message || t("auth.loginFailed"));
+        return;
+      }
+      window.localStorage.setItem("dailyclose-token", verified.data.session.access_token);
+      window.location.href = "/owner";
+    } catch (err: any) {
+      setMessage(err?.message || t("auth.phoneCodeFailed"));
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -150,7 +198,10 @@ export function ProductionLogin() {
           <div className="mb-4 grid grid-cols-2 rounded-xl bg-smoke p-1 text-sm font-black">
             <button
               type="button"
-              onClick={() => setAuthMode("email")}
+              onClick={() => {
+                setAuthMode("email");
+                setPhoneStep("password");
+              }}
               className={authMode === "email" ? "rounded-lg bg-white px-3 py-2 shadow-sm" : "px-3 py-2 text-ink/55"}
             >
               {t("auth.email")}
@@ -182,18 +233,50 @@ export function ProductionLogin() {
                 />
               </label>
             ) : (
-              <label key="phone-field" className="block">
-                <span className="text-sm font-black">{t("auth.phoneNumber")}</span>
-                <input
-                  className="focus-ring mt-2 h-12 w-full rounded-lg border border-ink/15 px-4 font-bold"
-                  value={phone}
-                  onChange={(event) => setPhone(event.target.value)}
-                  inputMode="tel"
-                  autoComplete="tel"
-                  placeholder="+15551234567"
-                />
-              </label>
+              <div key="phone-field" className="space-y-3">
+                <label className="block">
+                  <span className="text-sm font-black">{t("auth.phoneNumber")}</span>
+                  <input
+                    className="focus-ring mt-2 h-12 w-full rounded-lg border border-ink/15 px-4 font-bold"
+                    value={phone}
+                    onChange={(event) => setPhone(event.target.value)}
+                    inputMode="tel"
+                    autoComplete="tel"
+                    placeholder="+15551234567"
+                  />
+                </label>
+                <div className="grid grid-cols-2 gap-2 rounded-xl bg-smoke p-1 text-xs font-black">
+                  <button
+                    type="button"
+                    onClick={() => setPhoneStep("code")}
+                    className={phoneStep === "code" ? "rounded-lg bg-white px-3 py-2 shadow-sm" : "px-3 py-2 text-ink/55"}
+                  >
+                    {t("auth.whatsappCode")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPhoneStep("password")}
+                    className={phoneStep === "password" ? "rounded-lg bg-white px-3 py-2 shadow-sm" : "px-3 py-2 text-ink/55"}
+                  >
+                    {t("nav.password")}
+                  </button>
+                </div>
+                {phoneStep === "code" ? (
+                  <label className="block">
+                    <span className="text-sm font-black">{t("auth.sixDigitCode")}</span>
+                    <input
+                      className="focus-ring mt-2 h-12 w-full rounded-lg border border-ink/15 px-4 font-bold"
+                      value={phoneCode}
+                      onChange={(event) => setPhoneCode(event.target.value.replace(/[^0-9]/g, ""))}
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      maxLength={6}
+                    />
+                  </label>
+                ) : null}
+              </div>
             )}
+            {authMode === "email" || phoneStep === "password" ? (
             <label className="block">
               <span className="text-sm font-black">{t("nav.password")}</span>
               <div className="relative mt-2">
@@ -215,6 +298,7 @@ export function ProductionLogin() {
                 </button>
               </div>
             </label>
+            ) : null}
           </div>
 
           {expired ? (
@@ -229,10 +313,16 @@ export function ProductionLogin() {
           <div className="mt-5 grid gap-3">
             <button
               className="focus-ring flex h-14 items-center justify-center gap-2 rounded-lg bg-leaf text-lg font-black text-white shadow-sm transition-transform active:scale-[0.99] disabled:opacity-60"
-              onClick={login}
-              disabled={loading}
+              onClick={authMode === "phone" && phoneStep === "code" && phoneCode.length >= 6 ? verifyWhatsAppCode : authMode === "phone" && phoneStep === "code" ? sendWhatsAppCode : login}
+              disabled={loading || (authMode === "phone" && phoneStep === "code" && !phone.trim())}
             >
-              {loading ? t("auth.signingIn") : t("auth.signIn")}
+              {loading
+                ? t("auth.signingIn")
+                : authMode === "phone" && phoneStep === "code" && phoneCode.length >= 6
+                  ? t("auth.verifyContinue")
+                  : authMode === "phone" && phoneStep === "code"
+                    ? t("auth.sendWhatsappCode")
+                    : t("auth.signIn")}
               {!loading ? <ArrowRight size={22} aria-hidden /> : null}
             </button>
             <Link

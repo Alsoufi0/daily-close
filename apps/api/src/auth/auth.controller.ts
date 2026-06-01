@@ -109,6 +109,21 @@ export class AuthController {
     });
   }
 
+  @Post("phone-login/request")
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  requestPhoneLogin(@Body() body: { phone?: string }) {
+    return this.auth.requestPhoneLogin({ phone: body?.phone });
+  }
+
+  @Post("phone-login/confirm")
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  confirmPhoneLogin(@Body() body: { phone?: string; code?: string }) {
+    return this.auth.confirmPhoneLogin({
+      phone: body?.phone,
+      code: body?.code
+    });
+  }
+
   /**
    * Admin-only: create an owner with email already confirmed and provision
    * their public.users + owners row. Bypasses Supabase's email verification —
