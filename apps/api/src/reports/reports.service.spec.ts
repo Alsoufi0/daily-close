@@ -127,13 +127,18 @@ describe("ReportsService.listReceipts", () => {
         findMany: jest.fn().mockResolvedValue([
           {
             id: "ur-1",
+            storeId: "store-1",
+            uploadedByUserId: "user-emp",
             imageUrl: "https://storage.example/receipt.jpg",
             parsedJson: { totalSales: 100 },
             createdAt: new Date("2026-05-29T14:00:00Z"),
             uploadedBy: { name: "Maya" },
             dailyClose: {
               id: "close-1",
+              storeId: "store-1",
+              submittedByUserId: "user-emp",
               date: new Date("2026-05-29T04:00:00Z"),
+              createdAt: new Date("2026-05-29T14:05:00Z"),
               totalSales: 100,
               cashSales: 60,
               cardSales: 40,
@@ -141,6 +146,23 @@ describe("ReportsService.listReceipts", () => {
               status: "CLOSED",
               submittedBy: { name: "Maya" }
             }
+          }
+        ])
+      },
+      dailyClose: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: "close-1",
+            storeId: "store-1",
+            submittedByUserId: "user-emp",
+            date: new Date("2026-05-29T04:00:00Z"),
+            createdAt: new Date("2026-05-29T14:05:00Z"),
+            totalSales: 100,
+            cashSales: 60,
+            cardSales: 40,
+            difference: 0,
+            status: "CLOSED",
+            submittedBy: { name: "Maya" }
           }
         ])
       }
@@ -160,17 +182,34 @@ describe("ReportsService.listReceipts", () => {
     expect(rows[0].dailyClose?.totalSales).toBe(100);
   });
 
-  it("keeps legacy unlinked store receipt uploads visible", async () => {
+  it("keeps unlinked receipt uploads visible only when they pair to a submitted close", async () => {
     const prisma = makeReceiptsPrisma();
     prisma.uploadedReport.findMany.mockResolvedValueOnce([
       {
         id: "ur-legacy",
+        storeId: "store-1",
+        uploadedByUserId: "user-emp",
         imageUrl: "https://storage.example/legacy-receipt.jpg",
         storagePath: null,
         parsedJson: { totalSales: 125 },
-        createdAt: new Date("2026-05-29T14:00:00Z"),
+        createdAt: new Date("2026-05-29T14:03:00Z"),
         uploadedBy: { name: "Maya" },
         dailyClose: null
+      }
+    ]);
+    prisma.dailyClose.findMany.mockResolvedValueOnce([
+      {
+        id: "close-legacy",
+        storeId: "store-1",
+        submittedByUserId: "user-emp",
+        date: new Date("2026-05-29T04:00:00Z"),
+        createdAt: new Date("2026-05-29T14:08:00Z"),
+        totalSales: 125,
+        cashSales: 75,
+        cardSales: 50,
+        difference: 0,
+        status: "CLOSED",
+        submittedBy: { name: "Maya" }
       }
     ]);
     const service = new ReportsService({} as any, prisma as any);
@@ -182,7 +221,7 @@ describe("ReportsService.listReceipts", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].id).toBe("ur-legacy");
     expect(rows[0].employeeName).toBe("Maya");
-    expect(rows[0].dailyClose).toBeNull();
+    expect(rows[0].dailyClose?.id).toBe("close-legacy");
     expect(prisma.uploadedReport.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
@@ -195,6 +234,31 @@ describe("ReportsService.listReceipts", () => {
         })
       })
     );
+  });
+
+  it("does not show abandoned unlinked receipt uploads", async () => {
+    const prisma = makeReceiptsPrisma();
+    prisma.uploadedReport.findMany.mockResolvedValueOnce([
+      {
+        id: "ur-abandoned",
+        storeId: "store-1",
+        uploadedByUserId: "user-emp",
+        imageUrl: "https://storage.example/abandoned.jpg",
+        storagePath: null,
+        parsedJson: { totalSales: 125 },
+        createdAt: new Date("2026-05-29T14:03:00Z"),
+        uploadedBy: { name: "Maya" },
+        dailyClose: null
+      }
+    ]);
+    prisma.dailyClose.findMany.mockResolvedValueOnce([]);
+    const service = new ReportsService({} as any, prisma as any);
+    const rows = await service.listReceipts(
+      { storeId: "store-1", from: "2026-05-25", to: "2026-05-30" },
+      owner
+    );
+
+    expect(rows).toHaveLength(0);
   });
 
   it("forbids employees from listing receipts", async () => {

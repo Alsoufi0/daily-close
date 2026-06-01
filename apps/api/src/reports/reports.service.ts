@@ -451,6 +451,42 @@ export class ReportsService {
     return "jpg";
   }
 
+  private pairUnlinkedReceiptRows(
+    rows: any[],
+    closes: any[]
+  ): Array<{ row: any; dailyClose: any | null }> {
+    const linked = rows
+      .filter((row) => row.dailyClose)
+      .map((row) => ({ row, dailyClose: row.dailyClose }));
+    const linkedCloseIds = new Set(linked.map((entry) => entry.dailyClose.id));
+    const usedUploadIds = new Set(linked.map((entry) => entry.row.id));
+    const unlinked = rows
+      .filter((row) => !row.dailyClose)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    const matched: Array<{ row: any; dailyClose: any | null }> = [];
+    const windowMs = 8 * 60 * 60 * 1000;
+
+    for (const close of closes) {
+      if (linkedCloseIds.has(close.id)) continue;
+      const closeCreatedAt = close.createdAt ?? close.date;
+      const match = unlinked.find((row) => {
+        if (usedUploadIds.has(row.id)) return false;
+        if (row.storeId !== close.storeId) return false;
+        if (row.uploadedByUserId && row.uploadedByUserId !== close.submittedByUserId) return false;
+        const diff = closeCreatedAt.getTime() - row.createdAt.getTime();
+        return diff >= 0 && diff <= windowMs;
+      });
+      if (match) {
+        usedUploadIds.add(match.id);
+        matched.push({ row: match, dailyClose: close });
+      }
+    }
+
+    return [...linked, ...matched].sort(
+      (a, b) => b.row.createdAt.getTime() - a.row.createdAt.getTime()
+    );
+  }
+
   /**
    * Owner-only single-receipt download. Returns a Buffer + filename so the
    * controller can stream it as an attachment. Falls back to a redirect URL
@@ -535,10 +571,15 @@ export class ReportsService {
       orderBy: { createdAt: "desc" },
       take: 200
     });
+    const closes = await this.prisma.dailyClose.findMany({
+      where: { storeId: store.id, date: { gte: fromRange.start, lte: toRange.end } },
+      orderBy: { createdAt: "desc" }
+    });
+    const receiptRows = this.pairUnlinkedReceiptRows(rows, closes);
 
-    const items = rows.map((row: any) => {
-      const dateStr = row.dailyClose
-        ? this.localDate(tz, row.dailyClose.date)
+    const items = receiptRows.map(({ row, dailyClose }) => {
+      const dateStr = dailyClose
+        ? this.localDate(tz, dailyClose.date)
         : this.localDate(tz, row.createdAt);
       const ext = this.guessExt(row.imageUrl, row.storagePath);
       return {
@@ -600,21 +641,27 @@ export class ReportsService {
       orderBy: { createdAt: "desc" },
       take: 200
     });
+    const closes = await this.prisma.dailyClose.findMany({
+      where: { storeId: store.id, date: { gte: fromRange.start, lte: toRange.end } },
+      include: { submittedBy: true },
+      orderBy: { createdAt: "desc" }
+    });
+    const receiptRows = this.pairUnlinkedReceiptRows(rows, closes);
 
     // Mint a fresh short-lived signed URL for any row that has a
     // storagePath. The stored imageUrl is a 7-day signed URL and breaks
     // once it expires; storagePath never does. Done in parallel to keep
     // p95 acceptable even on large pages.
     const signed = await Promise.all(
-      rows.map(async (row: any) =>
+      receiptRows.map(async ({ row }) =>
         row.storagePath && this.storage
           ? await this.storage.signPath(row.storagePath, 3600)
           : null
       )
     );
 
-    return rows.map((row: any, idx: number) => {
-      const dc = row.dailyClose;
+    return receiptRows.map(({ row, dailyClose }, idx: number) => {
+      const dc = dailyClose;
       const employeeName = row.uploadedBy?.name ?? dc?.submittedBy?.name ?? "";
       const closeDate = dc ? this.localDate(tz, dc.date) : this.localDate(tz, row.createdAt);
       return {
