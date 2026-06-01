@@ -278,20 +278,13 @@ export default function EmployeesAdminPage() {
             };
       const result = await inviteEmployee(session.token, payload);
       const contactDisplay = result.email || result.phone || "";
-      // Push a row that matches the shape the grouping expects: the assignment
-      // id is `employeeId` (NOT the user id), plus a real `store` object so the
-      // store chip renders immediately instead of showing blank until reload.
-      const newStoreName = session.stores.find((s) => s.id === storeId)?.storeName ?? "";
-      setEmployees((prev) => [
-        ...prev,
-        {
-          id: result.employeeId,
-          userId: result.id,
-          storeId,
-          user: { id: result.id, name, email: contactDisplay, role: "EMPLOYEE" },
-          store: { id: storeId, storeName: newStoreName }
-        }
-      ]);
+      // Re-fetch from the API so the new employee appears immediately with the
+      // exact server shape (role, store, user id, assignment id). The previous
+      // optimistic append could be hidden behind sorting/show-more limits until
+      // the owner refreshed the page.
+      const refreshedRows = await listEmployees(session.token);
+      setEmployees(refreshedRows);
+      showLess();
 
       // When the welcome SMS was sent we skip the share-this-password modal —
       // the employee already has everything they need. The owner just gets a
