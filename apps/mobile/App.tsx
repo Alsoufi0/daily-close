@@ -14,6 +14,8 @@ import { StatusBar } from "expo-status-bar";
 import { WebView, WebViewNavigation } from "react-native-webview";
 import type { WebViewErrorEvent, WebViewHttpErrorEvent } from "react-native-webview/lib/WebViewTypes";
 import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system";
+import * as Sharing from "expo-sharing";
 import * as Sentry from "@sentry/react-native";
 import { colors, font, spacing, radius } from "./src/theme";
 
@@ -36,6 +38,58 @@ import { colors, font, spacing, radius } from "./src/theme";
 // the WebView alternative for side-by-side comparison.
 
 const WEB_URL = (process.env.EXPO_PUBLIC_APP_URL || "https://dailyclose.us").replace(/\/+$/, "");
+
+// ── Download bridge ─────────────────────────────────────────────────────────
+//
+// A plain WebView has no download manager: the web app's CSV/PDF export, single
+// receipt download, and "Download all" zip all work by fetching a Blob and
+// clicking an `<a download>` on a blob: URL — which does nothing inside a
+// WebView. This injected script captures those clicks, reads the Blob as a
+// base64 data URL, and posts it to native (onMessage), which writes a temp file
+// and opens the OS share sheet (Save to Files, etc.). It also patches
+// URL.createObjectURL so the Blob survives the page's immediate revokeObjectURL.
+const INJECTED_DOWNLOAD_JS = `
+(function () {
+  if (window.__dcDownloadPatched) return;
+  window.__dcDownloadPatched = true;
+
+  var blobs = {};
+  var _create = URL.createObjectURL.bind(URL);
+  URL.createObjectURL = function (obj) {
+    var url = _create(obj);
+    try { if (obj instanceof Blob) blobs[url] = obj; } catch (e) {}
+    return url;
+  };
+
+  function post(o) {
+    try { window.ReactNativeWebView.postMessage(JSON.stringify(o)); } catch (e) {}
+  }
+  function deliver(blob, filename) {
+    var r = new FileReader();
+    r.onload = function () { post({ type: 'dc-download', filename: filename, dataUrl: r.result }); };
+    r.onerror = function () { post({ type: 'dc-download-error', filename: filename }); };
+    r.readAsDataURL(blob);
+  }
+
+  document.addEventListener('click', function (ev) {
+    var a = ev.target && ev.target.closest ? ev.target.closest('a[download]') : null;
+    if (!a) return;
+    var href = a.getAttribute('href') || '';
+    var filename = a.getAttribute('download') || 'download';
+    if (!href) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    post({ type: 'dc-download-start', filename: filename });
+    var b = blobs[href];
+    if (b) { deliver(b, filename); return; }
+    fetch(href, { credentials: 'include' })
+      .then(function (res) { return res.blob(); })
+      .then(function (blob) { deliver(blob, filename); })
+      .catch(function () { post({ type: 'dc-download-error', filename: filename }); });
+  }, true);
+})();
+true;
+`;
 
 const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN;
 if (SENTRY_DSN) {
@@ -108,6 +162,32 @@ function App() {
     return true;
   }, []);
 
+  // Receive an intercepted download from the page (base64 data URL), write it
+  // to a temp file, and open the OS share sheet so the user can save/open it.
+  const onMessage = useCallback(async (event: { nativeEvent: { data: string } }) => {
+    let msg: any;
+    try {
+      msg = JSON.parse(event.nativeEvent.data);
+    } catch {
+      return;
+    }
+    if (!msg || msg.type !== "dc-download" || typeof msg.dataUrl !== "string") return;
+    try {
+      const comma = msg.dataUrl.indexOf(",");
+      const meta = msg.dataUrl.slice(0, comma);
+      const base64 = msg.dataUrl.slice(comma + 1);
+      const mime = /data:([^;]+)/.exec(meta)?.[1] || "application/octet-stream";
+      const safeName = String(msg.filename || "download").replace(/[^a-zA-Z0-9._-]+/g, "_") || "download";
+      const fileUri = (FileSystem.cacheDirectory || "") + safeName;
+      await FileSystem.writeAsStringAsync(fileUri, base64, { encoding: FileSystem.EncodingType.Base64 });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(fileUri, { mimeType: mime, dialogTitle: safeName });
+      }
+    } catch (err) {
+      Sentry.captureException(err);
+    }
+  }, []);
+
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
@@ -131,6 +211,9 @@ function App() {
             originWhitelist={["*"]}
             onNavigationStateChange={onNav}
             onShouldStartLoadWithRequest={onShouldStartLoad}
+            // Bridge browser downloads (export/receipts/zip) to native save+share.
+            injectedJavaScript={INJECTED_DOWNLOAD_JS}
+            onMessage={onMessage}
             // ── capability flags ──
             javaScriptEnabled
             domStorageEnabled
