@@ -23,6 +23,7 @@
     "typescript": "^5.6.3"
   },
   "dependencies": {
+    "archiver": "^7.0.1",
     "regenerator-runtime": "^0.14.1"
   }
 }
