@@ -244,6 +244,10 @@ export class DashboardService {
       where: {
         store: {
           ownerId: user.ownerId,
+          // A deleted store's closes must drop out of History too, so deleting
+          // a store removes it everywhere (History, exports, dashboards) — not
+          // just from the store list.
+          deletedAt: null,
           ...(restrictStoreIds ? { id: { in: restrictStoreIds } } : {})
         },
         date: { gte: start, lte: end }

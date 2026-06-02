@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Loader2, Pencil, Plus, Store, Trash2 } from "lucide-react";
 import { getBrowserTimeZone, getSupportedTimeZones } from "@smokeshop/shared/timezones";
 import { useLanguage } from "../../../components/language-provider";
+import { ConfirmDialog } from "../../../components/confirm-dialog";
 import { ListRevealControls } from "../../../components/show-more-button";
 import { useSession } from "../../../lib/use-session";
 import { useShowMore } from "../../../lib/use-show-more";
@@ -31,6 +32,7 @@ export default function StoresAdminPage() {
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState<StoreRowWithMeta | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<StoreRowWithMeta | null>(null);
   const { visible, hasMore, remaining, canShowLess, showMore, showLess } = useShowMore(stores, 5);
 
   useEffect(() => {
@@ -59,9 +61,15 @@ export default function StoresAdminPage() {
     }
   }
 
-  async function remove(s: StoreRowWithMeta) {
+  function remove(s: StoreRowWithMeta) {
     if (!session.token) return;
-    if (!window.confirm(t("admin.removeStoreConfirm").replace("{store}", s.storeName))) return;
+    setPendingDelete(s);
+  }
+
+  async function confirmRemove() {
+    const s = pendingDelete;
+    if (!s || !session.token) return;
+    setPendingDelete(null);
     try {
       await deleteStore(session.token, s.id);
       await refresh();
@@ -167,6 +175,15 @@ export default function StoresAdminPage() {
           </>
         )}
       </div>
+
+      {pendingDelete ? (
+        <ConfirmDialog
+          title={t("admin.removeStore")}
+          message={t("admin.removeStoreConfirm").replace("{store}", pendingDelete.storeName)}
+          onConfirm={confirmRemove}
+          onCancel={() => setPendingDelete(null)}
+        />
+      ) : null}
     </div>
   );
 }

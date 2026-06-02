@@ -398,44 +398,82 @@ export class ReportsService {
     });
     y -= 72;
 
-    const headers = [this.t(lang, "store"), this.t(lang, "closeDate"), this.t(lang, "totalSales"), this.t(lang, "difference"), this.t(lang, "status")];
-    const widths = [170, 95, 95, 95, 95];
+    // Group closes by store so the report reads store-by-store instead of one
+    // mixed list. Rows stay newest-first within each store (buildRows sorts by
+    // date desc); stores appear in first-seen order.
+    const groups = new Map<string, typeof rows>();
+    for (const row of rows) {
+      if (!groups.has(row.storeName)) groups.set(row.storeName, []);
+      groups.get(row.storeName)!.push(row);
+    }
+
+    // The store name is now a section heading, so the per-store table drops the
+    // Store column and gains Net Profit.
+    const colHeaders = [
+      this.t(lang, "closeDate"),
+      this.t(lang, "totalSales"),
+      this.t(lang, "difference"),
+      this.t(lang, "netProfit"),
+      this.t(lang, "status")
+    ];
+    const widths = [115, 100, 100, 100, 90];
     const xPositions = widths.reduce<number[]>((acc, width, index) => {
       acc.push(index === 0 ? margin : acc[index - 1] + widths[index - 1]);
       return acc;
     }, []);
 
-    const drawHeader = () => {
-      page.drawRectangle({ x: margin, y: y - 18, width: pageWidth - margin * 2, height: 22, color: rgb(0.94, 0.92, 0.88) });
-      headers.forEach((header, i) => page.drawText(this.pdfText(header), { x: xPositions[i] + 4, y: y - 12, size: 8, font: bold }));
-      y -= 28;
+    const drawColHeader = () => {
+      page.drawRectangle({ x: margin, y: y - 16, width: pageWidth - margin * 2, height: 20, color: rgb(0.94, 0.92, 0.88) });
+      colHeaders.forEach((header, i) => page.drawText(this.pdfText(header), { x: xPositions[i] + 4, y: y - 11, size: 8, font: bold }));
+      y -= 24;
     };
-    drawHeader();
-
-    for (const row of rows) {
-      if (y < 72) {
-        newPage();
-        drawHeader();
-      }
-      const values = [
-        row.storeName.slice(0, 28),
-        row.closeDate,
-        pdfMoney(row.totalSales),
-        pdfMoney(row.difference),
-        row.status
-      ];
-      values.forEach((value, i) => page.drawText(this.pdfText(value), { x: xPositions[i] + 4, y, size: 8, font: regular }));
+    const drawStoreHeading = (name: string) => {
+      page.drawText(this.pdfText(name), { x: margin, y, size: 13, font: bold, color: rgb(0.12, 0.48, 0.3) });
       y -= 18;
-      if (row.notes) {
-        page.drawText(this.pdfText(`${this.t(lang, "notes")}: ${row.notes}`).slice(0, 105), {
-          x: margin + 4,
-          y,
-          size: 7,
-          font: regular,
-          color: rgb(0.36, 0.39, 0.37)
-        });
-        y -= 14;
+    };
+
+    for (const [storeName, storeRows] of groups) {
+      // Don't strand a store heading at the very bottom of a page.
+      if (y < 130) newPage();
+      drawStoreHeading(storeName);
+      drawColHeader();
+
+      let storeSales = 0;
+      let storeShort = 0;
+      for (const row of storeRows) {
+        if (y < 64) {
+          newPage();
+          drawStoreHeading(storeName);
+          drawColHeader();
+        }
+        storeSales += row.totalSales;
+        storeShort += Math.min(row.difference, 0);
+        const values = [
+          row.closeDate,
+          pdfMoney(row.totalSales),
+          pdfMoney(row.difference),
+          pdfMoney(row.netProfit),
+          row.status
+        ];
+        values.forEach((value, i) => page.drawText(this.pdfText(value), { x: xPositions[i] + 4, y, size: 8, font: regular }));
+        y -= 16;
+        if (row.notes) {
+          page.drawText(this.pdfText(`${this.t(lang, "notes")}: ${row.notes}`).slice(0, 110), {
+            x: margin + 8,
+            y,
+            size: 7,
+            font: regular,
+            color: rgb(0.36, 0.39, 0.37)
+          });
+          y -= 13;
+        }
       }
+
+      // Per-store subtotal line.
+      y -= 2;
+      const subtotal = `${this.t(lang, "closes")}: ${storeRows.length}     ${this.t(lang, "totalSales")}: ${pdfMoney(storeSales)}     ${this.t(lang, "shortage")}: ${pdfMoney(storeShort)}`;
+      page.drawText(this.pdfText(subtotal), { x: margin + 4, y, size: 8, font: bold, color: rgb(0.42, 0.46, 0.43) });
+      y -= 26;
     }
 
     page.drawText("Daily Close", { x: margin, y: 28, size: 8, font: bold, color: rgb(0.12, 0.48, 0.3) });
