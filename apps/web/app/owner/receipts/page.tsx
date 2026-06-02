@@ -29,12 +29,29 @@ function ReceiptsView() {
   const [storeId, setStoreId] = useState<string>("");
   const [from, setFrom] = useState<string>(todayMinus(7));
   const [to, setTo] = useState<string>(todayMinus(0));
+  const [employeeFilter, setEmployeeFilter] = useState<string>("");
   const [rows, setRows] = useState<ReceiptRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<ReceiptRow | null>(null);
   const [downloadingAll, setDownloadingAll] = useState(false);
-  const { visible, hasMore, remaining, canShowLess, showMore, showLess } = useShowMore(rows, 6, `${storeId}:${from}:${to}`);
+
+  // Distinct employees present in the loaded receipts → drives the filter list.
+  const employeeNames = useMemo(
+    () => Array.from(new Set(rows.map((r) => r.employeeName).filter((n): n is string => !!n))).sort(),
+    [rows]
+  );
+  // Store + date are filtered server-side; employee is a client-side refinement
+  // over the loaded set (the API already returns just this store/date's receipts).
+  const filteredRows = useMemo(
+    () => (employeeFilter ? rows.filter((r) => (r.employeeName || "") === employeeFilter) : rows),
+    [rows, employeeFilter]
+  );
+  const { visible, hasMore, remaining, canShowLess, showMore, showLess } = useShowMore(
+    filteredRows,
+    6,
+    `${storeId}:${from}:${to}:${employeeFilter}`
+  );
 
   const stores = session.stores;
 
@@ -54,6 +71,12 @@ function ReceiptsView() {
   useEffect(() => {
     if (!storeId && stores.length > 0) setStoreId(stores[0].id);
   }, [stores, storeId]);
+
+  // Reset the employee filter when the store or date range changes — the set
+  // of employees in the results changes with it.
+  useEffect(() => {
+    setEmployeeFilter("");
+  }, [storeId, from, to]);
 
   useEffect(() => {
     if (!session.token || !storeId) return;
@@ -108,7 +131,7 @@ function ReceiptsView() {
         </button>
       </div>
 
-      <div className="grid gap-3 rounded-2xl border border-ink/10 bg-white p-4 shadow-sm sm:grid-cols-3">
+      <div className="grid gap-3 rounded-2xl border border-ink/10 bg-white p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-4">
         <label className="block">
           <span className="text-xs font-black uppercase tracking-wide text-ink/55">
             {t("receipts.store")}
@@ -121,6 +144,24 @@ function ReceiptsView() {
             {stores.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.storeName}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block">
+          <span className="text-xs font-black uppercase tracking-wide text-ink/55">
+            {t("receipts.employee")}
+          </span>
+          <select
+            className="focus-ring mt-1 h-12 w-full rounded-lg border border-ink/15 bg-white px-3 font-black disabled:opacity-50"
+            value={employeeFilter}
+            onChange={(event) => setEmployeeFilter(event.target.value)}
+            disabled={employeeNames.length === 0}
+          >
+            <option value="">{t("receipts.allEmployees")}</option>
+            {employeeNames.map((name) => (
+              <option key={name} value={name}>
+                {name}
               </option>
             ))}
           </select>
@@ -160,7 +201,7 @@ function ReceiptsView() {
           <Loader2 className="animate-spin" size={22} aria-hidden />
           <span className="font-black">{t("common.loading")}</span>
         </div>
-      ) : rows.length === 0 ? (
+      ) : filteredRows.length === 0 ? (
         <div className="rounded-xl border border-dashed border-ink/15 bg-white p-10 text-center">
           <ImageIcon className="mx-auto text-ink/40" size={36} aria-hidden />
           <p className="mt-3 font-black text-ink/70">{t("receipts.empty")}</p>

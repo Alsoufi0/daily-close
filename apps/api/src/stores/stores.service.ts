@@ -51,6 +51,19 @@ export class StoresService {
     });
     if (!existing) throw new NotFoundException("Store not found.");
 
+    // Permanently delete this store's uploaded receipts. The delete-store
+    // confirmation tells the owner their receipts will also be deleted, so
+    // make that true — this removes them from every receipts listing, export
+    // and bulk download. Covers receipts linked directly to the store as well
+    // as legacy rows linked only through a daily close (storeId still null).
+    const closeIds = (
+      await this.prisma.dailyClose.findMany({ where: { storeId }, select: { id: true } })
+    ).map((c) => c.id);
+    await this.prisma.uploadedReport.deleteMany({ where: { storeId } });
+    if (closeIds.length > 0) {
+      await this.prisma.uploadedReport.deleteMany({ where: { dailyCloseId: { in: closeIds } } });
+    }
+
     await this.prisma.store.update({
       where: { id: storeId },
       data: { deletedAt: new Date() }
