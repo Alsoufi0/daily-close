@@ -14,6 +14,7 @@ import {
   View
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import * as ImageManipulator from "expo-image-manipulator";
 import { formatMoney, formatMoneyExact, netProfit, toMoney } from "@smokeshop/shared/utils/money";
 import type { ParsedPOSReport } from "@smokeshop/shared/types";
 import { ApiError, finishClose, generateIdempotencyKey, uploadReport } from "../api";
@@ -22,7 +23,6 @@ import { QueuedForRetryError } from "../outbox";
 import { clearDraft, loadDraft, loadSelectedStoreId, saveDraft, saveSelectedStoreId } from "../persistence";
 import { AccountFooter } from "../components/AccountFooter";
 import { OfflineBanner } from "../components/OfflineBanner";
-import { uploadMobilePosReport } from "../upload-pos-report";
 import { useSession } from "../use-session";
 import { Banner, Button, Card, MetricCard, MoneyInput, StepProgress } from "../ui";
 import { colors, font, radius, spacing } from "../theme";
@@ -254,23 +254,26 @@ export function EmployeeScreen({ onSignOut }: { onSignOut: () => void }) {
       if (result.canceled || !result.assets?.length) return;
       const asset = result.assets[0];
 
-      try {
-        await uploadMobilePosReport(activeStore.id, {
-          uri: asset.uri,
-          mimeType: asset.mimeType,
-          fileName: asset.fileName
-        });
-      } catch (e: any) {
-        // Upload optional in dev (no Supabase). Carry on with mock parse.
-        if (process.env.EXPO_PUBLIC_SUPABASE_URL) {
-          Alert.alert(t("closing.uploadFailed"), e?.message || t("closing.uploadFailedBody"));
-          return;
-        }
-      }
+      // Preprocess to match the web upload: bake in EXIF orientation, resize the
+      // longest edge to ~1800px, and re-encode to JPEG. This fixes iOS HEIC
+      // photos, rotated images, and huge/slow uploads — the things that made
+      // native OCR return zeros or fail. The base64 output goes straight to the
+      // API, which stores it with the service key and runs OCR (no client-side
+      // Storage upload, so no RLS error).
+      const resize =
+        (asset.width ?? 0) >= (asset.height ?? 0) ? { width: 1800 } : { height: 1800 };
+      const processed = await ImageManipulator.manipulateAsync(
+        asset.uri,
+        [{ resize }],
+        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+      );
+      if (!processed.base64) throw new Error(t("closing.uploadFailedBody"));
 
-      const parsed = await uploadReport();
+      const parsed = await uploadReport(activeStore.id, processed.base64, "pos-report.jpg", "image/jpeg");
       setReport(parsed);
       setStep("sales");
+    } catch (e: any) {
+      Alert.alert(t("closing.uploadFailed"), e?.message || t("closing.uploadFailedBody"));
     } finally {
       setLoading(false);
     }

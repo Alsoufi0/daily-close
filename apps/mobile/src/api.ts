@@ -322,15 +322,19 @@ export async function getOwnerDashboard(): Promise<OwnerDashboardSummary> {
   return apiFetch<OwnerDashboardSummary>("/dashboard/me/today");
 }
 
-export async function uploadReport(): Promise<ParsedPOSReport> {
+// Send the real receipt image (preprocessed JPEG base64) to the API, which
+// stores it with the service key and runs OCR — same contract the web app
+// uses. Replaces the old stub that posted a hardcoded fake image, and removes
+// the need for the phone to touch Supabase Storage directly (which RLS blocks).
+export async function uploadReport(
+  storeId: string,
+  base64Data: string,
+  fileName = "pos-report.jpg",
+  contentType = "image/jpeg"
+): Promise<ParsedPOSReport> {
   return apiFetch<ParsedPOSReport>("/daily-close/upload-report", {
     method: "POST",
-    body: JSON.stringify({
-      storeId: "store-1",
-      fileName: "mobile-pos-report.jpg",
-      contentType: "image/jpeg",
-      imageUrl: "https://example.com/mobile-pos-report.jpg"
-    })
+    body: JSON.stringify({ storeId, fileName, contentType, base64Data })
   });
 }
 
