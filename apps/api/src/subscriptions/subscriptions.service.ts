@@ -40,8 +40,15 @@ export class SubscriptionsService {
   }
 
   async getForOwner(ownerId: string): Promise<SubscriptionView> {
-    const owner = await this.prisma.owner.findUnique({ where: { id: ownerId } });
+    let owner = await this.prisma.owner.findUnique({ where: { id: ownerId } });
     if (!owner) throw new NotFoundException("Owner not found.");
+    // Self-heal a missed/failed Stripe webhook: if the DB says inactive but
+    // Stripe has a live subscription tagged with this owner, sync it now so the
+    // billing page doesn't wrongly offer "Start paid plan" to a paying owner.
+    if (!SubscriptionsService.isActive(owner.subscriptionStatus, owner.trialEndsAt)) {
+      const reconciled = await this.reconcileFromStripe(ownerId);
+      if (reconciled) owner = reconciled;
+    }
     const status = (owner.subscriptionStatus || "TRIALING") as SubscriptionStatus;
     const activeStoreCount = await this.activeStoreCount(ownerId);
     const billedStoreQuantity = this.billableQuantity(activeStoreCount);
@@ -62,8 +69,15 @@ export class SubscriptionsService {
   }
 
   async ensureActiveForOwner(ownerId: string): Promise<void> {
-    const owner = await this.prisma.owner.findUnique({ where: { id: ownerId } });
+    let owner = await this.prisma.owner.findUnique({ where: { id: ownerId } });
     if (!owner) throw new NotFoundException("Owner not found.");
+    // Self-heal before paywalling: a paying owner whose webhook was missed
+    // would otherwise be blocked from uploading/closing. Reconcile from Stripe
+    // once when the DB says inactive (cheap + rare for real subscribers).
+    if (!SubscriptionsService.isActive(owner.subscriptionStatus, owner.trialEndsAt)) {
+      const reconciled = await this.reconcileFromStripe(ownerId);
+      if (reconciled) owner = reconciled;
+    }
     if (!SubscriptionsService.isActive(owner.subscriptionStatus, owner.trialEndsAt)) {
       const err: any = new Error("Subscription required.");
       err.statusCode = 402;
@@ -234,5 +248,50 @@ export class SubscriptionsService {
     const data = (await res.json()) as { url?: string };
     if (!data.url) throw new Error("Stripe did not return a portal URL.");
     return data.url;
+  }
+
+  static mapStripeStatus(status: string): SubscriptionStatus {
+    if (status === "active") return "ACTIVE";
+    if (status === "trialing") return "TRIALING";
+    if (status === "past_due") return "PAST_DUE";
+    return "CANCELED";
+  }
+
+  /**
+   * Self-heal a missed/failed webhook: find the owner's live subscription on
+   * Stripe (every checkout tags the subscription with metadata.ownerId) and
+   * sync its status into our DB. Returns the updated owner row, or null when
+   * there's nothing to sync. Best-effort — never throws into the caller, so a
+   * Stripe blip can't break the billing page or the paywall guard.
+   */
+  private async reconcileFromStripe(ownerId: string) {
+    const secret = process.env.STRIPE_SECRET_KEY;
+    if (!secret) return null;
+    try {
+      const query = encodeURIComponent(`status:'active' AND metadata['ownerId']:'${ownerId}'`);
+      const res = await fetch(
+        `https://api.stripe.com/v1/subscriptions/search?query=${query}&limit=1`,
+        { headers: { Authorization: `Bearer ${secret}` } }
+      );
+      if (!res.ok) {
+        this.logger.warn(`Stripe reconcile search failed for owner ${ownerId}: ${res.status}`);
+        return null;
+      }
+      const data = (await res.json()) as {
+        data?: Array<{ id: string; status: string; customer: string }>;
+      };
+      const sub = data.data?.[0];
+      if (!sub) return null;
+      this.logger.log(`Reconciling owner ${ownerId} from Stripe sub ${sub.id} (${sub.status}).`);
+      return await this.syncFromStripe({
+        ownerId,
+        stripeCustomerId: sub.customer,
+        stripeSubscriptionId: sub.id,
+        status: SubscriptionsService.mapStripeStatus(sub.status)
+      });
+    } catch (err) {
+      this.logger.warn(`Stripe reconcile error for owner ${ownerId}: ${(err as Error)?.message || err}`);
+      return null;
+    }
   }
 }
