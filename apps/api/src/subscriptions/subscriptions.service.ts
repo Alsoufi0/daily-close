@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from "@nestjs/common";
+import { Injectable, Logger, NotFoundException, OnModuleInit } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 
 export type SubscriptionStatus = "TRIALING" | "ACTIVE" | "PAST_DUE" | "CANCELED";
@@ -19,10 +19,54 @@ export interface SubscriptionView {
 }
 
 @Injectable()
-export class SubscriptionsService {
+export class SubscriptionsService implements OnModuleInit {
   private readonly logger = new Logger(SubscriptionsService.name);
 
+  /** Summary of the last boot-time reconcile, exposed for verification. */
+  bootReconcile: { at: string; scanned: number; healed: string[] } | null = null;
+
   constructor(private readonly prisma: PrismaService) {}
+
+  // On boot, proactively heal any paid-but-unsynced owners (e.g. a missed
+  // Stripe webhook left them inactive in our DB despite an active subscription)
+  // so they aren't blocked from the dashboard / closing. Runs in the background
+  // — never blocks startup — and re-syncs only owners the DB currently thinks
+  // are inactive, so it self-limits (healed owners are skipped next boot).
+  onModuleInit(): void {
+    void this.reconcileAllInactive()
+      .then((r) => {
+        this.bootReconcile = r;
+        if (r.healed.length) {
+          this.logger.log(`Boot reconcile healed ${r.healed.length}/${r.scanned} owner(s).`);
+        }
+      })
+      .catch((err) => this.logger.warn(`Boot reconcile failed: ${(err as Error)?.message || err}`));
+  }
+
+  async reconcileAllInactive(): Promise<{ at: string; scanned: number; healed: string[] }> {
+    const now = new Date();
+    const inactive = await this.prisma.owner.findMany({
+      where: {
+        OR: [
+          { subscriptionStatus: { in: ["PAST_DUE", "CANCELED"] } },
+          { subscriptionStatus: "TRIALING", trialEndsAt: { lt: now } }
+        ]
+      },
+      select: { id: true }
+    });
+    const healed: string[] = [];
+    for (const owner of inactive) {
+      try {
+        const updated = await this.reconcileFromStripe(owner.id);
+        if (updated && SubscriptionsService.isActive(updated.subscriptionStatus, updated.trialEndsAt)) {
+          healed.push(owner.id);
+        }
+      } catch (err) {
+        this.logger.warn(`Boot reconcile error for owner ${owner.id}: ${(err as Error)?.message || err}`);
+      }
+    }
+    return { at: now.toISOString(), scanned: inactive.length, healed };
+  }
 
   static isActive(status: string, trialEndsAt: Date | null): boolean {
     if (status === "ACTIVE") return true;
