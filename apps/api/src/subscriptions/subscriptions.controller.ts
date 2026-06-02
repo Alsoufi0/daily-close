@@ -36,6 +36,20 @@ export class SubscriptionsController {
     return this.subscriptions.getForOwner(user.ownerId);
   }
 
+  // Verification: the result of the boot-time heal (which paid-but-unsynced
+  // owners were reconciled from Stripe). Also re-runs the heal on demand so a
+  // freshly-affected account can be synced without waiting for a restart.
+  @Get("reconcile-status")
+  @ApiBearerAuth()
+  @UseGuards(SupabaseAuthGuard)
+  async reconcileStatus(@CurrentUser() user: RequestUser) {
+    if (user.role !== "STORE_OWNER" || !user.ownerId) {
+      throw new ForbiddenException("Only owners can view reconcile status.");
+    }
+    const live = await this.subscriptions.reconcileAllInactive();
+    return { boot: this.subscriptions.bootReconcile, live };
+  }
+
   @Post("create-checkout")
   @ApiBearerAuth()
   @UseGuards(SupabaseAuthGuard)
