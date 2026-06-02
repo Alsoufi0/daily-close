@@ -264,13 +264,19 @@ export class SubscriptionsService {
    * there's nothing to sync. Best-effort — never throws into the caller, so a
    * Stripe blip can't break the billing page or the paywall guard.
    */
+  // Lower index = more authoritative when an owner has multiple subscriptions.
+  private static readonly STATUS_PRIORITY = ["active", "trialing", "past_due"];
+
   private async reconcileFromStripe(ownerId: string) {
     const secret = process.env.STRIPE_SECRET_KEY;
     if (!secret) return null;
     try {
-      const query = encodeURIComponent(`status:'active' AND metadata['ownerId']:'${ownerId}'`);
+      // Find every subscription tagged with this owner, then pick the most
+      // authoritative one (a live active/trialing/past_due over a stale
+      // canceled), so both paying AND past-due owners get the right status.
+      const query = encodeURIComponent(`metadata['ownerId']:'${ownerId}'`);
       const res = await fetch(
-        `https://api.stripe.com/v1/subscriptions/search?query=${query}&limit=1`,
+        `https://api.stripe.com/v1/subscriptions/search?query=${query}&limit=10`,
         { headers: { Authorization: `Bearer ${secret}` } }
       );
       if (!res.ok) {
@@ -278,16 +284,24 @@ export class SubscriptionsService {
         return null;
       }
       const data = (await res.json()) as {
-        data?: Array<{ id: string; status: string; customer: string }>;
+        data?: Array<{ id: string; status: string; customer: string; created?: number }>;
       };
-      const sub = data.data?.[0];
-      if (!sub) return null;
-      this.logger.log(`Reconciling owner ${ownerId} from Stripe sub ${sub.id} (${sub.status}).`);
+      const subs = data.data ?? [];
+      if (subs.length === 0) return null;
+      const best = [...subs].sort((a, b) => {
+        const pa = SubscriptionsService.STATUS_PRIORITY.indexOf(a.status);
+        const pb = SubscriptionsService.STATUS_PRIORITY.indexOf(b.status);
+        const ra = pa === -1 ? 99 : pa;
+        const rb = pb === -1 ? 99 : pb;
+        if (ra !== rb) return ra - rb;
+        return (b.created ?? 0) - (a.created ?? 0); // newer first on a tie
+      })[0];
+      this.logger.log(`Reconciling owner ${ownerId} from Stripe sub ${best.id} (${best.status}).`);
       return await this.syncFromStripe({
         ownerId,
-        stripeCustomerId: sub.customer,
-        stripeSubscriptionId: sub.id,
-        status: SubscriptionsService.mapStripeStatus(sub.status)
+        stripeCustomerId: best.customer,
+        stripeSubscriptionId: best.id,
+        status: SubscriptionsService.mapStripeStatus(best.status)
       });
     } catch (err) {
       this.logger.warn(`Stripe reconcile error for owner ${ownerId}: ${(err as Error)?.message || err}`);
