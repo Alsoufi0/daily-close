@@ -17,7 +17,10 @@ export class HealthController {
     return {
       status: "ok",
       uptime: process.uptime(),
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      // Deployed git SHA so we can verify WHICH commit is actually live
+      // without dashboard access. Render injects RENDER_GIT_COMMIT at build.
+      commit: (process.env.RENDER_GIT_COMMIT || "unknown").slice(0, 7)
     };
   }
 
