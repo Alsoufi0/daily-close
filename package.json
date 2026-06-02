@@ -24,5 +24,24 @@
   },
   "dependencies": {
     "regenerator-runtime": "^0.14.1"
+  },
+  "comments": {
+    "overrides": "Pin the whole Metro family to 0.81.x (RN 0.76 / Expo SDK 52). A leftover from the SDK 54 experiment left Metro 0.83.7 in the lockfile; SDK 52's @expo/cli does require('metro/src/lib/TerminalReporter'), a path Metro 0.83 removed, so the EAS 'Bundle JavaScript' phase crashed. This forces every transitive Metro back to the SDK-52-compatible line."
+  },
+  "overrides": {
+    "metro": "0.81.5",
+    "metro-babel-transformer": "0.81.5",
+    "metro-cache": "0.81.5",
+    "metro-cache-key": "0.81.5",
+    "metro-config": "0.81.5",
+    "metro-core": "0.81.5",
+    "metro-file-map": "0.81.5",
+    "metro-minify-terser": "0.81.5",
+    "metro-resolver": "0.81.5",
+    "metro-runtime": "0.81.5",
+    "metro-source-map": "0.81.5",
+    "metro-symbolicate": "0.81.5",
+    "metro-transform-plugins": "0.81.5",
+    "metro-transform-worker": "0.81.5"
   }
 }
