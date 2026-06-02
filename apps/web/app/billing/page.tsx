@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, CreditCard, Loader2, Sparkles, TimerReset } from "lucide-react";
 import { useSession } from "../../lib/use-session";
-import { getSubscription, startSubscriptionCheckout, SubscriptionView } from "../../lib/api-client";
+import { getSubscription, openBillingPortal, startSubscriptionCheckout, SubscriptionView } from "../../lib/api-client";
 import { RequireAuth } from "../../components/require-auth";
 
 const demoSub: SubscriptionView = {
@@ -36,6 +36,8 @@ function BillingPageInner() {
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
 
+  const [portalLoading, setPortalLoading] = useState(false);
+
   async function startCheckout() {
     if (!session.token) return;
     setStarting(true);
@@ -46,6 +48,21 @@ function BillingPageInner() {
     } catch (err: any) {
       setStartError(err?.message || "Could not start checkout.");
       setStarting(false);
+    }
+  }
+
+  // Update card / view invoices / cancel — all inside the Stripe portal. We
+  // mint the session on demand, so it works without a static portal URL.
+  async function manageBilling() {
+    if (!session.token) return;
+    setPortalLoading(true);
+    setStartError(null);
+    try {
+      const { url } = await openBillingPortal(session.token);
+      window.location.href = url;
+    } catch (err: any) {
+      setStartError(err?.message || "Could not open billing portal.");
+      setPortalLoading(false);
     }
   }
 
@@ -85,7 +102,10 @@ function BillingPageInner() {
   // An existing Stripe customer (active or past-due) manages/updates their card
   // through the billing PORTAL — never a brand-new checkout (which would try to
   // charge again). Only new/expired subscriptions go through checkout.
-  const portalAction = (sub.status === "ACTIVE" || pastDue) && !!sub.portalUrl;
+  // Active or past-due owners manage their card / cancel through the Stripe
+  // portal (minted on demand — no static URL needed). Trial/expired go to
+  // checkout to (re)subscribe.
+  const portalAction = sub.status === "ACTIVE" || pastDue;
   const unitPrice = `$${(sub.unitAmountCents / 100).toFixed(2)}`;
 
   return (
@@ -133,15 +153,16 @@ function BillingPageInner() {
           </div>
           <div className="flex flex-col items-end gap-2 sm:flex-row">
             {portalAction ? (
-              // Active or past-due → send them to the Stripe billing portal to
-              // update their card / fix a failed renewal. No new charge.
-              <a
-                href={sub.portalUrl as string}
-                className="focus-ring inline-flex h-12 items-center gap-2 rounded-lg bg-leaf px-4 font-black text-white"
+              // Active or past-due → open the Stripe billing portal to update
+              // their card, view invoices, or cancel. No new charge.
+              <button
+                onClick={manageBilling}
+                disabled={portalLoading || !session.token}
+                className="focus-ring inline-flex h-12 items-center gap-2 rounded-lg bg-leaf px-4 font-black text-white disabled:opacity-60"
               >
-                <CreditCard size={18} />
-                {pastDue ? "Update payment" : "Update card"}
-              </a>
+                {portalLoading ? <Loader2 className="animate-spin" size={18} /> : <CreditCard size={18} />}
+                {portalLoading ? "Opening…" : pastDue ? "Update payment & reactivate" : "Manage payment & cancel"}
+              </button>
             ) : (
               // New / trialing / expired → start (or restart) a checkout.
               <button
@@ -155,16 +176,6 @@ function BillingPageInner() {
             )}
             {startError ? (
               <span className="text-xs font-bold text-warning">{startError}</span>
-            ) : null}
-            {/* Secondary portal link only when the primary action ISN'T already
-                the portal — avoids two identical buttons for active subs. */}
-            {sub.portalUrl && !portalAction ? (
-              <a
-                href={sub.portalUrl}
-                className="focus-ring inline-flex h-12 items-center gap-2 rounded-lg border border-ink/15 bg-white px-4 font-black text-ink hover:bg-smoke"
-              >
-                Manage billing
-              </a>
             ) : null}
           </div>
         </div>

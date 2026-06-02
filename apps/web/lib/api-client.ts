@@ -350,6 +350,15 @@ export async function startSubscriptionCheckout(token: string): Promise<{ url: s
   });
 }
 
+// Stripe Billing Portal — update card, view invoices, or cancel. Mints a
+// per-customer session server-side; the caller redirects to the returned URL.
+export async function openBillingPortal(token: string): Promise<{ url: string }> {
+  return apiFetch<{ url: string }>("/subscriptions/create-portal", token, {
+    method: "POST",
+    body: JSON.stringify({})
+  });
+}
+
 export async function editDailyClose(
   token: string,
   id: string,

@@ -40,8 +40,15 @@ export class SubscriptionsService {
   }
 
   async getForOwner(ownerId: string): Promise<SubscriptionView> {
-    const owner = await this.prisma.owner.findUnique({ where: { id: ownerId } });
+    let owner = await this.prisma.owner.findUnique({ where: { id: ownerId } });
     if (!owner) throw new NotFoundException("Owner not found.");
+    // Self-heal a missed/failed Stripe webhook: if the DB says inactive but
+    // Stripe has a live subscription tagged with this owner, sync it now so the
+    // billing page doesn't wrongly offer "Start paid plan" to a paying owner.
+    if (!SubscriptionsService.isActive(owner.subscriptionStatus, owner.trialEndsAt)) {
+      const reconciled = await this.reconcileFromStripe(ownerId);
+      if (reconciled) owner = reconciled;
+    }
     const status = (owner.subscriptionStatus || "TRIALING") as SubscriptionStatus;
     const activeStoreCount = await this.activeStoreCount(ownerId);
     const billedStoreQuantity = this.billableQuantity(activeStoreCount);
@@ -62,8 +69,15 @@ export class SubscriptionsService {
   }
 
   async ensureActiveForOwner(ownerId: string): Promise<void> {
-    const owner = await this.prisma.owner.findUnique({ where: { id: ownerId } });
+    let owner = await this.prisma.owner.findUnique({ where: { id: ownerId } });
     if (!owner) throw new NotFoundException("Owner not found.");
+    // Self-heal before paywalling: a paying owner whose webhook was missed
+    // would otherwise be blocked from uploading/closing. Reconcile from Stripe
+    // once when the DB says inactive (cheap + rare for real subscribers).
+    if (!SubscriptionsService.isActive(owner.subscriptionStatus, owner.trialEndsAt)) {
+      const reconciled = await this.reconcileFromStripe(ownerId);
+      if (reconciled) owner = reconciled;
+    }
     if (!SubscriptionsService.isActive(owner.subscriptionStatus, owner.trialEndsAt)) {
       const err: any = new Error("Subscription required.");
       err.statusCode = 402;
@@ -199,5 +213,99 @@ export class SubscriptionsService {
 
   private billableQuantity(activeStoreCount: number): number {
     return Math.max(1, activeStoreCount);
+  }
+
+  /**
+   * Mint a Stripe Billing Portal session so the owner can update their card,
+   * view invoices, or cancel — Stripe hosts the whole flow. Returns the URL to
+   * redirect to. Requires a Billing Portal configuration to exist on the Stripe
+   * account (created once). Throws if the owner has no Stripe customer yet
+   * (never checked out) so the caller can fall back to checkout.
+   */
+  async createPortalSession(ownerId: string): Promise<string> {
+    const secret = process.env.STRIPE_SECRET_KEY;
+    if (!secret) throw new Error("Stripe is not configured (STRIPE_SECRET_KEY).");
+    const owner = await this.prisma.owner.findUnique({ where: { id: ownerId } });
+    if (!owner?.stripeCustomerId) {
+      throw new Error("No billing account yet. Start a subscription first.");
+    }
+    const siteUrl = process.env.SITE_URL || "https://dailyclose.us";
+    const params = new URLSearchParams();
+    params.set("customer", owner.stripeCustomerId);
+    params.set("return_url", process.env.STRIPE_PORTAL_RETURN_URL || `${siteUrl}/billing`);
+    const res = await fetch("https://api.stripe.com/v1/billing_portal/sessions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${secret}`,
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body: params.toString()
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`Stripe portal failed: ${res.status} ${body.slice(0, 200)}`);
+    }
+    const data = (await res.json()) as { url?: string };
+    if (!data.url) throw new Error("Stripe did not return a portal URL.");
+    return data.url;
+  }
+
+  static mapStripeStatus(status: string): SubscriptionStatus {
+    if (status === "active") return "ACTIVE";
+    if (status === "trialing") return "TRIALING";
+    if (status === "past_due") return "PAST_DUE";
+    return "CANCELED";
+  }
+
+  /**
+   * Self-heal a missed/failed webhook: find the owner's live subscription on
+   * Stripe (every checkout tags the subscription with metadata.ownerId) and
+   * sync its status into our DB. Returns the updated owner row, or null when
+   * there's nothing to sync. Best-effort — never throws into the caller, so a
+   * Stripe blip can't break the billing page or the paywall guard.
+   */
+  // Lower index = more authoritative when an owner has multiple subscriptions.
+  private static readonly STATUS_PRIORITY = ["active", "trialing", "past_due"];
+
+  private async reconcileFromStripe(ownerId: string) {
+    const secret = process.env.STRIPE_SECRET_KEY;
+    if (!secret) return null;
+    try {
+      // Find every subscription tagged with this owner, then pick the most
+      // authoritative one (a live active/trialing/past_due over a stale
+      // canceled), so both paying AND past-due owners get the right status.
+      const query = encodeURIComponent(`metadata['ownerId']:'${ownerId}'`);
+      const res = await fetch(
+        `https://api.stripe.com/v1/subscriptions/search?query=${query}&limit=10`,
+        { headers: { Authorization: `Bearer ${secret}` } }
+      );
+      if (!res.ok) {
+        this.logger.warn(`Stripe reconcile search failed for owner ${ownerId}: ${res.status}`);
+        return null;
+      }
+      const data = (await res.json()) as {
+        data?: Array<{ id: string; status: string; customer: string; created?: number }>;
+      };
+      const subs = data.data ?? [];
+      if (subs.length === 0) return null;
+      const best = [...subs].sort((a, b) => {
+        const pa = SubscriptionsService.STATUS_PRIORITY.indexOf(a.status);
+        const pb = SubscriptionsService.STATUS_PRIORITY.indexOf(b.status);
+        const ra = pa === -1 ? 99 : pa;
+        const rb = pb === -1 ? 99 : pb;
+        if (ra !== rb) return ra - rb;
+        return (b.created ?? 0) - (a.created ?? 0); // newer first on a tie
+      })[0];
+      this.logger.log(`Reconciling owner ${ownerId} from Stripe sub ${best.id} (${best.status}).`);
+      return await this.syncFromStripe({
+        ownerId,
+        stripeCustomerId: best.customer,
+        stripeSubscriptionId: best.id,
+        status: SubscriptionsService.mapStripeStatus(best.status)
+      });
+    } catch (err) {
+      this.logger.warn(`Stripe reconcile error for owner ${ownerId}: ${(err as Error)?.message || err}`);
+      return null;
+    }
   }
 }

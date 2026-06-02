@@ -77,6 +77,56 @@ describe("SubscriptionsService.syncFromStripe", () => {
   });
 });
 
+describe("SubscriptionsService reconcile self-heal", () => {
+  const originalFetch = global.fetch;
+  afterEach(() => {
+    global.fetch = originalFetch;
+    delete process.env.STRIPE_SECRET_KEY;
+  });
+
+  it("heals an expired-trial owner who actually has a live active Stripe sub", async () => {
+    process.env.STRIPE_SECRET_KEY = "sk_test";
+    const expired = new Date(Date.now() - 86_400_000);
+    const update = jest.fn().mockResolvedValue({ subscriptionStatus: "ACTIVE", trialEndsAt: expired });
+    const prisma = {
+      owner: {
+        findUnique: jest.fn().mockResolvedValue({ subscriptionStatus: "TRIALING", trialEndsAt: expired }),
+        update
+      },
+      store: { count: jest.fn().mockResolvedValue(2) }
+    } as any;
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: [{ id: "sub_1", status: "active", customer: "cus_1", created: 1 }] })
+    }) as any;
+    const service = new SubscriptionsService(prisma);
+
+    // Was 402 before the heal; now passes because Stripe confirms an active sub.
+    await expect(service.ensureActiveForOwner("owner-1")).resolves.toBeUndefined();
+    expect(update).toHaveBeenCalledWith({
+      where: { id: "owner-1" },
+      data: { subscriptionStatus: "ACTIVE", stripeCustomerId: "cus_1", stripeSubscriptionId: "sub_1" }
+    });
+  });
+
+  it("still 402s when Stripe has no subscription for the owner", async () => {
+    process.env.STRIPE_SECRET_KEY = "sk_test";
+    const expired = new Date(Date.now() - 86_400_000);
+    const prisma = {
+      owner: {
+        findUnique: jest.fn().mockResolvedValue({ subscriptionStatus: "TRIALING", trialEndsAt: expired }),
+        update: jest.fn()
+      },
+      store: { count: jest.fn().mockResolvedValue(1) }
+    } as any;
+    global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ data: [] }) }) as any;
+    const service = new SubscriptionsService(prisma);
+
+    await expect(service.ensureActiveForOwner("owner-1")).rejects.toMatchObject({ statusCode: 402 });
+    expect(prisma.owner.update).not.toHaveBeenCalled();
+  });
+});
+
 describe("SubscriptionsService Stripe quantities", () => {
   const originalFetch = global.fetch;
 
