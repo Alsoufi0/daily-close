@@ -200,4 +200,39 @@ export class SubscriptionsService {
   private billableQuantity(activeStoreCount: number): number {
     return Math.max(1, activeStoreCount);
   }
+
+  /**
+   * Mint a Stripe Billing Portal session so the owner can update their card,
+   * view invoices, or cancel — Stripe hosts the whole flow. Returns the URL to
+   * redirect to. Requires a Billing Portal configuration to exist on the Stripe
+   * account (created once). Throws if the owner has no Stripe customer yet
+   * (never checked out) so the caller can fall back to checkout.
+   */
+  async createPortalSession(ownerId: string): Promise<string> {
+    const secret = process.env.STRIPE_SECRET_KEY;
+    if (!secret) throw new Error("Stripe is not configured (STRIPE_SECRET_KEY).");
+    const owner = await this.prisma.owner.findUnique({ where: { id: ownerId } });
+    if (!owner?.stripeCustomerId) {
+      throw new Error("No billing account yet. Start a subscription first.");
+    }
+    const siteUrl = process.env.SITE_URL || "https://dailyclose.us";
+    const params = new URLSearchParams();
+    params.set("customer", owner.stripeCustomerId);
+    params.set("return_url", process.env.STRIPE_PORTAL_RETURN_URL || `${siteUrl}/billing`);
+    const res = await fetch("https://api.stripe.com/v1/billing_portal/sessions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${secret}`,
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body: params.toString()
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`Stripe portal failed: ${res.status} ${body.slice(0, 200)}`);
+    }
+    const data = (await res.json()) as { url?: string };
+    if (!data.url) throw new Error("Stripe did not return a portal URL.");
+    return data.url;
+  }
 }

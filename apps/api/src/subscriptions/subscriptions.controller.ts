@@ -51,6 +51,23 @@ export class SubscriptionsController {
     }
   }
 
+  // Stripe Billing Portal: update card, view invoices, or cancel. Stripe hosts
+  // the flow; we mint a per-customer session and the client redirects to it.
+  @Post("create-portal")
+  @ApiBearerAuth()
+  @UseGuards(SupabaseAuthGuard)
+  async createPortal(@CurrentUser() user: RequestUser): Promise<{ url: string }> {
+    if (user.role !== "STORE_OWNER" || !user.ownerId) {
+      throw new ForbiddenException("Only owners can manage billing.");
+    }
+    try {
+      const url = await this.subscriptions.createPortalSession(user.ownerId);
+      return { url };
+    } catch (err: any) {
+      throw new BadRequestException(err?.message || "Could not open billing portal.");
+    }
+  }
+
   // Stripe webhook. The signature is verified against the raw request body
   // (captured in main.ts) using STRIPE_WEBHOOK_SECRET. A forged POST here can
   // otherwise flip an owner to ACTIVE without paying, so we FAIL CLOSED in
