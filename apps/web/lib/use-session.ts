@@ -34,6 +34,45 @@ async function readSessionToken(): Promise<string | undefined> {
   return data.session?.access_token || undefined;
 }
 
+// Stale-while-revalidate cache for the session's profile + stores. Lets a page
+// (re)mount paint the last-known data instantly instead of blocking ~2 API
+// round-trips on every navigation. Stored per-tab (sessionStorage) and cleared
+// on sign-out so it never leaks across accounts.
+const SESSION_CACHE_KEY = "dc:session-cache:v1";
+
+function readSessionCache(): { profile: SessionProfile; stores: StoreRecord[] } | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.sessionStorage.getItem(SESSION_CACHE_KEY);
+    return raw ? (JSON.parse(raw) as { profile: SessionProfile; stores: StoreRecord[] }) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeSessionCache(profile: SessionProfile, stores: StoreRecord[]): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(SESSION_CACHE_KEY, JSON.stringify({ profile, stores }));
+  } catch {
+    /* quota / disabled storage — caching is best-effort */
+  }
+}
+
+function clearSessionCache(): void {
+  if (typeof window === "undefined") return;
+  try {
+    // Clear every app cache entry (session + per-page data caches) so nothing
+    // leaks across accounts when a different user signs in on the same tab.
+    for (let i = window.sessionStorage.length - 1; i >= 0; i -= 1) {
+      const key = window.sessionStorage.key(i);
+      if (key && key.startsWith("dc:")) window.sessionStorage.removeItem(key);
+    }
+  } catch {
+    /* noop */
+  }
+}
+
 export function useSession(): Session {
   const [mode, setMode] = useState<SessionMode>("loading");
   const [token, setToken] = useState<string | undefined>();
@@ -55,6 +94,7 @@ export function useSession(): Session {
         // No session: render unauthenticated state so RequireAuth-style
         // guards bounce to the landing page. We never fabricate a demo
         // profile here (the demo backdoor was removed in fix #2).
+        clearSessionCache();
         setToken(undefined);
         setProfile(undefined);
         setMode("demo");
@@ -62,23 +102,37 @@ export function useSession(): Session {
       }
 
       setToken(stored);
+
+      // Instant paint: show the last-known profile + stores immediately so
+      // navigating between pages isn't blocked on the network. We still
+      // revalidate below and overwrite with fresh data.
+      const cached = readSessionCache();
+      if (cached?.profile && !cancelled) {
+        setProfile(cached.profile);
+        setStores(cached.stores ?? []);
+        setMode("production");
+      }
+
       try {
-        let p: SessionProfile;
-        try {
-          p = await getProfile(stored);
-        } catch (err) {
-          // First-time Supabase user with no public.users row yet → auto-bootstrap as owner
-          if (err instanceof ApiError && err.status === 401 && /profile is not set up/i.test(err.message)) {
-            p = await bootstrapOwner(stored);
-          } else {
+        // Profile and stores are independent — fetch them in parallel instead
+        // of one-after-the-other to cut a full round-trip off first load.
+        const profilePromise = (async () => {
+          try {
+            return await getProfile(stored);
+          } catch (err) {
+            // First-time Supabase user with no public.users row yet → bootstrap.
+            if (err instanceof ApiError && err.status === 401 && /profile is not set up/i.test(err.message)) {
+              return await bootstrapOwner(stored);
+            }
             throw err;
           }
-        }
-        const s = await listStores(stored).catch(() => []);
+        })();
+        const [p, s] = await Promise.all([profilePromise, listStores(stored).catch(() => [])]);
         if (cancelled) return;
         setProfile(p);
         setStores(s);
         setMode("production");
+        writeSessionCache(p, s);
       } catch (err: any) {
         if (cancelled) return;
         // Only bounce on hard auth rejection (Supabase says token is bad / expired).
@@ -139,6 +193,7 @@ export function useSession(): Session {
       ) {
         setToken(nextSession.access_token);
       } else if (event === "SIGNED_OUT") {
+        clearSessionCache();
         setToken(undefined);
         setProfile(undefined);
         setMode("demo");
@@ -170,6 +225,7 @@ export function useSession(): Session {
   }, []);
 
   async function signOut() {
+    clearSessionCache();
     const supabase = createBrowserSupabase();
     if (supabase) {
       try {
