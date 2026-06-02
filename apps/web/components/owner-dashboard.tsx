@@ -20,6 +20,7 @@ import {
   markNotificationRead
 } from "../lib/api-client";
 import { useSession } from "../lib/use-session";
+import { readCache, writeCache } from "../lib/client-cache";
 import { MetricCard } from "./metric-card";
 import { HistoryPanel } from "./history-panel";
 import { ExportReportModal } from "./export-report-modal";
@@ -28,8 +29,11 @@ import { useLanguage } from "./language-provider";
 export function OwnerDashboard() {
   const session = useSession();
   const { t, lang } = useLanguage();
-  const [summary, setSummary] = useState<OwnerDashboardSummary | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Hydrate from the last-seen dashboard so a revisit paints instantly while we
+  // revalidate in the background, instead of flashing a full-screen skeleton.
+  const cachedSummary = readCache<OwnerDashboardSummary>("dashboard");
+  const [summary, setSummary] = useState<OwnerDashboardSummary | null>(cachedSummary);
+  const [loading, setLoading] = useState(cachedSummary === null);
   const [error, setError] = useState<string | null>(null);
   const [dismissing, setDismissing] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -41,6 +45,7 @@ export function OwnerDashboard() {
     try {
       const data = await getOwnerDashboard(session.token);
       setSummary(data);
+      writeCache("dashboard", data);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("dashboard.refreshFailed"));
     } finally {
@@ -64,13 +69,16 @@ export function OwnerDashboard() {
 
     async function load(initial: boolean) {
       if (initial) {
-        setLoading(true);
+        // Skip the skeleton when cached data is already on screen — revalidate
+        // silently underneath so the dashboard never blanks out on revisit.
+        if (!readCache<OwnerDashboardSummary>("dashboard")) setLoading(true);
         setError(null);
       }
       try {
         const data = await getOwnerDashboard(session.token);
         if (cancelled) return;
         setSummary(data);
+        writeCache("dashboard", data);
         if (!initial) setError(null);
       } catch (err) {
         if (cancelled) return;
