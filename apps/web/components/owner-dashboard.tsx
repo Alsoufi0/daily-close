@@ -55,14 +55,6 @@ export function OwnerDashboard() {
 
   useEffect(() => {
     if (session.mode === "loading") return;
-    if (
-      session.mode === "production" &&
-      session.profile?.role === "STORE_OWNER" &&
-      session.stores.length === 0
-    ) {
-      window.location.replace("/setup");
-      return;
-    }
 
     let cancelled = false;
     let timer: ReturnType<typeof setInterval> | null = null;
@@ -77,6 +69,17 @@ export function OwnerDashboard() {
       try {
         const data = await getOwnerDashboard(session.token);
         if (cancelled) return;
+        // A real account owner with zero stores hasn't finished onboarding —
+        // send them to /setup. Decide from the FRESH summary, never from the
+        // stale-while-revalidate session.stores cache: right after creating the
+        // first store in /setup that cache still reads empty for a beat, and the
+        // old `session.stores.length === 0` check bounced the owner back to
+        // /setup, so they created a SECOND store. totalStores is straight from
+        // this fetch, so it reflects the store they just made.
+        if (initial && session.profile?.role === "STORE_OWNER" && data.totalStores === 0) {
+          window.location.replace("/setup");
+          return;
+        }
         setSummary(data);
         writeCache("dashboard", data);
         if (!initial) setError(null);
