@@ -96,16 +96,77 @@ describe("EmployeesService", () => {
     ).rejects.toThrow(BadRequestException);
   });
 
-  it("invite rejects a duplicate email", async () => {
+  it("invite rejects a duplicate email when the user still has an active assignment", async () => {
     const { service } = build({
       user: {
-        findUnique: jest.fn().mockResolvedValue({ id: "exists" }),
+        findUnique: jest.fn().mockResolvedValue({
+          id: "exists",
+          role: "EMPLOYEE",
+          employees: [{ id: "a1" }] // still actively assigned somewhere
+        }),
         create: jest.fn()
       }
     });
     await expect(
       service.invite(owner, { name: "X", email: "exists@x.com", storeId: "s-1" })
     ).rejects.toThrow(ConflictException);
+  });
+
+  it("invite rejects re-using an account owner's email", async () => {
+    const { service } = build({
+      user: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: "exists",
+          role: "STORE_OWNER",
+          employees: []
+        }),
+        create: jest.fn()
+      }
+    });
+    await expect(
+      service.invite(owner, { name: "X", email: "boss@x.com", storeId: "s-1" })
+    ).rejects.toThrow(ConflictException);
+  });
+
+  it("invite REVIVES a previously-removed employee instead of erroring (frees the email/phone)", async () => {
+    const update = jest.fn().mockResolvedValue({
+      id: "exists",
+      name: "Maya",
+      employees: [{ id: "emp-revived", storeId: "s-1" }]
+    });
+    const { service, prisma } = build({
+      user: {
+        // The row survived removal (daily_close FK pins it) but has no active
+        // assignment — so it should be revived, not rejected as a duplicate.
+        findUnique: jest.fn().mockResolvedValue({
+          id: "exists",
+          email: "maya@demo.com",
+          role: "EMPLOYEE",
+          authUserId: null,
+          employees: []
+        }),
+        update
+      }
+    });
+    const result = await service.invite(owner, {
+      name: "Maya",
+      email: "maya@demo.com",
+      storeId: "s-1"
+    });
+    expect(result.reactivated).toBe(true);
+    expect(result.employeeId).toBe("emp-revived");
+    expect(typeof result.tempPassword).toBe("string");
+    // Revival adds a fresh EMPLOYEE assignment on the surviving user row.
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "exists" },
+        data: expect.objectContaining({
+          role: "EMPLOYEE",
+          employees: { create: { storeId: "s-1", role: "EMPLOYEE" } }
+        })
+      })
+    );
+    void prisma;
   });
 
   it("invite creates the user + employee row with EMPLOYEE role and returns a temp password", async () => {

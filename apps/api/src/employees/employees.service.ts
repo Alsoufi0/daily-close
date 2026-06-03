@@ -17,6 +17,7 @@ import {
 } from "../auth/admin-scope";
 import { SmsService } from "../notifications/sms.service";
 import { EmailService } from "../notifications/email.service";
+import { normalizePhone, syntheticPhoneEmail } from "../common/phone";
 import { InviteEmployeeDto } from "./dto/invite-employee.dto";
 
 @Injectable()
@@ -67,7 +68,10 @@ export class EmployeesService {
     assertScopeAllowsStore(scope, input.storeId);
 
     const email = input.email?.trim() || undefined;
-    const phone = input.phone?.trim() || undefined;
+    // Normalize to E.164 up front (accepts bare US numbers like "5551234567")
+    // so the synthetic sign-in email, consent record and welcome SMS all use
+    // the SAME canonical number the phone-login flow looks an account up by.
+    const phone = input.phone?.trim() ? normalizePhone(input.phone) : undefined;
     if (!email && !phone) {
       throw new BadRequestException("Provide an email or phone for the employee.");
     }
@@ -95,18 +99,29 @@ export class EmployeesService {
     // lives in Supabase auth.users (used for sign-in and future SMS sends).
     // A follow-up migration can add `users.phone` + make email nullable; until
     // then this keeps the feature shipping without a schema change.
-    const syntheticEmail = phone
-      ? `phone_${phone.replace(/\D/g, "")}@invites.dailyclose.local`
-      : undefined;
+    const syntheticEmail = phone ? syntheticPhoneEmail(phone, "invites") : undefined;
     const lookupEmail = email ?? syntheticEmail!;
 
-    const existingUser = await this.prisma.user.findUnique({ where: { email: lookupEmail } });
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email: lookupEmail },
+      include: { employees: { where: { deletedAt: null } } }
+    });
     if (existingUser) {
-      throw new ConflictException(
-        email
-          ? "A user with this email already exists."
-          : "A user with this phone already exists."
-      );
+      // A genuinely-active employee (or an account owner) is a real conflict.
+      // But a previously-REMOVED employee leaves their `users` row behind (the
+      // daily_close FK pins it), which used to make re-inviting the same email
+      // or phone fail with "already exists". When the row has no active
+      // assignments and isn't an owner, revive it instead so the number/email
+      // is effectively freed for re-invite.
+      const hasActiveAssignment = existingUser.employees.length > 0;
+      if (hasActiveAssignment || existingUser.role === "STORE_OWNER") {
+        throw new ConflictException(
+          email
+            ? "A user with this email already exists."
+            : "A user with this phone already exists."
+        );
+      }
+      return this.reinviteRemovedEmployee(user, existingUser.id, store, input, { email, phone });
     }
 
     // Strong temporary password the owner shares with the employee (over
@@ -213,7 +228,126 @@ export class EmployeesService {
       smsSent,
       smsError: smsError ?? null,
       emailSent,
-      emailError: emailError ?? null
+      emailError: emailError ?? null,
+      reactivated: false
+    };
+  }
+
+  /**
+   * Re-invite someone who was previously removed (their `users` row survived
+   * because daily_close history pins it, but they have no active assignment).
+   * Re-provisions a Supabase login (resetting the password, or recreating the
+   * auth user if `remove()` already deleted it), adds a fresh EMPLOYEE
+   * assignment for the invited store, re-records consent, and re-sends the
+   * welcome — so the owner can invite the same email/phone again as if new.
+   */
+  private async reinviteRemovedEmployee(
+    user: RequestUser,
+    userId: string,
+    store: { id: string; storeName: string },
+    input: InviteEmployeeDto,
+    contact: { email?: string; phone?: string }
+  ) {
+    const { email, phone } = contact;
+    const existing = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!existing) throw new NotFoundException("Employee not found.");
+
+    const tempPassword = randomBytes(9).toString("base64url") + "Aa1!";
+    const metadata = phone
+      ? { name: input.name, phone, role: "EMPLOYEE", signup_channel: "phone" }
+      : { name: input.name, role: "EMPLOYEE" };
+
+    // Re-provision Supabase auth. `remove()` deletes the auth user when the
+    // last assignment goes, so the stored authUserId is usually stale: try to
+    // reset the password on it, and fall back to creating a fresh auth user.
+    let authUserId: string | null = existing.authUserId;
+    if (this.supabase) {
+      let reset = false;
+      if (authUserId) {
+        const { error } = await this.supabase.auth.admin.updateUserById(authUserId, {
+          password: tempPassword,
+          email_confirm: true,
+          user_metadata: metadata
+        });
+        reset = !error;
+      }
+      if (!reset) {
+        const create = await this.supabase.auth.admin.createUser({
+          email: existing.email,
+          password: tempPassword,
+          email_confirm: true,
+          user_metadata: metadata
+        });
+        if (create.error) throw new BadRequestException(create.error.message);
+        authUserId = create.data.user?.id ?? null;
+      }
+    }
+
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        name: input.name,
+        role: "EMPLOYEE",
+        authUserId,
+        employees: { create: { storeId: input.storeId, role: "EMPLOYEE" } }
+      },
+      include: { employees: { where: { storeId: input.storeId, deletedAt: null } } }
+    });
+    const employeeId = updated.employees[0]?.id;
+
+    if (phone && input.consent) {
+      await this.prisma.phoneConsent.create({
+        data: {
+          phone,
+          employeeId,
+          consentedByUserId: user.id,
+          storeId: input.storeId,
+          consentMethod: "owner_attestation_v1",
+          consentText: input.consent.text
+        }
+      });
+    }
+
+    let smsSent = false;
+    let smsError: string | undefined;
+    if (phone) {
+      const result = await this.sms.sendEmployeeWelcome({
+        phone,
+        name: input.name,
+        storeName: store.storeName,
+        tempPassword
+      });
+      smsSent = result.sent;
+      smsError = result.error;
+    }
+
+    let emailSent = false;
+    let emailError: string | undefined;
+    if (email) {
+      const result = await this.email.sendEmployeeWelcome({
+        email,
+        name: input.name,
+        storeName: store.storeName,
+        tempPassword
+      });
+      emailSent = result.sent;
+      emailError = result.error;
+    }
+
+    return {
+      id: updated.id,
+      employeeId,
+      email: email ?? null,
+      phone: phone ?? null,
+      name: updated.name,
+      storeId: input.storeId,
+      tempPassword,
+      invitedViaSupabase: Boolean(this.supabase),
+      smsSent,
+      smsError: smsError ?? null,
+      emailSent,
+      emailError: emailError ?? null,
+      reactivated: true
     };
   }
 
