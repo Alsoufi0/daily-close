@@ -28,6 +28,7 @@ import {
 } from "../api";
 import { Banner, Button, Card } from "../ui";
 import { DateField } from "../components/DateField";
+import { saveDownloadedFile } from "../save-file";
 import { SkeletonRow } from "../ui/Skeleton";
 import { t } from "../i18n";
 import { colors, font, radius, spacing } from "../theme";
@@ -116,16 +117,8 @@ export function ReportsScreen() {
       if (dl.status !== 200) {
         throw new Error(`Download failed (HTTP ${dl.status})`);
       }
-      const canShare = await Sharing.isAvailableAsync();
-      if (canShare) {
-        await Sharing.shareAsync(dl.uri, {
-          mimeType: "application/zip",
-          dialogTitle: t("reports.bulkExport"),
-          UTI: "public.zip-archive"
-        });
-      } else {
-        Alert.alert(t("reports.bulkExport"), t("reports.downloadedTo").replace("{path}", dl.uri));
-      }
+      const result = await saveDownloadedFile(dl.uri, fileName, "application/zip");
+      if (result === "saved") Alert.alert(t("reports.bulkExport"), t("reports.savedToDevice"));
     } catch (err: any) {
       Alert.alert(t("reports.downloadFailed"), err?.message || t("common.tryAgain"));
     } finally {
@@ -152,15 +145,8 @@ export function ReportsScreen() {
       const dest = `${FileSystem.cacheDirectory}${fileName}`;
       const dl = await FileSystem.downloadAsync(url, dest, { headers });
       if (dl.status !== 200) throw new Error(`Download failed (HTTP ${dl.status})`);
-      const canShare = await Sharing.isAvailableAsync();
-      if (canShare) {
-        await Sharing.shareAsync(dl.uri, {
-          mimeType: type === "csv" ? "text/csv" : "application/pdf",
-          dialogTitle: t("common.export")
-        });
-      } else {
-        Alert.alert(t("common.export"), t("reports.downloadedTo").replace("{path}", dl.uri));
-      }
+      const result = await saveDownloadedFile(dl.uri, fileName, type === "csv" ? "text/csv" : "application/pdf");
+      if (result === "saved") Alert.alert(t("common.export"), t("reports.savedToDevice"));
     } catch (err: any) {
       Alert.alert(t("reports.downloadFailed"), err?.message || t("common.tryAgain"));
     } finally {
@@ -177,14 +163,9 @@ export function ReportsScreen() {
       const dest = `${FileSystem.cacheDirectory}${fileName}`;
       const dl = await FileSystem.downloadAsync(r.imageUrl, dest);
       if (dl.status !== 200) throw new Error(`Download failed (HTTP ${dl.status})`);
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(dl.uri, {
-          mimeType: ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg",
-          dialogTitle: t("reports.download")
-        });
-      } else {
-        Alert.alert(t("common.export"), t("reports.downloadedTo").replace("{path}", dl.uri));
-      }
+      const mime = ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg";
+      const result = await saveDownloadedFile(dl.uri, fileName, mime);
+      if (result === "saved") Alert.alert(t("common.export"), t("reports.savedToDevice"));
     } catch (err: any) {
       Alert.alert(t("reports.downloadFailed"), err?.message || t("common.tryAgain"));
     } finally {

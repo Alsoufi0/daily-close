@@ -210,6 +210,7 @@ export const translations: Record<Language, Dictionary> = {
     "reports.exportPdf": "Export PDF",
     "reports.exportAllStores": "Export all stores",
     "reports.download": "Download",
+    "reports.savedToDevice": "Saved to your device.",
     "reports.chooseStore": "Choose store",
     "reports.emptyBody": "Try widening the date range or pick another store.",
     "reports.status": "Status",
