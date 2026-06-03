@@ -17,13 +17,19 @@ export class SubscriptionGuard implements CanActivate {
     const req = context.switchToHttp().getRequest<{ user?: RequestUser }>();
     const user = req.user;
     if (!user) throw new ForbiddenException("Sign in required.");
-    const isManager = Array.isArray(user.managedStoreIds) && user.managedStoreIds.length > 0;
-    if (!user.ownerId || (user.role !== "STORE_OWNER" && !isManager)) {
-      // Plain employees write closes but never set up billing; only owners are
-      // charged. Per-store managers act ON the owner's account, so they ARE
-      // gated by that owner's subscription (below).
+    if (!user.ownerId) {
+      // No owning account in context (e.g. a SUPER_ADMIN, or a brand-new user
+      // with no store assignment yet) — there's no subscription to gate against.
       return true;
     }
+    // Everyone who operates within an owning account is gated by that account's
+    // subscription: the owner, per-store managers, AND plain employees. When the
+    // owner stops paying the whole store is locked — previously plain employees
+    // bypassed this guard, so an unpaid owner's staff could keep submitting
+    // closes. `user.ownerId` for an employee is the owner of their store (set in
+    // getUserFromToken from their primary assignment), so the lock follows the
+    // store they work under. Data is never deleted; access resumes the moment
+    // the owner renews.
     try {
       await this.subscriptions.ensureActiveForOwner(user.ownerId);
       return true;

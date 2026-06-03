@@ -32,12 +32,34 @@ describe("SubscriptionGuard", () => {
     expect(subscriptions.ensureActiveForOwner).toHaveBeenCalledWith("owner-1");
   });
 
-  it("does not block plain employees from closing stores", async () => {
-    const subscriptions = { ensureActiveForOwner: jest.fn() };
+  it("lets plain employees close when their owner's subscription is active", async () => {
+    const subscriptions = { ensureActiveForOwner: jest.fn().mockResolvedValue(undefined) };
     const guard = new SubscriptionGuard(subscriptions as any);
 
     await expect(
       guard.canActivate(contextFor({ role: "EMPLOYEE", ownerId: "owner-1", managedStoreIds: [] }))
+    ).resolves.toBe(true);
+    expect(subscriptions.ensureActiveForOwner).toHaveBeenCalledWith("owner-1");
+  });
+
+  it("blocks plain employees when their owner has not paid (whole store locks)", async () => {
+    const subscriptions = {
+      ensureActiveForOwner: jest.fn().mockRejectedValue({ statusCode: 402 })
+    };
+    const guard = new SubscriptionGuard(subscriptions as any);
+
+    await expect(
+      guard.canActivate(contextFor({ role: "EMPLOYEE", ownerId: "owner-1", managedStoreIds: [] }))
+    ).rejects.toBeInstanceOf(HttpException);
+    expect(subscriptions.ensureActiveForOwner).toHaveBeenCalledWith("owner-1");
+  });
+
+  it("bypasses users with no owning account (e.g. super admin / unassigned)", async () => {
+    const subscriptions = { ensureActiveForOwner: jest.fn() };
+    const guard = new SubscriptionGuard(subscriptions as any);
+
+    await expect(
+      guard.canActivate(contextFor({ role: "SUPER_ADMIN" }))
     ).resolves.toBe(true);
     expect(subscriptions.ensureActiveForOwner).not.toHaveBeenCalled();
   });

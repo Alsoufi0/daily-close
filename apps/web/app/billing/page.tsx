@@ -6,6 +6,7 @@ import { CheckCircle2, CreditCard, Loader2, Sparkles, TimerReset } from "lucide-
 import { useSession } from "../../lib/use-session";
 import { getSubscription, openBillingPortal, startSubscriptionCheckout, SubscriptionView } from "../../lib/api-client";
 import { RequireAuth } from "../../components/require-auth";
+import { isAccountOwner } from "../../lib/session-roles";
 
 const demoSub: SubscriptionView = {
   status: "TRIALING",
@@ -22,8 +23,14 @@ const demoSub: SubscriptionView = {
 };
 
 export default function BillingPage() {
+  // Any signed-in user can land here: owners to manage billing, and
+  // employees/managers when a guarded action 402'd because the owner's plan
+  // lapsed (api-client redirects 402 → /billing). The inner view branches by
+  // role so non-owners get an "ask the owner" notice instead of a checkout
+  // they can't use — and we must NOT restrict roles here, or employees would
+  // be bounced to /close and never see why their close was blocked.
   return (
-    <RequireAuth allowedRoles={["STORE_OWNER", "SUPER_ADMIN"]}>
+    <RequireAuth>
       <BillingPageInner />
     </RequireAuth>
   );
@@ -68,6 +75,12 @@ function BillingPageInner() {
 
   useEffect(() => {
     if (session.mode === "loading") return;
+    // Only account owners have a subscription to load; for employees/managers
+    // /subscriptions/me 403s, so skip the fetch and render the notice below.
+    if (!isAccountOwner(session.profile)) {
+      setLoading(false);
+      return;
+    }
     if (!session.token) {
       setSub(demoSub);
       setLoading(false);
@@ -81,7 +94,15 @@ function BillingPageInner() {
     return () => {
       cancelled = true;
     };
-  }, [session.mode, session.token]);
+  }, [session.mode, session.token, session.profile?.role]);
+
+  // Employees / per-store managers don't manage billing. They only reach this
+  // page when a guarded action 402'd — i.e. the store owner's plan lapsed — so
+  // tell them what's happening and what to do, rather than a checkout they
+  // can't use. (Their data is preserved; access returns when the owner renews.)
+  if (session.mode !== "loading" && !isAccountOwner(session.profile)) {
+    return <EmployeeBillingNotice />;
+  }
 
   if (loading || !sub) {
     return (
@@ -200,6 +221,36 @@ function BillingPageInner() {
         Questions? <Link href="/terms" className="underline">Terms</Link> ·{" "}
         <Link href="/privacy" className="underline">Privacy</Link>
       </p>
+    </main>
+  );
+}
+
+function EmployeeBillingNotice() {
+  return (
+    <main className="mx-auto w-full max-w-2xl px-4 py-10 sm:px-6">
+      <div className="rounded-2xl border border-warning/40 bg-red-50 p-6 shadow-sm">
+        <p className="flex items-center gap-2 text-sm font-black uppercase tracking-wide text-warning">
+          <TimerReset size={16} /> Store plan paused
+        </p>
+        <h1 className="mt-2 text-2xl font-black tracking-tight">Billing is managed by the store owner</h1>
+        <p className="mt-3 text-base font-bold text-ink/70">
+          If a close was just blocked, this store&apos;s subscription has lapsed — please ask
+          the store owner to renew it. You won&apos;t be able to submit closes until the plan
+          is active again.
+        </p>
+        <p className="mt-2 text-base font-bold text-ink/70">
+          Nothing is lost: all of your closes and data are safe and will be right here once
+          the owner reactivates the plan.
+        </p>
+        <div className="mt-5">
+          <Link
+            href="/close"
+            className="focus-ring inline-flex h-12 items-center gap-2 rounded-lg bg-leaf px-4 font-black text-white"
+          >
+            Back to closing
+          </Link>
+        </div>
+      </div>
     </main>
   );
 }
