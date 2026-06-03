@@ -230,6 +230,22 @@ function StoreFormModal({
       setFormError(t("admin.closeTimeInvalid"));
       return;
     }
+    // Mirror web: adding a store updates the monthly bill, so confirm the
+    // billing impact before creating it.
+    if (mode === "create") {
+      const ok = await new Promise<boolean>((resolve) => {
+        Alert.alert(
+          t("admin.newStore"),
+          t("admin.addStoreBillingConfirm"),
+          [
+            { text: t("common.cancel"), style: "cancel", onPress: () => resolve(false) },
+            { text: t("admin.createStore"), onPress: () => resolve(true) }
+          ],
+          { onDismiss: () => resolve(false) }
+        );
+      });
+      if (!ok) return;
+    }
     setSubmitting(true);
     setFormError(null);
     try {
