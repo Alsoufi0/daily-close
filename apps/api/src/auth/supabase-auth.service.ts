@@ -550,8 +550,22 @@ export class SupabaseAuthService {
   }
 
   private async findUserByPhone(phone: string): Promise<{ id: string; email: string; authUserId: string | null } | null> {
+    // Only return an account that can actually sign in. A phone can match
+    // several synthetic-email candidates (both digit variants × the owners/
+    // invites namespaces), and historical or half-provisioned rows can carry a
+    // null authUserId (a Supabase auth-user create that failed, or a users row
+    // left behind after remove()). Such rows can't authenticate, so a plain
+    // findFirst that happened to return one made phone login/reset wrongly
+    // report "no account uses this number" even when a valid account existed.
+    // Filter those out and order deterministically, preferring the higher-
+    // privilege identity (SUPER_ADMIN > STORE_OWNER > EMPLOYEE) when a single
+    // number maps to more than one signable account.
     return this.prisma.user.findFirst({
-      where: { email: { in: syntheticPhoneEmailCandidates(phone) } },
+      where: {
+        email: { in: syntheticPhoneEmailCandidates(phone) },
+        authUserId: { not: null }
+      },
+      orderBy: [{ role: "asc" }, { createdAt: "asc" }],
       select: { id: true, email: true, authUserId: true }
     });
   }
