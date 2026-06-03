@@ -190,7 +190,7 @@ export default function SignupPage() {
             </form>
           ) : (
             <Link
-              href="/"
+              href="/login"
               className="focus-ring mt-5 inline-flex h-12 items-center justify-center gap-2 rounded-lg border-2 border-ink/15 bg-white px-5 font-black text-ink"
             >
               Back to sign in
@@ -326,7 +326,7 @@ export default function SignupPage() {
 
         <p className="mt-4 text-center text-sm font-bold text-ink/65">
           {t("auth.alreadyHaveAccount")}{" "}
-          <Link href="/" className="text-leaf underline">
+          <Link href="/login" className="text-leaf underline">
             {t("auth.signIn")}
           </Link>
         </p>
