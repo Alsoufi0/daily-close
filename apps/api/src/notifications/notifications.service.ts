@@ -1,6 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { RequestUser } from "../auth/request-user";
+import { normalizePhone } from "../common/phone";
 
 @Injectable()
 export class NotificationsService {
@@ -60,7 +61,7 @@ export class NotificationsService {
     if (user.role !== "STORE_OWNER" || !user.ownerId) {
       throw new ForbiddenException("Only owners can manage WhatsApp settings.");
     }
-    const cleanPhone = input.whatsappPhone ? this.normalizePhone(input.whatsappPhone) : null;
+    const cleanPhone = input.whatsappPhone ? normalizePhone(input.whatsappPhone) : null;
     if ((input.whatsappAlertsEnabled || input.whatsappCloseAlertsEnabled || input.whatsappReportsEnabled) && !cleanPhone) {
       throw new BadRequestException("Enter a WhatsApp phone number before turning on WhatsApp messages.");
     }
@@ -192,13 +193,4 @@ export class NotificationsService {
     };
   }
 
-  private normalizePhone(input: string): string {
-    const trimmed = input.trim();
-    const digits = trimmed.replace(/[^\d+]/g, "");
-    const e164 = digits.startsWith("+") ? digits : `+${digits.replace(/[^\d]/g, "")}`;
-    if (!/^\+\d{8,15}$/.test(e164)) {
-      throw new BadRequestException("Enter the phone number with country code, like +15551234567.");
-    }
-    return e164;
-  }
 }

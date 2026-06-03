@@ -3,6 +3,11 @@ import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { createHash, randomBytes, randomInt } from "crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import { RequestUser } from "./request-user";
+import {
+  normalizePhone,
+  syntheticPhoneEmail,
+  syntheticPhoneEmailCandidates
+} from "../common/phone";
 
 interface CachedUser {
   user: RequestUser;
@@ -279,8 +284,8 @@ export class SupabaseAuthService {
   }): Promise<{ email: string; phone: string | null; name: string; ownerId: string }> {
     if (!this.supabase) throw new UnauthorizedException("Supabase is not configured.");
 
-    const phone = input.phone ? this.normalizePhone(input.phone) : undefined;
-    const email = input.email?.trim().toLowerCase() || (phone ? this.syntheticPhoneEmail(phone, "owners") : "");
+    const phone = input.phone ? normalizePhone(input.phone) : undefined;
+    const email = input.email?.trim().toLowerCase() || (phone ? syntheticPhoneEmail(phone, "owners") : "");
     const name = input.name.trim();
     if (!email && !phone) throw new BadRequestException("Enter an email or phone number.");
     if (input.email && !email.includes("@")) throw new BadRequestException("Enter a valid email.");
@@ -335,7 +340,7 @@ export class SupabaseAuthService {
 
   async requestPhonePasswordReset(input: { phone?: string }): Promise<{ sent: boolean; message: string }> {
     if (!this.supabase) throw new UnauthorizedException("Supabase is not configured.");
-    const phone = this.normalizePhone(input.phone || "");
+    const phone = normalizePhone(input.phone || "");
     const user = await this.findUserByPhone(phone);
     if (!user?.authUserId) {
       // Same outward response as success to avoid phone-number enumeration.
@@ -383,7 +388,7 @@ export class SupabaseAuthService {
     password?: string;
   }): Promise<{ reset: true }> {
     if (!this.supabase) throw new UnauthorizedException("Supabase is not configured.");
-    const phone = this.normalizePhone(input.phone || "");
+    const phone = normalizePhone(input.phone || "");
     const code = String(input.code || "").replace(/\D/g, "");
     const password = input.password || "";
     if (code.length !== 6) throw new BadRequestException("Enter the 6 digit code.");
@@ -437,7 +442,7 @@ export class SupabaseAuthService {
 
   async requestPhoneLogin(input: { phone?: string }): Promise<{ sent: boolean; message: string }> {
     if (!this.supabase) throw new UnauthorizedException("Supabase is not configured.");
-    const phone = this.normalizePhone(input.phone || "");
+    const phone = normalizePhone(input.phone || "");
     const user = await this.findUserByPhone(phone);
     if (!user?.authUserId) {
       throw new BadRequestException("No Daily Close account uses this phone yet. Use Get Started or ask the owner to invite this number.");
@@ -483,7 +488,7 @@ export class SupabaseAuthService {
     code?: string;
   }): Promise<{ tokenHash: string; type: "magiclink" }> {
     if (!this.supabase) throw new UnauthorizedException("Supabase is not configured.");
-    const phone = this.normalizePhone(input.phone || "");
+    const phone = normalizePhone(input.phone || "");
     const code = String(input.code || "").replace(/\D/g, "");
     if (code.length !== 6) throw new BadRequestException("Enter the 6 digit code.");
 
@@ -536,25 +541,17 @@ export class SupabaseAuthService {
     const emails: string[] = [];
     if (user.email) emails.push(user.email.toLowerCase());
     if (user.phone) {
-      const phone = this.normalizePhone(user.phone);
-      emails.push(this.syntheticPhoneEmail(phone, "owners"));
-      emails.push(this.syntheticPhoneEmail(phone, "invites"));
+      // Match every synthetic-email variant this phone could have been stored
+      // under (both namespaces + 10-digit vs 1+10-digit), so an account whose
+      // invite predates phone normalization still resolves from its token.
+      emails.push(...syntheticPhoneEmailCandidates(normalizePhone(user.phone)));
     }
     return Array.from(new Set(emails));
   }
 
-  private syntheticPhoneEmail(phone: string, namespace: "owners" | "invites"): string {
-    return `phone_${phone.replace(/\D/g, "")}@${namespace}.dailyclose.local`;
-  }
-
   private async findUserByPhone(phone: string): Promise<{ id: string; email: string; authUserId: string | null } | null> {
     return this.prisma.user.findFirst({
-      where: {
-        OR: [
-          { email: this.syntheticPhoneEmail(phone, "owners") },
-          { email: this.syntheticPhoneEmail(phone, "invites") }
-        ]
-      },
+      where: { email: { in: syntheticPhoneEmailCandidates(phone) } },
       select: { id: true, email: true, authUserId: true }
     });
   }
@@ -695,14 +692,6 @@ export class SupabaseAuthService {
     const trimmed = phone.trim();
     const e164 = trimmed.startsWith("+") ? trimmed : `+${trimmed.replace(/[^\d]/g, "")}`;
     return `whatsapp:${e164}`;
-  }
-
-  private normalizePhone(input: string): string {
-    const clean = input.trim().replace(/[^\d+]/g, "");
-    if (!/^\+[1-9]\d{7,14}$/.test(clean)) {
-      throw new BadRequestException("Enter the phone number with country code, like +15551234567.");
-    }
-    return clean;
   }
 
   /**

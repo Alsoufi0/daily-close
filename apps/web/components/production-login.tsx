@@ -23,8 +23,27 @@ const FEATURES = [
   { icon: BadgeCheck, titleKey: "home.featureBooksTitle", bodyKey: "home.featureBooksBody" }
 ];
 
-function syntheticPhoneEmail(phone: string, namespace: "owners" | "invites") {
-  return `phone_${phone.replace(/\D/g, "")}@${namespace}.dailyclose.local`;
+// Mirror the API's phone handling (apps/api/src/common/phone.ts) so a bare US
+// number typed on the sign-in form resolves to the SAME synthetic email the
+// account was provisioned under. We try every digit variant (10-digit vs
+// 1+10-digit) in both namespaces so accounts created before phone
+// normalization still sign in.
+function phoneDigitVariants(raw: string): string[] {
+  const digits = raw.replace(/\D/g, "");
+  const variants = new Set<string>();
+  if (digits) variants.add(digits);
+  if (digits.length === 10) variants.add(`1${digits}`);
+  if (digits.length === 11 && digits.startsWith("1")) variants.add(digits.slice(1));
+  return Array.from(variants);
+}
+
+function syntheticPhoneEmailCandidates(raw: string): string[] {
+  const out: string[] = [];
+  for (const digits of phoneDigitVariants(raw)) {
+    out.push(`phone_${digits}@owners.dailyclose.local`);
+    out.push(`phone_${digits}@invites.dailyclose.local`);
+  }
+  return out;
 }
 
 export function ProductionLogin() {
@@ -71,10 +90,7 @@ export function ProductionLogin() {
       session = result.data.session;
       error = result.error;
     } else {
-      for (const candidate of [
-        syntheticPhoneEmail(phone.trim(), "owners"),
-        syntheticPhoneEmail(phone.trim(), "invites")
-      ]) {
+      for (const candidate of syntheticPhoneEmailCandidates(phone.trim())) {
         const result = await supabase.auth.signInWithPassword({ email: candidate, password });
         session = result.data.session;
         error = result.error;
