@@ -332,9 +332,16 @@ export async function uploadReport(
   fileName = "pos-report.jpg",
   contentType = "image/jpeg"
 ): Promise<ParsedPOSReport> {
+  // The API's storage + OCR pipeline expect a data: URL (that's what the web
+  // app sends). expo-image-manipulator returns RAW base64, so wrap it — without
+  // the data: prefix the OCR step tries to fetch() the raw base64 as a URL,
+  // fails, and OCR comes back empty (the "always zeros" bug).
+  const dataUrl = base64Data.startsWith("data:")
+    ? base64Data
+    : `data:${contentType};base64,${base64Data}`;
   return apiFetch<ParsedPOSReport>("/daily-close/upload-report", {
     method: "POST",
-    body: JSON.stringify({ storeId, fileName, contentType, base64Data })
+    body: JSON.stringify({ storeId, fileName, contentType, base64Data: dataUrl })
   });
 }
 
