@@ -38,7 +38,7 @@ const EXPENSE_CATEGORIES = [
   { value: "Supplies", labelKey: "closing.expenseSupplies" },
   { value: "Lottery payout", labelKey: "closing.expenseLottery" },
   { value: "Repair", labelKey: "closing.expenseRepair" },
-  { value: "Refund", labelKey: "closing.expenseRefund" },
+  { value: "Check", labelKey: "closing.expenseCheck" },
   { value: "Cash paid out", labelKey: "closing.expenseCashPaidOut" },
   { value: "Other", labelKey: "closing.expenseOther" }
 ] as const;

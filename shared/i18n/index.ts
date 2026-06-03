@@ -143,7 +143,7 @@ export const translations: Record<Language, Dictionary> = {
     "closing.expenseSupplies": "Supplies",
     "closing.expenseLottery": "Lottery payout",
     "closing.expenseRepair": "Repair",
-    "closing.expenseRefund": "Refund",
+    "closing.expenseCheck": "Check",
     "closing.expenseCashPaidOut": "Cash paid out",
     "closing.expenseOther": "Other",
     "receipts.title": "Receipts",
