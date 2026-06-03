@@ -20,6 +20,7 @@ import { Alert } from "react-native";
 import { formatMoney, formatMoneyExact } from "@smokeshop/shared/utils/money";
 import {
   getReceiptsZipDownloadInfo,
+  getReportExportDownloadInfo,
   listReceipts,
   listStores,
   ReceiptRow,
@@ -47,6 +48,8 @@ export function ReportsScreen() {
   const [openReceipt, setOpenReceipt] = useState<ReceiptRow | null>(null);
   const [downloadingZip, setDownloadingZip] = useState(false);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [exporting, setExporting] = useState<"csv" | "pdf" | null>(null);
+  const [allStores, setAllStores] = useState(false);
 
   // Initial: load stores, pre-select first
   useEffect(() => {
@@ -128,6 +131,41 @@ export function ReportsScreen() {
     }
   }
 
+  async function downloadExport(type: "csv" | "pdf") {
+    if (!allStores && !storeId) return;
+    setExporting(type);
+    try {
+      // Always send explicit yyyy-MM-dd dates. A blank date makes the backend
+      // default to "today", which silently exports an empty report — so blank
+      // here means "all history → today", not nothing.
+      const today = new Date().toISOString().slice(0, 10);
+      const exFrom = from && DATE_REGEX.test(from) ? from : "2020-01-01";
+      const exTo = to && DATE_REGEX.test(to) ? to : today;
+      const { url, headers } = await getReportExportDownloadInfo(type, {
+        storeId: allStores ? undefined : storeId,
+        from: exFrom,
+        to: exTo
+      });
+      const fileName = `daily-close-${exFrom}_${exTo}.${type}`;
+      const dest = `${FileSystem.cacheDirectory}${fileName}`;
+      const dl = await FileSystem.downloadAsync(url, dest, { headers });
+      if (dl.status !== 200) throw new Error(`Download failed (HTTP ${dl.status})`);
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(dl.uri, {
+          mimeType: type === "csv" ? "text/csv" : "application/pdf",
+          dialogTitle: t("common.export")
+        });
+      } else {
+        Alert.alert(t("common.export"), t("reports.downloadedTo").replace("{path}", dl.uri));
+      }
+    } catch (err: any) {
+      Alert.alert(t("reports.downloadFailed"), err?.message || t("common.tryAgain"));
+    } finally {
+      setExporting(null);
+    }
+  }
+
   const selectedStore = useMemo(() => stores.find((s) => s.id === storeId), [stores, storeId]);
   const visibleReceipts = receipts.slice(0, visibleCount);
   const hasMore = visibleCount < receipts.length;
@@ -200,6 +238,34 @@ export function ReportsScreen() {
               onPress={downloadZip}
               loading={downloadingZip}
               disabled={downloadingZip || !storeId}
+            />
+          </View>
+        </View>
+
+        <TouchableOpacity onPress={() => setAllStores((v) => !v)} style={s.allStoresRow}>
+          <View style={[s.checkbox, allStores && s.checkboxOn]}>
+            {allStores ? <Text style={s.checkboxMark}>✓</Text> : null}
+          </View>
+          <Text style={s.allStoresLabel}>{t("reports.exportAllStores")}</Text>
+        </TouchableOpacity>
+
+        <View style={{ flexDirection: "row", gap: spacing.sm }}>
+          <View style={{ flex: 1 }}>
+            <Button
+              title={exporting === "csv" ? t("common.downloading") : t("reports.exportCsv")}
+              variant="secondary"
+              onPress={() => downloadExport("csv")}
+              loading={exporting === "csv"}
+              disabled={!!exporting || (!allStores && !storeId)}
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Button
+              title={exporting === "pdf" ? t("common.downloading") : t("reports.exportPdf")}
+              variant="secondary"
+              onPress={() => downloadExport("pdf")}
+              loading={exporting === "pdf"}
+              disabled={!!exporting || (!allStores && !storeId)}
             />
           </View>
         </View>
@@ -398,5 +464,13 @@ const s = StyleSheet.create({
     paddingVertical: spacing.md, alignItems: "center", marginTop: spacing.sm,
     backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md
   },
-  showMoreText: { color: colors.leaf, fontWeight: font.black, fontSize: 14 }
+  showMoreText: { color: colors.leaf, fontWeight: font.black, fontSize: 14 },
+  allStoresRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginTop: spacing.xs },
+  checkbox: {
+    width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: colors.inputBorder,
+    alignItems: "center", justifyContent: "center", backgroundColor: colors.white
+  },
+  checkboxOn: { backgroundColor: colors.leaf, borderColor: colors.leaf },
+  checkboxMark: { color: colors.white, fontWeight: font.black, fontSize: 14 },
+  allStoresLabel: { color: colors.ink, fontWeight: font.bold, fontSize: 14 }
 });

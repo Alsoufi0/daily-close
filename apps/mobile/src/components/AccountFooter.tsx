@@ -62,10 +62,6 @@ export function AccountFooter({
         </TouchableOpacity>
       ) : null}
 
-      <TouchableOpacity onPress={onSignOut} style={s.signOutRow}>
-        <Text style={s.signOutLabel}>Sign out</Text>
-      </TouchableOpacity>
-
       <TouchableOpacity
         onPress={confirmDelete}
         disabled={deleting}

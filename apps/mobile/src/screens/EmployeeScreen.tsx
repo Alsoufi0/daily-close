@@ -41,7 +41,7 @@ const EXPENSE_CATEGORIES = [
   { value: "Supplies", labelKey: "closing.expenseSupplies" },
   { value: "Lottery payout", labelKey: "closing.expenseLottery" },
   { value: "Repair", labelKey: "closing.expenseRepair" },
-  { value: "Refund", labelKey: "closing.expenseRefund" },
+  { value: "Check", labelKey: "closing.expenseCheck" },
   { value: "Cash paid out", labelKey: "closing.expenseCashPaidOut" },
   { value: "Other", labelKey: "closing.expenseOther" }
 ] as const;
@@ -92,7 +92,7 @@ export function EmployeeScreen({ onSignOut }: { onSignOut: () => void }) {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [report, setReport] = useState<ParsedPOSReport>(initialReport);
-  const [cashCounted, setCashCounted] = useState("2390");
+  const [cashCounted, setCashCounted] = useState("");
   const [safeDrop, setSafeDrop] = useState("0");
   const [expenseItems, setExpenseItems] = useState<ExpenseRow[]>([]);
   const [notes, setNotes] = useState("");
@@ -265,7 +265,7 @@ export function EmployeeScreen({ onSignOut }: { onSignOut: () => void }) {
       const processed = await ImageManipulator.manipulateAsync(
         asset.uri,
         [{ resize }],
-        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+        { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG, base64: true }
       );
       if (!processed.base64) throw new Error(t("closing.uploadFailedBody"));
 
@@ -343,7 +343,7 @@ export function EmployeeScreen({ onSignOut }: { onSignOut: () => void }) {
   function reset() {
     setStep("start");
     setReport(initialReport);
-    setCashCounted("2390");
+    setCashCounted("");
     setSafeDrop("0");
     setExpenseItems([]);
     setNotes("");
@@ -607,7 +607,6 @@ export function EmployeeScreen({ onSignOut }: { onSignOut: () => void }) {
             </View>
           ) : null}
         </Card>
-        <AccountFooter role="employee" onSignOut={onSignOut} />
       </ScrollView>
 
       {/* Store picker sheet — surfaces when the user taps the

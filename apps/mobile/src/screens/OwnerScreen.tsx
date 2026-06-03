@@ -295,8 +295,6 @@ export function OwnerScreen({ onSignOut }: { onSignOut: () => void }) {
             <Text style={s.viewAllArrow}>→</Text>
           </TouchableOpacity>
         ) : null}
-
-        <AccountFooter role="owner" onSignOut={onSignOut} />
       </ScrollView>
     </View>
   );

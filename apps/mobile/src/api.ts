@@ -6,6 +6,7 @@ import type {
   SessionProfile
 } from "@smokeshop/shared/types";
 import * as SecureStore from "expo-secure-store";
+import { supabase } from "./supabase";
 
 const apiUrl = process.env.EXPO_PUBLIC_API_URL;
 const tokenKey = "dailyclose-token";
@@ -32,6 +33,20 @@ export async function saveToken(token: string) {
 }
 
 export async function getToken() {
+  // Prefer the live Supabase session: getSession() auto-refreshes an expired
+  // access token (as long as the refresh token is valid), so a long-running app
+  // session never sends a stale JWT — which was causing "Invalid session / 401"
+  // upload failures after the app sat open for a while. Fall back to the token
+  // cached in SecureStore if Supabase isn't available.
+  try {
+    if (supabase) {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (token) return token;
+    }
+  } catch {
+    /* fall through to the stored token */
+  }
   return SecureStore.getItemAsync(tokenKey);
 }
 
@@ -286,6 +301,27 @@ export async function getReceiptsZipDownloadInfo(filters: {
   if (filters.to) params.set("to", filters.to);
   return {
     url: `${apiUrl}/reports/receipts/download?${params.toString()}`,
+    headers: { Authorization: `Bearer ${token}` }
+  };
+}
+
+// CSV/PDF close-report export. storeId is optional — omit it to export ALL the
+// owner's stores. Dates are REQUIRED and explicit (yyyy-MM-dd): the backend
+// treats a missing date as "today", which would silently export an empty report.
+export async function getReportExportDownloadInfo(
+  type: "csv" | "pdf",
+  filters: { storeId?: string; from: string; to: string }
+): Promise<{ url: string; headers: Record<string, string> }> {
+  const token = await getToken();
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL;
+  if (!apiUrl) throw new Error("API URL not configured.");
+  if (!token) throw new Error("Not signed in.");
+  const params = new URLSearchParams();
+  if (filters.storeId) params.set("storeId", filters.storeId);
+  params.set("from", filters.from);
+  params.set("to", filters.to);
+  return {
+    url: `${apiUrl}/reports/export.${type}?${params.toString()}`,
     headers: { Authorization: `Bearer ${token}` }
   };
 }
