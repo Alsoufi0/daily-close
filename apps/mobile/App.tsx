@@ -8,7 +8,7 @@ import * as Sentry from "@sentry/react-native";
 import { LoginScreen } from "./src/screens/LoginScreen";
 import { AppDrawer } from "./src/navigation/AppDrawer";
 import { ErrorBoundary } from "./src/components/ErrorBoundary";
-import { setMobileLanguage } from "./src/i18n";
+import { setMobileLanguage, onLanguageChange } from "./src/i18n";
 import { colors } from "./src/theme";
 import { clearToken, registerOutboxHandlers } from "./src/api";
 import { drainOnce } from "./src/outbox";
@@ -55,6 +55,10 @@ function App() {
   // "checking" is a brief boot frame so we don't flash the login screen
   // before reading the persisted Supabase session.
   const [authState, setAuthState] = useState<AuthState>(supabase ? "checking" : "out");
+  // Re-render the whole app when the language changes so every screen (and the
+  // drawer) re-translates immediately — no app restart needed.
+  const [, bumpLang] = useState(0);
+  useEffect(() => onLanguageChange(() => bumpLang((v) => v + 1)), []);
 
   useEffect(() => {
     if (!supabase) return;

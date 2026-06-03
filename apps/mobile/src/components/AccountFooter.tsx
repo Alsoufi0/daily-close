@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Alert, Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { clearToken, deleteMyAccount } from "../api";
+import { t } from "../i18n";
 import { colors, font, radius, spacing } from "../theme";
 
 /**
@@ -31,12 +32,12 @@ export function AccountFooter({
 
   function confirmDelete() {
     Alert.alert(
-      "Delete your account?",
-      "Permanently removes your sign-in, cancels any active subscription, and detaches your stores. This can't be undone.",
+      t("account.deleteSection"),
+      t("account.deleteIntro"),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Delete",
+          text: t("common.delete"),
           style: "destructive",
           onPress: async () => {
             setDeleting(true);
@@ -46,7 +47,7 @@ export function AccountFooter({
               onSignOut();
             } catch (err: any) {
               setDeleting(false);
-              Alert.alert("Couldn't delete account", err?.message || "Try again.");
+              Alert.alert(t("account.deleteFailed"), err?.message || t("common.tryAgain"));
             }
           }
         }
@@ -67,7 +68,7 @@ export function AccountFooter({
         disabled={deleting}
         style={[s.dangerRow, deleting && { opacity: 0.5 }]}
       >
-        <Text style={s.dangerLabel}>{deleting ? "Deleting…" : "Delete account"}</Text>
+        <Text style={s.dangerLabel}>{deleting ? `${t("account.deleteSection")}…` : t("account.deleteSection")}</Text>
       </TouchableOpacity>
     </View>
   );

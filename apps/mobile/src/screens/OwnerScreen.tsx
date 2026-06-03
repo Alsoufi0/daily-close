@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   RefreshControl,
@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import type { DrawerNavigationProp } from "@react-navigation/drawer";
 import { formatMoney, formatMoneyExact } from "@smokeshop/shared/utils/money";
 import type { OwnerDashboardSummary } from "@smokeshop/shared/types";
@@ -62,9 +62,16 @@ export function OwnerScreen({ onSignOut }: { onSignOut: () => void }) {
     }
   }, []);
 
-  useEffect(() => {
-    load(true);
-  }, [load]);
+  // Reload every time the dashboard gains focus, so finishing a close and
+  // returning here shows fresh numbers without a manual refresh. First focus
+  // shows the skeleton; later focuses refresh silently.
+  const firstFocus = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      load(firstFocus.current);
+      firstFocus.current = false;
+    }, [load])
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

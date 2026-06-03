@@ -25,6 +25,7 @@ import { AccountFooter } from "../components/AccountFooter";
 import { OfflineBanner } from "../components/OfflineBanner";
 import { useSession } from "../use-session";
 import { Banner, Button, Card, MetricCard, MoneyInput, StepProgress } from "../ui";
+import { DateField } from "../components/DateField";
 import { colors, font, radius, spacing } from "../theme";
 import { t } from "../i18n";
 
@@ -96,6 +97,15 @@ export function EmployeeScreen({ onSignOut }: { onSignOut: () => void }) {
   const [safeDrop, setSafeDrop] = useState("0");
   const [expenseItems, setExpenseItems] = useState<ExpenseRow[]>([]);
   const [notes, setNotes] = useState("");
+  // The business date the close is filed under. Defaults to the smart-suggested
+  // store-local day, but the user confirms/changes it at the Finish step (#2).
+  const [businessDate, setBusinessDate] = useState("");
+
+  function goBack() {
+    setStep((sCur) =>
+      sCur === "sales" ? "upload" : sCur === "cash" ? "sales" : sCur === "expenses" ? "cash" : sCur
+    );
+  }
 
   const expensesTotal = useMemo(
     () => expenseItems.reduce((sum, item) => sum + toMoney(item.amount), 0),
@@ -288,12 +298,12 @@ export function EmployeeScreen({ onSignOut }: { onSignOut: () => void }) {
       // the web close flow via the shared helpers.
       const tz = (activeStore as { timezone?: string }).timezone;
       const closeTime = (activeStore as { closeTime?: string }).closeTime;
-      const businessDate = suggestBusinessDate({ timezone: tz, closeTime });
+      const dateForClose = businessDate || suggestBusinessDate({ timezone: tz, closeTime });
       await finishClose(
         {
           storeId: activeStore.id,
           employeeId,
-          date: storeLocalDateToUtcNoon(businessDate, tz),
+          date: storeLocalDateToUtcNoon(dateForClose, tz),
           cashSales: report.cashSales,
           cardSales: report.cardSales,
           totalSales: report.totalSales,
@@ -394,7 +404,14 @@ export function EmployeeScreen({ onSignOut }: { onSignOut: () => void }) {
         ) : null}
 
         <Card style={{ gap: spacing.md }}>
-          <Text style={s.title}>{t(STEP_TITLE_KEYS[step])}</Text>
+          <View style={s.titleRow}>
+            {step === "sales" || step === "cash" || step === "expenses" ? (
+              <Pressable onPress={goBack} hitSlop={8} style={s.backBtn} accessibilityLabel={t("common.back")}>
+                <Text style={s.backIcon}>←</Text>
+              </Pressable>
+            ) : null}
+            <Text style={s.title}>{t(STEP_TITLE_KEYS[step])}</Text>
+          </View>
 
           {step === "start" ? (
             <>
@@ -584,6 +601,18 @@ export function EmployeeScreen({ onSignOut }: { onSignOut: () => void }) {
                 placeholderTextColor={colors.inkMuted}
                 multiline
               />
+              <DateField
+                label={t("closing.businessDate")}
+                value={
+                  businessDate ||
+                  suggestBusinessDate({
+                    timezone: (activeStore as { timezone?: string }).timezone,
+                    closeTime: (activeStore as { closeTime?: string }).closeTime
+                  })
+                }
+                onChange={setBusinessDate}
+                maximumDate={new Date()}
+              />
               <Button title={t("closing.finish")} variant="dark" loading={submitting} onPress={submit} />
             </>
           ) : null}
@@ -651,6 +680,9 @@ export function EmployeeScreen({ onSignOut }: { onSignOut: () => void }) {
 }
 
 const s = StyleSheet.create({
+  titleRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  backBtn: { width: 32, height: 32, borderRadius: radius.md, backgroundColor: colors.smoke, alignItems: "center", justifyContent: "center" },
+  backIcon: { color: colors.ink, fontWeight: font.black, fontSize: 20 },
   content: { padding: spacing.lg, gap: spacing.md, paddingBottom: 40 },
   contextBar: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border },
   contextTitle: { color: colors.ink, fontWeight: font.black, fontSize: 16 },

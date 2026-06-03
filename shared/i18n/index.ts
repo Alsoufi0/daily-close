@@ -80,6 +80,7 @@ export const translations: Record<Language, Dictionary> = {
     "closing.expenses": "Add Expenses",
     "closing.netProfit": "Net Profit",
     "closing.finish": "Finish Closing",
+    "closing.businessDate": "Business date",
     "closing.ready": "Ready to close?",
     "closing.employeeView": "Employee view",
     "closing.followSteps": "Follow one simple step at a time.",
@@ -208,6 +209,7 @@ export const translations: Record<Language, Dictionary> = {
     "reports.exportCsv": "Export CSV",
     "reports.exportPdf": "Export PDF",
     "reports.exportAllStores": "Export all stores",
+    "reports.download": "Download",
     "reports.chooseStore": "Choose store",
     "reports.emptyBody": "Try widening the date range or pick another store.",
     "reports.status": "Status",
@@ -1048,6 +1050,7 @@ const productionTranslations: Record<Language, Dictionary> = {
 const supplementalTranslations: Record<Language, Dictionary> = {
   en: {
     "common.back": "Back",
+    "common.clear": "Clear",
     "common.remove": "Remove",
     "common.showMore": "Show more",
     "common.showLess": "Show less",

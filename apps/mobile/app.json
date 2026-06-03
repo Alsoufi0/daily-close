@@ -24,7 +24,12 @@
         "NSCameraUsageDescription": "Employees take a photo of the POS report to fill daily closing numbers.",
         "NSPhotoLibraryUsageDescription": "Employees can upload a POS report image from their phone.",
         "ITSAppUsesNonExemptEncryption": false,
-        "CFBundleLocalizations": ["en", "es", "ar", "hi"]
+        "CFBundleLocalizations": [
+          "en",
+          "es",
+          "ar",
+          "hi"
+        ]
       }
     },
     "locales": {
@@ -56,7 +61,8 @@
             "kotlinVersion": "1.9.25"
           }
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "extra": {
       "eas": {

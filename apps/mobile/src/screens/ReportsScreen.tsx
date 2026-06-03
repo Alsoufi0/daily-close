@@ -27,6 +27,7 @@ import {
   StoreRecord
 } from "../api";
 import { Banner, Button, Card } from "../ui";
+import { DateField } from "../components/DateField";
 import { SkeletonRow } from "../ui/Skeleton";
 import { t } from "../i18n";
 import { colors, font, radius, spacing } from "../theme";
@@ -50,6 +51,7 @@ export function ReportsScreen() {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [exporting, setExporting] = useState<"csv" | "pdf" | null>(null);
   const [allStores, setAllStores] = useState(false);
+  const [downloadingReceipt, setDownloadingReceipt] = useState(false);
 
   // Initial: load stores, pre-select first
   useEffect(() => {
@@ -166,6 +168,30 @@ export function ReportsScreen() {
     }
   }
 
+  async function downloadReceiptImage(r: ReceiptRow) {
+    if (!r.imageUrl) return;
+    setDownloadingReceipt(true);
+    try {
+      const ext = (r.imageUrl.match(/\.(jpe?g|png|webp)(\?|$)/i)?.[1] || "jpg").toLowerCase();
+      const fileName = `receipt-${r.closeDate}-${r.id}.${ext}`;
+      const dest = `${FileSystem.cacheDirectory}${fileName}`;
+      const dl = await FileSystem.downloadAsync(r.imageUrl, dest);
+      if (dl.status !== 200) throw new Error(`Download failed (HTTP ${dl.status})`);
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(dl.uri, {
+          mimeType: ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg",
+          dialogTitle: t("reports.download")
+        });
+      } else {
+        Alert.alert(t("common.export"), t("reports.downloadedTo").replace("{path}", dl.uri));
+      }
+    } catch (err: any) {
+      Alert.alert(t("reports.downloadFailed"), err?.message || t("common.tryAgain"));
+    } finally {
+      setDownloadingReceipt(false);
+    }
+  }
+
   const selectedStore = useMemo(() => stores.find((s) => s.id === storeId), [stores, storeId]);
   const visibleReceipts = receipts.slice(0, visibleCount);
   const hasMore = visibleCount < receipts.length;
@@ -202,27 +228,21 @@ export function ReportsScreen() {
 
         <View style={s.dateRow}>
           <View style={{ flex: 1 }}>
-            <Text style={s.label}>{t("reports.from")}</Text>
-            <TextInput
+            <DateField
+              label={t("reports.from")}
               value={from}
-              onChangeText={setFrom}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor={colors.inkMuted}
-              style={s.dateInput}
-              autoCapitalize="none"
-              maxLength={10}
+              onChange={setFrom}
+              onClear={() => setFrom("")}
+              maximumDate={new Date()}
             />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={s.label}>{t("reports.to")}</Text>
-            <TextInput
+            <DateField
+              label={t("reports.to")}
               value={to}
-              onChangeText={setTo}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor={colors.inkMuted}
-              style={s.dateInput}
-              autoCapitalize="none"
-              maxLength={10}
+              onChange={setTo}
+              onClear={() => setTo("")}
+              maximumDate={new Date()}
             />
           </View>
         </View>
@@ -371,6 +391,15 @@ export function ReportsScreen() {
                 source={{ uri: openReceipt.imageUrl }}
                 style={{ width: "100%", aspectRatio: 0.75, borderRadius: radius.md, backgroundColor: colors.smoke }}
                 resizeMode="contain"
+              />
+            ) : null}
+            {openReceipt?.imageUrl ? (
+              <Button
+                title={downloadingReceipt ? t("common.downloading") : t("reports.download")}
+                variant="secondary"
+                onPress={() => openReceipt && downloadReceiptImage(openReceipt)}
+                loading={downloadingReceipt}
+                disabled={downloadingReceipt}
               />
             ) : null}
             {openReceipt?.dailyClose ? (
