@@ -5,7 +5,9 @@ import { colors, font, radius, spacing } from "../theme";
 import { supabase } from "../supabase";
 import { confirmPhoneLogin, requestPhoneLogin, saveToken } from "../api";
 import { t } from "../i18n";
+import { LanguageSelector } from "../components/LanguageSelector";
 import { ForgotPasswordScreen } from "./ForgotPasswordScreen";
+import { SignupScreen } from "./SignupScreen";
 
 const WEB_BASE = (process.env.EXPO_PUBLIC_APP_URL || "https://dailyclose.us").replace(/\/+$/, "");
 
@@ -18,7 +20,7 @@ const FEATURES: Array<{ icon: string; titleKey: string; bodyKey: string }> = [
 ];
 
 export function LoginScreen({ onOpen }: { onOpen: () => void }) {
-  const [mode, setMode] = useState<"intro" | "signin" | "forgot">(supabase ? "intro" : "intro");
+  const [mode, setMode] = useState<"intro" | "signin" | "signup" | "forgot">("intro");
   const [authMode, setAuthMode] = useState<"email" | "phone">("email");
   const [phoneStep, setPhoneStep] = useState<"password" | "code">("password");
   const [email, setEmail] = useState("");
@@ -107,9 +109,14 @@ export function LoginScreen({ onOpen }: { onOpen: () => void }) {
     return <ForgotPasswordScreen onBack={() => setMode("signin")} />;
   }
 
+  if (mode === "signup") {
+    return <SignupScreen onOpen={onOpen} onBack={() => setMode("intro")} />;
+  }
+
   if (mode === "signin") {
     return (
       <ScrollView contentContainerStyle={s.container} keyboardShouldPersistTaps="handled">
+        <LanguageSelector />
         <Pill label={t("auth.signInPill")} tone="good" />
         <Text style={s.hero}>{t("auth.welcomeBack")}</Text>
         <Text style={s.copy}>{t("auth.useSamePassword")}</Text>
@@ -234,6 +241,7 @@ export function LoginScreen({ onOpen }: { onOpen: () => void }) {
 
   return (
     <ScrollView contentContainerStyle={s.container} keyboardShouldPersistTaps="handled">
+      <LanguageSelector />
       <Pill label={t("mobile.pilotPill")} tone="good" />
       <Text style={s.hero}>
         {t("mobile.hero")} <Text style={{ color: colors.leaf }}>{t("mobile.heroAccent")}</Text>
@@ -254,7 +262,10 @@ export function LoginScreen({ onOpen }: { onOpen: () => void }) {
 
       <View style={{ gap: spacing.md, marginTop: spacing.lg }}>
         {supabase ? (
-          <Button title={t("auth.signIn")} onPress={() => setMode("signin")} />
+          <>
+            <Button title={t("auth.getStarted")} onPress={() => setMode("signup")} />
+            <Button title={t("auth.signIn")} variant="secondary" onPress={() => setMode("signin")} />
+          </>
         ) : (
           <View style={s.errorBox}>
             <Text style={s.errorText}>{t("auth.buildMisconfigured")}</Text>

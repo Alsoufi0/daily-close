@@ -32,6 +32,27 @@ export async function saveToken(token: string) {
   await SecureStore.setItemAsync(tokenKey, token);
 }
 
+// Create a new owner account (unauthenticated). Mirrors the web /signup flow.
+export async function signupOwner(input: {
+  name: string;
+  email?: string;
+  phone?: string;
+  password: string;
+}): Promise<unknown> {
+  return apiFetch("/auth/signup-owner", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+// Finish owner setup right after the first sign-in (authed via the live token).
+export async function bootstrapOwner(name: string): Promise<SessionProfile> {
+  return apiFetch<SessionProfile>("/auth/bootstrap-owner", {
+    method: "POST",
+    body: JSON.stringify({ name })
+  });
+}
+
 export async function getToken() {
   // Prefer the live Supabase session: getSession() auto-refreshes an expired
   // access token (as long as the refresh token is valid), so a long-running app
