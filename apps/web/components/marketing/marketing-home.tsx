@@ -26,58 +26,63 @@ export function MarketingHome() {
   return (
     <main className="w-full">
       {/* Hero */}
-      <section className="relative mx-auto grid w-full max-w-6xl items-center gap-8 overflow-hidden px-4 py-8 sm:px-6 sm:py-12 lg:grid-cols-[1.1fr_0.9fr] lg:gap-12 lg:py-20">
+      <section className="relative mx-auto grid w-full max-w-6xl items-center gap-8 overflow-hidden px-4 py-8 text-center sm:px-6 sm:py-12 sm:text-left lg:grid-cols-[1.1fr_0.9fr] lg:gap-12 lg:py-20">
         <div
           aria-hidden
           className="pointer-events-none absolute -right-20 -top-16 -z-10 h-72 w-72 rounded-full bg-leaf/10 blur-3xl"
         />
         <div>
-          <p className="text-sm font-black uppercase tracking-wide text-leaf">{t("marketing.heroEyebrow")}</p>
-          <h1 className="mt-3 text-4xl font-black leading-[1.05] tracking-tight text-ink sm:text-5xl lg:text-6xl">
+          <p className="text-xs font-black uppercase tracking-wide text-leaf sm:text-sm">{t("marketing.heroEyebrow")}</p>
+          <h1 className="mt-3 text-3xl font-black leading-[1.08] tracking-tight text-ink sm:text-5xl sm:leading-[1.05] lg:text-6xl">
             {t("marketing.heroTitle")}
           </h1>
-          <p className="mt-5 max-w-xl text-lg font-bold text-ink/70">{t("marketing.heroBody")}</p>
-          <div className="mt-7 flex flex-wrap items-center gap-3">
+          <p className="mx-auto mt-4 max-w-md text-base font-bold text-ink/70 sm:mx-0 sm:mt-5 sm:max-w-xl sm:text-lg">{t("marketing.heroBody")}</p>
+          <div className="mt-6 flex flex-col items-center gap-3 sm:mt-7 sm:flex-row sm:flex-wrap sm:items-center">
             {signedIn ? (
               <Link
                 href={dashHref}
-                className="focus-ring inline-flex items-center gap-2 rounded-xl bg-leaf px-6 py-3 text-base font-black text-white shadow-sm hover:bg-leaf/90"
+                className="focus-ring inline-flex w-full items-center justify-center gap-2 rounded-xl bg-leaf px-6 py-3 text-base font-black text-white shadow-sm hover:bg-leaf/90 sm:w-auto"
               >
                 {t("marketing.goToDashboard")} <ArrowRight size={18} aria-hidden />
               </Link>
             ) : (
               <Link
                 href="/signup"
-                className="focus-ring inline-flex items-center gap-2 rounded-xl bg-leaf px-6 py-3 text-base font-black text-white shadow-sm hover:bg-leaf/90"
+                className="focus-ring inline-flex w-full items-center justify-center gap-2 rounded-xl bg-leaf px-6 py-3 text-base font-black text-white shadow-sm hover:bg-leaf/90 sm:w-auto"
               >
                 {t("marketing.heroPrimaryCta")} <ArrowRight size={18} aria-hidden />
               </Link>
             )}
             <Link
               href="/how-it-works"
-              className="focus-ring inline-flex items-center gap-2 rounded-xl border-2 border-ink/15 bg-white px-6 py-3 text-base font-black text-ink hover:bg-smoke"
+              className="focus-ring inline-flex items-center gap-2 font-black text-leaf hover:underline sm:rounded-xl sm:border-2 sm:border-ink/15 sm:bg-white sm:px-6 sm:py-3 sm:text-base sm:text-ink sm:no-underline sm:hover:bg-smoke"
             >
-              {t("marketing.heroSecondaryCta")}
+              {t("marketing.heroSecondaryCta")} <ArrowRight size={16} aria-hidden className="sm:hidden" />
             </Link>
           </div>
           <p className="mt-4 text-sm font-bold text-ink/55">{t("marketing.heroNote")}</p>
-          <div className="mt-8">
+          <div className="mt-7 flex justify-center sm:mt-8 sm:justify-start">
             <StoreBadges />
           </div>
         </div>
 
-        {/* On desktop, right-align the hero phone within its column so it sits
-            toward the page edge (balances the text-heavy left column); stays
-            centered on mobile. */}
-        <PhoneFrame
-          mode="loop"
-          src="/videos/hero-demo.mp4"
-          poster="/videos/posters/hero-demo.jpg"
-          caption={t("marketing.heroDemoCaption")}
-          label={t("marketing.heroDemoCaption")}
-          comingSoonText={t("marketing.tutComingSoon")}
-          className="lg:mr-0"
-        />
+        {/* Phone demo: smaller + a soft glow on mobile so the hero reads as one
+            compact unit (not big text with a big frame under it). At sm+ it
+            reverts to the original right-aligned ~280px frame. */}
+        <div className="relative mx-auto w-full max-w-[230px] sm:max-w-[280px] lg:ml-auto lg:mr-0">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-48 w-48 -translate-x-1/2 -translate-y-1/2 rounded-full bg-leaf/15 blur-3xl sm:hidden"
+          />
+          <PhoneFrame
+            mode="loop"
+            src="/videos/hero-demo.mp4"
+            poster="/videos/posters/hero-demo.jpg"
+            caption={t("marketing.heroDemoCaption")}
+            label={t("marketing.heroDemoCaption")}
+            comingSoonText={t("marketing.tutComingSoon")}
+          />
+        </div>
       </section>
 
       {/* Trust line */}
