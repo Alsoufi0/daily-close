@@ -1,4 +1,4 @@
-import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Linking, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -22,13 +22,18 @@ interface Row {
 }
 
 function accountRows(): Row[] {
-  return [
+  const rows: Row[] = [
     { title: t("account.changePassword"), subtitle: t("settings.changePasswordSubtitle"), icon: "lock", navigate: "ChangePassword" },
     { title: t("phoneSignin.title"), subtitle: t("phoneSignin.listSubtitle"), icon: "smartphone", navigate: "PhoneSignIn" },
     { title: t("settings.whatsappTitle"), subtitle: t("settings.whatsappListSubtitle"), icon: "message-circle", navigate: "WhatsAppSettings" },
-    { title: t("common.language"), subtitle: t("settings.languageSubtitle"), icon: "globe", navigate: "Language" },
-    { title: t("settings.billingTitle"), subtitle: t("settings.billingSubtitle"), icon: "credit-card", web: "/billing" }
+    { title: t("common.language"), subtitle: t("settings.languageSubtitle"), icon: "globe", navigate: "Language" }
   ];
+  // Apple Guideline 3.1.1: no external billing/purchase entry point on iOS.
+  // iOS owners manage their subscription on the website; Android keeps the link.
+  if (Platform.OS !== "ios") {
+    rows.push({ title: t("settings.billingTitle"), subtitle: t("settings.billingSubtitle"), icon: "credit-card", web: "/billing" });
+  }
+  return rows;
 }
 
 function helpRows(): Row[] {
