@@ -19,14 +19,14 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node
         # Node 22+ ships a global WebSocket, which @supabase/supabase-js's
         # realtime client requires at createClient() time. On Node 20 the
         # Supabase-configured service tests throw "Node.js 20 detected without
         # native WebSocket support". Match the deployed runtime (Node 22).
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '22'
           cache: 'npm'
