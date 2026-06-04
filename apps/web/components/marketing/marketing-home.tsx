@@ -66,6 +66,9 @@ export function MarketingHome() {
           </div>
         </div>
 
+        {/* On desktop, right-align the hero phone within its column so it sits
+            toward the page edge (balances the text-heavy left column); stays
+            centered on mobile. */}
         <PhoneFrame
           mode="loop"
           src="/videos/hero-demo.mp4"
@@ -73,6 +76,7 @@ export function MarketingHome() {
           caption={t("marketing.heroDemoCaption")}
           label={t("marketing.heroDemoCaption")}
           comingSoonText={t("marketing.tutComingSoon")}
+          className="lg:mr-0"
         />
       </section>
 
