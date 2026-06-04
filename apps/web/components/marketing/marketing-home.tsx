@@ -15,6 +15,7 @@ import { useLanguage } from "../language-provider";
 import { useSession } from "../../lib/use-session";
 import { landingPath } from "../../lib/session-roles";
 import { PhoneFrame } from "./phone-frame";
+import { StoreBadges } from "./store-badges";
 
 export function MarketingHome() {
   const { t } = useLanguage();
@@ -25,7 +26,11 @@ export function MarketingHome() {
   return (
     <main className="w-full">
       {/* Hero */}
-      <section className="mx-auto grid w-full max-w-6xl items-center gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:gap-12 lg:py-20">
+      <section className="relative mx-auto grid w-full max-w-6xl items-center gap-10 overflow-hidden px-4 py-12 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:gap-12 lg:py-20">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-20 -top-16 -z-10 h-72 w-72 rounded-full bg-leaf/10 blur-3xl"
+        />
         <div>
           <p className="text-sm font-black uppercase tracking-wide text-leaf">{t("marketing.heroEyebrow")}</p>
           <h1 className="mt-3 text-4xl font-black leading-[1.05] tracking-tight text-ink sm:text-5xl lg:text-6xl">
@@ -56,6 +61,9 @@ export function MarketingHome() {
             </Link>
           </div>
           <p className="mt-4 text-sm font-bold text-ink/55">{t("marketing.heroNote")}</p>
+          <div className="mt-8">
+            <StoreBadges />
+          </div>
         </div>
 
         <PhoneFrame
