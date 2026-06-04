@@ -1,159 +1,84 @@
 # Daily Close
 
-MVP v1 for replacing paper-sheet daily closing workflows in retail.
+Daily closing for retail, done in ~2 minutes. Employees close each store from any
+phone (scan the POS report, count cash, submit); owners see today's sales, missing
+cash, and missed closes across every location — and export clean numbers for their
+accountant.
 
-## What Works
+**Live:** https://dailyclose.us
 
-- Simple login screen for demo access
-- Owner dashboard with today’s sales, closed stores, missing cash, and missed-close warning
-- Employee closing page with five clear steps
-- Expo mobile app scaffold for iOS and Android
-- Supabase production schema, RLS policies, seed data, and storage bucket setup
-- Supabase Auth profile endpoint and protected API surfaces
-- Mock POS report upload with loading state and auto-filled numbers
-- Cash shortage calculation
-- Multi-store demo data
-- Prisma schema and NestJS API foundation
-- PDF/Excel export foundation through the reports service
+## Features
 
-## Demo Data
+- **Marketing site** — landing, how-it-works, tutorials (phone-frame demo videos),
+  pricing, contact. English/Arabic/Spanish/Hindi (Arabic RTL). Sign-in links into
+  the app at `/login`.
+- **Daily close in steps** — upload the POS report (OCR auto-fills the numbers via
+  Google Vision), review sales, count cash (over/short computed), add expenses,
+  finish. Works offline with a sync outbox on mobile.
+- **Owner dashboard** — today's sales, which stores closed, missing cash, and
+  missed-close alerts across all stores; history with CSV + PDF export.
+- **Per-store billing (Stripe)** — $49.99 per store / month, 14-day free trial.
+  Subscription quantity tracks active store count (prorated). Self-serve billing
+  portal (update card / cancel). When an owner is unpaid the whole store is locked
+  (owner and employees) with no data loss; access resumes on renewal.
+- **Auth** — Supabase email/password and phone (WhatsApp/SMS one-time code) sign-in.
+  Per-store manager role (store-scoped admin) in addition to owner and employee.
+- **Notifications** — Twilio SMS / WhatsApp (missed-close + weekly/monthly summaries)
+  and Resend email (employee welcome, password reset, summaries).
+- **Mobile** — native iOS/Android app (Expo / React Navigation), same API and data
+  as the web. Ships via EAS.
 
-- Owner: Sam Owner
-- Stores: Store #1, Store #2, Store #3
-- Employees: Maya and Chris
-- Store #2 has not completed closing yet
-- Store #3 has missing cash
-- Several daily close records are included in the demo data file
+## Architecture
 
-## Install
+Monorepo (npm workspaces):
 
-```bash
-npm install
-```
+| Path | What | Hosting |
+| --- | --- | --- |
+| `apps/web` | Next.js (App Router) — marketing site + app UI | Vercel → dailyclose.us |
+| `apps/api` | NestJS REST API (`@smokeshop/api`) | Render → smokeshop-api.onrender.com |
+| `apps/mobile` | Expo / React Native app | EAS build (not via `main`) |
+| `shared` | Shared types, i18n (4 locales), utils | — |
+| `database` | Prisma schema + SQL migrations | Supabase Postgres |
+| `supabase` | RLS policies, seed, storage setup | Supabase |
 
-## Run Web App
+Data lives in Supabase (Postgres + Storage). The web app authenticates with Supabase
+directly, then calls the API with the JWT. Stripe handles billing; Twilio handles
+SMS/WhatsApp; Resend handles transactional email; Google Vision powers POS OCR.
 
-```bash
-npm run dev:web
-```
+## Local development
 
-Open:
-
-```text
-http://127.0.0.1:3000
-```
-
-## Run API
-
-```bash
-npm run dev:api
-```
-
-The API runs on:
-
-```text
-http://127.0.0.1:4000
-```
-
-API docs:
-
-```text
-http://127.0.0.1:4000/docs
-```
-
-## Setup Database
-
-Create a PostgreSQL database and add:
+Prerequisites: Node 18+ and npm. Copy the example env and fill in your own keys:
 
 ```bash
-DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE"
+cp apps/api/.env.example apps/api/.env   # API: Supabase, Stripe, Twilio, Resend, Google Vision
+# Web reads NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY / NEXT_PUBLIC_API_URL
 ```
-
-Then run:
 
 ```bash
-npm run prisma:generate
+npm install                # install all workspaces
+npm run prisma:generate    # generate the Prisma client
+
+npm run dev:web            # web on http://127.0.0.1:3000
+npm run dev:api            # API on http://127.0.0.1:4000 (Swagger at /docs)
+npm run dev:mobile         # Expo dev server
 ```
 
-## Run Tests
+## Quality
 
 ```bash
-npm test --workspace apps/api
+npm run typecheck                  # web + api + mobile
+npm test --workspace apps/api      # API unit tests (Jest)
+npm run build                      # production build (web + api)
 ```
 
-## Run Mobile App
+## Deployment
 
-```bash
-npm run dev:mobile
-```
+- **Web** auto-deploys to Vercel from `main` (each branch gets a preview URL).
+- **API** auto-deploys to Render (`smokeshop-api`) from `main` (`render.yaml`).
+- **Mobile** ships via EAS from a mobile branch (not through `main`).
 
-Then open with Expo Go or a development build.
+> Production pushes go through pull requests — direct pushes to `main` are blocked.
+> Open a PR and merge it (`gh pr merge`).
 
-## Type Check
-
-```bash
-npm run typecheck
-```
-
-## Build
-
-```bash
-npm run build
-```
-
-## Deploy To Vercel
-
-From the project root:
-
-```bash
-npx vercel
-```
-
-For production:
-
-```bash
-npx vercel --prod
-```
-
-Use these settings if Vercel asks:
-
-- Install command: `npm install`
-- Build command: `npm run build --workspace apps/web`
-- Output directory: `apps/web/.next`
-- Framework: Next.js
-
-## Production Setup
-
-See:
-
-```text
-docs/production-runbook.md
-```
-
-Core production steps:
-
-1. Create Supabase project.
-2. Run `supabase/migrations/001_production_schema.sql`.
-3. Create Supabase Auth users and link them to `public.users.auth_user_id`.
-4. Run `supabase/seed.sql`.
-5. Deploy the API with `DATABASE_URL`, `SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY`.
-6. Set `NEXT_PUBLIC_API_URL` and Supabase browser keys in Vercel.
-7. Build iOS/Android with EAS from `apps/mobile`.
-
-## Mocked For MVP Demo
-
-- Login
-- POS report reading
-- File upload storage
-- Owner dashboard data
-- Notifications
-- PDF/Excel file generation
-
-## Still Needs Backend Connection
-
-- A real Supabase project with Auth users linked to app users
-- A deployed NestJS API URL
-- Final app icon, splash screen, and store listing assets
-- Real OCR provider
-- Real email provider
-- Real PDF and Excel files
+Secrets are configured in the Vercel / Render / Supabase dashboards; never commit
+real keys. See `apps/api/.env.example` for the full list of required variables.
