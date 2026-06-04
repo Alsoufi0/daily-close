@@ -221,7 +221,13 @@ const phraseKeys: Record<string, string> = {
   "Manage billing": "billing.managePortal",
   "Could not start checkout.": "billing.checkoutFailed",
   "Close": "common.close",
-  "This cannot be undone.": "common.cannotBeUndone"
+  "This cannot be undone.": "common.cannotBeUndone",
+  // === added 2026-06-04: employee/manager notice shown when the owner's plan lapsed ===
+  "Store plan paused": "billing.pausedTitle",
+  "Billing is managed by the store owner": "billing.pausedHeading",
+  "If a close was just blocked, this store's subscription has lapsed — please ask the store owner to renew it. You won't be able to submit closes until the plan is active again.": "billing.pausedBody1",
+  "Nothing is lost: all of your closes and data are safe and will be right here once the owner reactivates the plan.": "billing.pausedBody2",
+  "Back to closing": "billing.backToClosing"
 };
 
 const dynamicPhraseRules: Array<{
