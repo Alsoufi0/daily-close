@@ -152,8 +152,8 @@ export function useSession(): Session {
           setToken(undefined);
           setProfile(undefined);
           setMode("demo");
-          if (typeof window !== "undefined" && window.location.pathname !== "/") {
-            window.location.replace("/?expired=1");
+          if (typeof window !== "undefined" && window.location.pathname !== "/login") {
+            window.location.replace("/login?expired=1");
             return;
           }
         } else {

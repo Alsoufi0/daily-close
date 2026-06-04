@@ -22,6 +22,14 @@ const NAV = [
   { href: "/account/password", labelKey: "nav.password" }
 ] as Array<{ href: string; labelKey: string; adminOnly?: boolean; accountOnly?: boolean }>;
 
+// Public marketing nav shown to signed-out visitors.
+const MARKETING_NAV = [
+  { href: "/how-it-works", labelKey: "marketing.navHowItWorks" },
+  { href: "/tutorials", labelKey: "marketing.navTutorials" },
+  { href: "/pricing", labelKey: "marketing.navPricing" },
+  { href: "/contact", labelKey: "nav.contact" }
+] as Array<{ href: string; labelKey: string }>;
+
 export function TopBar() {
   const pathname = usePathname() || "/";
   const session = useSession();
@@ -103,79 +111,109 @@ export function TopBar() {
                 {t("auth.signOut")}
               </button>
             </>
-          ) : pathname === "/" ? (
-            <Link
-              href="/signup"
-              className="focus-ring inline-flex h-10 items-center justify-center rounded-lg bg-leaf px-4 font-black text-white"
-            >
-              {t("auth.getStarted")}
-            </Link>
           ) : (
-            <Link
-              href="/"
-              className="focus-ring inline-flex h-10 items-center justify-center rounded-lg border border-ink/15 px-4 font-black text-ink"
-            >
-              {t("auth.signIn")}
-            </Link>
+            <>
+              {MARKETING_NAV.map((item) => {
+                const active = pathname.startsWith(item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    aria-current={active ? "page" : undefined}
+                    className={clsx(
+                      "focus-ring rounded-lg px-3 py-2 transition-colors",
+                      active ? "bg-leaf/10 text-leaf" : "text-ink/65 hover:bg-smoke hover:text-ink"
+                    )}
+                  >
+                    {t(item.labelKey)}
+                  </Link>
+                );
+              })}
+              <Link
+                href="/login"
+                className="focus-ring ml-1 inline-flex h-10 items-center justify-center rounded-lg border border-ink/15 px-4 font-black text-ink hover:bg-smoke"
+              >
+                {t("auth.signIn")}
+              </Link>
+              <Link
+                href="/signup"
+                className="focus-ring inline-flex h-10 items-center justify-center rounded-lg bg-leaf px-4 font-black text-white hover:bg-leaf/90"
+              >
+                {t("auth.getStarted")}
+              </Link>
+            </>
           )}
         </nav>
 
-        {/* Mobile hamburger — only when signed in (anonymous landing is clean) */}
-        {signedIn ? (
-          <button
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            aria-label={open ? "Close menu" : "Open menu"}
-            aria-expanded={open}
-            className="focus-ring inline-flex h-11 w-11 items-center justify-center rounded-lg border border-ink/15 text-ink/80 md:hidden"
-          >
-            {open ? <X size={20} aria-hidden /> : <Menu size={20} aria-hidden />}
-          </button>
-        ) : pathname === "/" ? (
-          <Link
-            href="/signup"
-            className="focus-ring inline-flex h-10 items-center justify-center rounded-lg bg-leaf px-3 text-sm font-black text-white md:hidden"
-          >
-            {t("auth.getStarted")}
-          </Link>
-        ) : (
-          <Link
-            href="/"
-            className="focus-ring inline-flex h-10 items-center justify-center rounded-lg border border-ink/15 px-3 text-sm font-black text-ink md:hidden"
-          >
-            {t("auth.signIn")}
-          </Link>
-        )}
+        {/* Mobile hamburger (signed-in and signed-out) */}
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-label={open ? "Close menu" : "Open menu"}
+          aria-expanded={open}
+          className="focus-ring inline-flex h-11 w-11 items-center justify-center rounded-lg border border-ink/15 text-ink/80 md:hidden"
+        >
+          {open ? <X size={20} aria-hidden /> : <Menu size={20} aria-hidden />}
+        </button>
       </div>
 
-      {/* Mobile sheet (signed-in only) */}
-      {open && signedIn ? (
+      {/* Mobile sheet */}
+      {open ? (
         <div className="border-t border-ink/10 bg-white md:hidden">
           <nav className="mx-auto flex w-full max-w-6xl flex-col gap-1 px-4 py-3 text-base font-black">
-            {navItems.map((item) => {
-              const active = item.href === "/owner" ? pathname === "/owner" : pathname.startsWith(item.href);
-              return (
+            {signedIn ? (
+              <>
+                {navItems.map((item) => {
+                  const active = item.href === "/owner" ? pathname === "/owner" : pathname.startsWith(item.href);
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      aria-current={active ? "page" : undefined}
+                      className={clsx(
+                        "focus-ring flex min-h-[44px] items-center rounded-lg px-3",
+                        active ? "bg-leaf/10 text-leaf" : "text-ink/75 hover:bg-smoke"
+                      )}
+                    >
+                      {t(item.labelKey)}
+                    </Link>
+                  );
+                })}
+                {showSignOut ? (
+                  <button
+                    onClick={signOut}
+                    className="focus-ring mt-2 inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-ink/15 px-3 text-ink/80"
+                  >
+                    <LogOut size={18} aria-hidden /> {t("auth.signOut")}
+                  </button>
+                ) : null}
+              </>
+            ) : (
+              <>
+                {MARKETING_NAV.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    aria-current={pathname.startsWith(item.href) ? "page" : undefined}
+                    className="focus-ring flex min-h-[44px] items-center rounded-lg px-3 text-ink/75 hover:bg-smoke"
+                  >
+                    {t(item.labelKey)}
+                  </Link>
+                ))}
                 <Link
-                  key={item.href}
-                  href={item.href}
-                  aria-current={active ? "page" : undefined}
-                  className={clsx(
-                    "focus-ring flex min-h-[44px] items-center rounded-lg px-3",
-                    active ? "bg-leaf/10 text-leaf" : "text-ink/75 hover:bg-smoke"
-                  )}
+                  href="/login"
+                  className="focus-ring mt-1 flex min-h-[44px] items-center justify-center rounded-lg border-2 border-ink/15 px-3 text-ink hover:bg-smoke"
                 >
-                  {t(item.labelKey)}
+                  {t("auth.signIn")}
                 </Link>
-              );
-            })}
-            {showSignOut ? (
-              <button
-                onClick={signOut}
-                className="focus-ring mt-2 inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-ink/15 px-3 text-ink/80"
-              >
-                <LogOut size={18} aria-hidden /> {t("auth.signOut")}
-              </button>
-            ) : null}
+                <Link
+                  href="/signup"
+                  className="focus-ring flex min-h-[44px] items-center justify-center rounded-lg bg-leaf px-3 text-white"
+                >
+                  {t("auth.getStarted")}
+                </Link>
+              </>
+            )}
             <div className="px-3 py-2">
               <LanguageSelect />
             </div>

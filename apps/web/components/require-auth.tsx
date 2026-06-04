@@ -38,7 +38,7 @@ export function RequireAuth({
         /* ignore */
       }
       const next = encodeURIComponent(window.location.pathname + window.location.search);
-      window.location.replace(`/?next=${next}`);
+      window.location.replace(`/login?next=${next}`);
     }
 
     (async () => {
