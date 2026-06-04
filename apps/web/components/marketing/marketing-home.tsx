@@ -8,6 +8,7 @@ import {
   BellRing,
   Building2,
   Camera,
+  Check,
   Coins,
   Download
 } from "lucide-react";
@@ -169,6 +170,13 @@ export function MarketingHome() {
             <span className="text-base font-bold text-white/70">{t("marketing.pricePer")}</span>
           </p>
           <p className="text-sm font-bold text-white/70">{t("marketing.priceTrial")}</p>
+          <ul className="mt-1 grid w-full max-w-xl gap-x-6 gap-y-2.5 text-left sm:grid-cols-2">
+            {["marketing.pricingInc1", "marketing.pricingInc2", "marketing.pricingInc3", "marketing.pricingInc4", "marketing.pricingInc5", "marketing.pricingInc6"].map((k) => (
+              <li key={k} className="flex items-center gap-2.5 text-sm font-bold text-white/85">
+                <Check size={16} aria-hidden className="shrink-0 text-green-400" /> {t(k)}
+              </li>
+            ))}
+          </ul>
           <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
             <Link href="/signup" className="focus-ring inline-flex items-center gap-2 rounded-xl bg-leaf px-6 py-3 text-base font-black text-white hover:bg-leaf/90">
               {t("marketing.pricingCta")} <ArrowRight size={18} aria-hidden />
@@ -202,7 +210,7 @@ export function MarketingHome() {
 
 function Feature({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) {
   return (
-    <div className="rounded-2xl border border-ink/10 bg-white p-4 shadow-sm sm:p-6">
+    <div className="rounded-2xl border border-ink/10 bg-white p-4 shadow-sm ring-1 ring-ink/5 transition duration-200 hover:-translate-y-0.5 hover:border-leaf/25 hover:shadow-md sm:p-6">
       <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-leaf/10 text-leaf sm:h-11 sm:w-11">{icon}</span>
       <h3 className="mt-3 text-base font-black text-ink sm:mt-4 sm:text-lg">{title}</h3>
       <p className="mt-1.5 text-sm font-bold text-ink/65">{body}</p>
@@ -212,8 +220,8 @@ function Feature({ icon, title, body }: { icon: React.ReactNode; title: string; 
 
 function Step({ n, title, body }: { n: number; title: string; body: string }) {
   return (
-    <li className="rounded-2xl border border-ink/10 bg-white p-4 shadow-sm sm:p-6">
-      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-leaf font-black text-white">{n}</span>
+    <li className="rounded-2xl border border-ink/10 bg-white p-4 shadow-sm ring-1 ring-ink/5 transition duration-200 hover:-translate-y-0.5 hover:border-leaf/25 hover:shadow-md sm:p-6">
+      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-leaf font-black text-white shadow-sm ring-4 ring-leaf/10">{n}</span>
       <h3 className="mt-3 text-base font-black text-ink sm:mt-4">{title}</h3>
       <p className="mt-1.5 text-sm font-bold text-ink/65">{body}</p>
     </li>

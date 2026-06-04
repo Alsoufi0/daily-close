@@ -215,7 +215,7 @@ const phraseKeys: Record<string, string> = {
   "Trial ends today.": "billing.trialEndsToday",
   "Standard plan": "billing.standardPlan",
   "Employees finish closing from their phone.": "billing.featureCloseBody",
-  "See sales, missing cash, alerts — all in one screen.": "billing.featureMultiBody",
+  "See sales, missing cash, and alerts, all in one screen.": "billing.featureMultiBody",
   "Export every close for your accountant.": "billing.featureCsvBody",
   "Starting…": "billing.starting",
   "Manage billing": "billing.managePortal",
@@ -225,7 +225,7 @@ const phraseKeys: Record<string, string> = {
   // === added 2026-06-04: employee/manager notice shown when the owner's plan lapsed ===
   "Store plan paused": "billing.pausedTitle",
   "Billing is managed by the store owner": "billing.pausedHeading",
-  "If a close was just blocked, this store's subscription has lapsed — please ask the store owner to renew it. You won't be able to submit closes until the plan is active again.": "billing.pausedBody1",
+  "If a close was just blocked, this store's subscription has lapsed. Please ask the store owner to renew it. You won't be able to submit closes until the plan is active again.": "billing.pausedBody1",
   "Nothing is lost: all of your closes and data are safe and will be right here once the owner reactivates the plan.": "billing.pausedBody2",
   "Back to closing": "billing.backToClosing"
 };

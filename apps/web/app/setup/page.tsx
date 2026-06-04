@@ -159,7 +159,7 @@ function SetupPageInner() {
               </select>
               <p className="mt-1 text-xs font-bold text-ink/55">
                 Detected from your device. Pick the store's real timezone so close
-                times and missed-close alerts follow the store's clock — not yours. ({browserTz})
+                times and missed-close alerts follow the store's clock, not yours. ({browserTz})
               </p>
             </Field>
             <button

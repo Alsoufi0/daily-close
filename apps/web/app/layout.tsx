@@ -13,7 +13,7 @@ const DESCRIPTION =
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Daily Close — Daily closing for retail",
+    default: "Daily Close: daily closing for retail",
     template: "%s · Daily Close"
   },
   description: DESCRIPTION,

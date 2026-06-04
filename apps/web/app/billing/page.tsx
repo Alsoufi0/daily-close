@@ -213,7 +213,7 @@ function BillingPageInner() {
 
       <section className="mt-8 grid gap-3 sm:grid-cols-3">
         <FeatureCard icon={<TimerReset size={20} />} title="Daily close in 2 min" body="Employees finish closing from their phone." />
-        <FeatureCard icon={<CheckCircle2 size={20} />} title="Multi-store dashboard" body="See sales, missing cash, alerts — all in one screen." />
+        <FeatureCard icon={<CheckCircle2 size={20} />} title="Multi-store dashboard" body="See sales, missing cash, and alerts, all in one screen." />
         <FeatureCard icon={<CreditCard size={20} />} title="Audit-ready CSV" body="Export every close for your accountant." />
       </section>
 
@@ -234,7 +234,7 @@ function EmployeeBillingNotice() {
         </p>
         <h1 className="mt-2 text-2xl font-black tracking-tight">Billing is managed by the store owner</h1>
         <p className="mt-3 text-base font-bold text-ink/70">
-          If a close was just blocked, this store&apos;s subscription has lapsed — please ask
+          If a close was just blocked, this store&apos;s subscription has lapsed. Please ask
           the store owner to renew it. You won&apos;t be able to submit closes until the plan
           is active again.
         </p>
