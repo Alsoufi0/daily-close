@@ -14,7 +14,7 @@
     "splash": {
       "image": "./assets/icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#1f7a4d"
+      "backgroundColor": "#0e3b34"
     },
     "ios": {
       "bundleIdentifier": "com.dailyclose1.app",
@@ -43,7 +43,7 @@
       "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#1f7a4d"
+        "backgroundColor": "#0e3b34"
       },
       "permissions": [
         "android.permission.CAMERA",

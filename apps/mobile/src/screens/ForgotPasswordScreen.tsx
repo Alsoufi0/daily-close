@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { Banner, Button } from "../ui";
 import { confirmPhonePasswordReset, requestPhonePasswordReset } from "../api";
 import { supabase } from "../supabase";
@@ -101,7 +102,8 @@ export function ForgotPasswordScreen({ onBack }: { onBack: () => void }) {
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.bg }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
         <TouchableOpacity onPress={onBack} style={s.backRow}>
-          <Text style={s.backText}>‹ {t("auth.backToSignIn")}</Text>
+          <Feather name="arrow-left" size={18} color={colors.inkSoft} />
+          <Text style={s.backText}>{t("auth.backToSignIn")}</Text>
         </TouchableOpacity>
 
         <View style={s.card}>
@@ -196,7 +198,7 @@ export function ForgotPasswordScreen({ onBack }: { onBack: () => void }) {
 
 const s = StyleSheet.create({
   content: { padding: spacing.lg, paddingBottom: 40 },
-  backRow: { paddingVertical: spacing.sm, marginBottom: spacing.md },
+  backRow: { flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: spacing.sm, marginBottom: spacing.md },
   backText: { color: colors.inkSoft, fontWeight: font.black, fontSize: 14 },
   card: {
     backgroundColor: colors.white, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
