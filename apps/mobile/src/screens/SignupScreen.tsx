@@ -14,10 +14,9 @@ import { colors, font, radius, spacing } from "../theme";
 import { supabase } from "../supabase";
 import {
   bootstrapOwner,
-  confirmPhoneLogin,
-  requestPhoneLogin,
-  saveToken,
-  signupOwner
+  confirmSignup,
+  requestSignup,
+  saveToken
 } from "../api";
 import { t } from "../i18n";
 
@@ -29,7 +28,7 @@ export function SignupScreen({ onOpen, onBack }: { onOpen: () => void; onBack: (
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [phoneCode, setPhoneCode] = useState("");
+  const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [needsConfirm, setNeedsConfirm] = useState(false);
@@ -63,24 +62,19 @@ export function SignupScreen({ onOpen, onBack }: { onOpen: () => void; onBack: (
     setSubmitting(true);
     setError(null);
     try {
-      await signupOwner({
+      // Send a verification code. The account is NOT created until the code is
+      // confirmed below — abandoning here leaves nothing behind.
+      const r = await requestSignup({
         name: name.trim(),
         email: mode === "email" ? e : undefined,
         phone: mode === "phone" ? p : undefined,
         password
       });
-      if (mode === "phone") {
-        await requestPhoneLogin(p);
+      if (r.sent) {
         setNeedsConfirm(true);
-        return;
+      } else {
+        setError(r.message || t("auth.couldNotSignIn"));
       }
-      const r = await supabase.auth.signInWithPassword({ email: e, password });
-      if (r.error || !r.data.session) {
-        // Email confirmation required before a session exists.
-        setNeedsConfirm(true);
-        return;
-      }
-      await finishWithSession(r.data.session.access_token);
     } catch (err: any) {
       setError(err?.message || t("auth.couldNotSignIn"));
     } finally {
@@ -88,7 +82,7 @@ export function SignupScreen({ onOpen, onBack }: { onOpen: () => void; onBack: (
     }
   }
 
-  async function verifyPhone() {
+  async function verify() {
     if (!supabase) {
       setError(t("auth.buildMisconfigured"));
       return;
@@ -96,7 +90,14 @@ export function SignupScreen({ onOpen, onBack }: { onOpen: () => void; onBack: (
     setSubmitting(true);
     setError(null);
     try {
-      const result = await confirmPhoneLogin({ phone: phone.trim(), code: phoneCode.trim() });
+      // Verify the code → the API creates the account and returns a session.
+      const result = await confirmSignup({
+        name: name.trim(),
+        email: mode === "email" ? email.trim() : undefined,
+        phone: mode === "phone" ? phone.trim() : undefined,
+        password,
+        code: code.trim()
+      });
       const verified = await supabase.auth.verifyOtp({ token_hash: result.tokenHash, type: result.type });
       if (verified.error || !verified.data.session) {
         setError(verified.error?.message || t("auth.phoneCodeFailed"));
@@ -116,34 +117,40 @@ export function SignupScreen({ onOpen, onBack }: { onOpen: () => void; onBack: (
         <LanguageSelector />
         <Text style={s.hero}>{mode === "phone" ? t("auth.confirmNumber") : t("auth.checkEmail")}</Text>
         <Text style={s.copy}>{mode === "phone" ? t("auth.phoneConfirmSent") : t("auth.emailConfirmSent")}</Text>
-        {mode === "phone" ? (
-          <View style={{ gap: spacing.md, marginTop: spacing.lg }}>
-            <View>
-              <Text style={s.label}>{t("auth.sixDigitCode")}</Text>
-              <TextInput
-                style={s.input}
-                keyboardType="number-pad"
-                value={phoneCode}
-                onChangeText={(v) => setPhoneCode(v.replace(/[^0-9]/g, ""))}
-                maxLength={6}
-                placeholder="123456"
-                placeholderTextColor={colors.inkMuted}
-              />
-            </View>
-            {error ? (
-              <View style={s.errorBox}>
-                <Text style={s.errorText}>{error}</Text>
-              </View>
-            ) : null}
-            <Button
-              title={submitting ? t("auth.verifying") : t("auth.verifyContinue")}
-              onPress={verifyPhone}
-              disabled={submitting || phoneCode.length < 6}
+        <View style={{ gap: spacing.md, marginTop: spacing.lg }}>
+          <View>
+            <Text style={s.label}>{t("auth.sixDigitCode")}</Text>
+            <TextInput
+              style={s.input}
+              keyboardType="number-pad"
+              value={code}
+              onChangeText={(v) => setCode(v.replace(/[^0-9]/g, ""))}
+              maxLength={6}
+              placeholder="123456"
+              placeholderTextColor={colors.inkMuted}
             />
           </View>
-        ) : (
-          <Button title={t("common.back")} variant="secondary" onPress={onBack} />
-        )}
+          {error ? (
+            <View style={s.errorBox}>
+              <Text style={s.errorText}>{error}</Text>
+            </View>
+          ) : null}
+          <Button
+            title={submitting ? t("auth.verifying") : t("auth.verifyContinue")}
+            onPress={verify}
+            disabled={submitting || code.length < 6}
+          />
+          <TouchableOpacity
+            onPress={() => {
+              setNeedsConfirm(false);
+              setCode("");
+              setError(null);
+            }}
+            style={{ alignItems: "center", paddingVertical: spacing.sm }}
+          >
+            <Text style={s.linkText}>{t("common.back")}</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     );
   }

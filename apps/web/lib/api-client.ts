@@ -85,13 +85,28 @@ export async function bootstrapOwner(token: string, name?: string): Promise<Sess
   });
 }
 
-export async function signupOwner(input: {
+// Verify-first signup: request a code (email via Resend, phone via Twilio),
+// then confirm it — the account is created only on confirm.
+export async function requestSignup(input: {
   name: string;
   email?: string;
   phone?: string;
   password: string;
-}): Promise<{ email: string; phone: string | null; name: string; ownerId: string }> {
-  return apiFetch("/auth/signup-owner", undefined, {
+}): Promise<{ sent: boolean; channel: "email" | "phone"; message: string }> {
+  return apiFetch("/auth/signup-owner/request", undefined, {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function confirmSignup(input: {
+  name: string;
+  email?: string;
+  phone?: string;
+  password: string;
+  code: string;
+}): Promise<{ tokenHash: string; type: "magiclink"; email: string }> {
+  return apiFetch("/auth/signup-owner/confirm", undefined, {
     method: "POST",
     body: JSON.stringify(input)
   });

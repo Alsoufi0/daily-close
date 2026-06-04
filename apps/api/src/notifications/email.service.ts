@@ -56,6 +56,22 @@ export class EmailService {
     return this.send(opts.email, subject, html);
   }
 
+  async sendSignupCode(opts: {
+    email: string;
+    name?: string;
+    code: string;
+  }): Promise<{ sent: boolean; error?: string }> {
+    const subject = "Your Daily Close verification code";
+    const greeting = opts.name?.trim() ? `Hi ${esc(opts.name.trim())}, ` : "";
+    const html = baseEmailShell(`
+      <h1 style="margin:0 0 12px;font-size:20px;color:#11181c;">Confirm your email</h1>
+      <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3f4b51;">${greeting}use this code to finish creating your <strong>Daily Close</strong> account. It expires in 10 minutes.</p>
+      <div style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:30px;font-weight:800;color:#11181c;background:#f1f5f3;border:1px solid #dde5e1;border-radius:9px;padding:14px 16px;letter-spacing:8px;text-align:center;">${esc(opts.code)}</div>
+      <p style="margin:22px 0 0;font-size:13px;line-height:1.6;color:#8a949a;">If you didn't request this, you can ignore this email.</p>
+    `);
+    return this.send(opts.email, subject, html);
+  }
+
   async sendContactMessage(opts: {
     name: string;
     email: string;

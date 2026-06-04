@@ -12,7 +12,7 @@ import {
   UserPlus
 } from "lucide-react";
 import { createBrowserSupabase } from "../../lib/supabase-browser";
-import { ApiError, bootstrapOwner, confirmPhoneLogin, requestPhoneLogin, signupOwner } from "../../lib/api-client";
+import { ApiError, bootstrapOwner, confirmSignup, requestSignup } from "../../lib/api-client";
 import { useLanguage } from "../../components/language-provider";
 
 type Status = "idle" | "loading" | "needs_confirm" | "done" | "error";
@@ -61,52 +61,28 @@ export default function SignupPage() {
       return;
     }
 
-    let data;
-    let error;
     try {
-      await signupOwner({
+      // Send a verification code. The account is created only after the code is
+      // confirmed below — nothing is created if the user abandons here.
+      const r = await requestSignup({
         name,
         email: mode === "email" ? trimmedEmail : undefined,
         phone: mode === "phone" ? trimmedPhone : undefined,
         password
       });
-      if (mode === "phone") {
-        await requestPhoneLogin(trimmedPhone);
+      if (r.sent) {
         setStatus("needs_confirm");
-        return;
+      } else {
+        setStatus("error");
+        setMessage(r.message || "Could not send your verification code.");
       }
-      const signIn =
-        await supabase.auth.signInWithPassword({ email: trimmedEmail, password });
-      data = signIn.data;
-      error = signIn.error;
     } catch (err) {
       setStatus("error");
       setMessage(err instanceof ApiError ? err.message : "Could not create your account.");
-      return;
-    }
-
-    if (error) {
-      setStatus("error");
-      setMessage(error.message);
-      return;
-    }
-
-    if (!data.session) {
-      setStatus("needs_confirm");
-      return;
-    }
-
-    try {
-      await bootstrapOwner(data.session.access_token, name);
-      window.localStorage.setItem("dailyclose-token", data.session.access_token);
-      window.location.href = "/setup";
-    } catch (err: any) {
-      setStatus("error");
-      setMessage(err?.message || "Could not finish setting up your account.");
     }
   }
 
-  async function verifyPhoneSignup(event: React.FormEvent) {
+  async function verifySignup(event: React.FormEvent) {
     event.preventDefault();
     setVerifyingPhone(true);
     setMessage(null);
@@ -118,8 +94,12 @@ export default function SignupPage() {
       return;
     }
     try {
-      const result = await confirmPhoneLogin({
-        phone: phone.trim(),
+      // Verify the code → the API creates the account and returns a session.
+      const result = await confirmSignup({
+        name,
+        email: mode === "email" ? email.trim() : undefined,
+        phone: mode === "phone" ? phone.trim() : undefined,
+        password,
         code: phoneCode.trim()
       });
       const verified = await supabase.auth.verifyOtp({
@@ -153,49 +133,40 @@ export default function SignupPage() {
           <p className="mt-2 text-base font-bold text-ink/65">
             {mode === "phone" ? (
               <>
-                We sent a confirmation code to <strong>{phone}</strong>. Confirm it, then sign in
-                with your phone number and password.
+                We texted a 6-digit code to <strong>{phone}</strong>. Enter it below to finish
+                creating your account.
               </>
             ) : (
               <>
-                We sent a confirmation link to <strong>{email}</strong>. Click it to finish creating
-                your account.
+                We emailed a 6-digit code to <strong>{email}</strong>. Enter it below to finish
+                creating your account.
               </>
             )}
           </p>
-          {mode === "phone" ? (
-            <form onSubmit={verifyPhoneSignup} className="mt-5 space-y-3 text-left">
-              <label className="block">
-                <span className="text-sm font-black">{t("auth.sixDigitCode")}</span>
-                <input
-                  required
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  maxLength={6}
-                  className="focus-ring mt-2 h-12 w-full rounded-lg border border-ink/15 px-4 text-center text-xl font-black tracking-widest"
-                  value={phoneCode}
-                  onChange={(e) => setPhoneCode(e.target.value.replace(/[^0-9]/g, ""))}
-                />
-              </label>
-              {message ? (
-                <div className="rounded-lg bg-red-50 p-3 text-sm font-bold text-warning">{message}</div>
-              ) : null}
-              <button
-                type="submit"
-                disabled={verifyingPhone || phoneCode.length < 6}
-                className="focus-ring flex h-12 w-full items-center justify-center rounded-lg bg-leaf font-black text-white disabled:opacity-60"
-              >
-                {verifyingPhone ? t("auth.verifying") : t("auth.verifyContinue")}
-              </button>
-            </form>
-          ) : (
-            <Link
-              href="/"
-              className="focus-ring mt-5 inline-flex h-12 items-center justify-center gap-2 rounded-lg border-2 border-ink/15 bg-white px-5 font-black text-ink"
+          <form onSubmit={verifySignup} className="mt-5 space-y-3 text-left">
+            <label className="block">
+              <span className="text-sm font-black">{t("auth.sixDigitCode")}</span>
+              <input
+                required
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                className="focus-ring mt-2 h-12 w-full rounded-lg border border-ink/15 px-4 text-center text-xl font-black tracking-widest"
+                value={phoneCode}
+                onChange={(e) => setPhoneCode(e.target.value.replace(/[^0-9]/g, ""))}
+              />
+            </label>
+            {message ? (
+              <div className="rounded-lg bg-red-50 p-3 text-sm font-bold text-warning">{message}</div>
+            ) : null}
+            <button
+              type="submit"
+              disabled={verifyingPhone || phoneCode.length < 6}
+              className="focus-ring flex h-12 w-full items-center justify-center rounded-lg bg-leaf font-black text-white disabled:opacity-60"
             >
-              Back to sign in
-            </Link>
-          )}
+              {verifyingPhone ? t("auth.verifying") : t("auth.verifyContinue")}
+            </button>
+          </form>
         </div>
       </main>
     );

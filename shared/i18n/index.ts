@@ -1327,7 +1327,7 @@ const supplementalTranslations: Record<Language, Dictionary> = {
     "auth.resetPhoneSub": "We'll text you a code to verify.",
     "auth.checkEmail": "Check your email.",
     "auth.confirmNumber": "Confirm your number",
-    "auth.emailConfirmSent": "We sent a confirmation link to your email. Tap it to finish creating your account, then come back and sign in.",
+    "auth.emailConfirmSent": "We emailed you a 6-digit code. Enter it below to finish creating your account.",
     "auth.phoneConfirmSent": "We sent a confirmation code to your phone. Enter it below to finish.",
     "auth.checkEmailBody": "If email delivery is enabled, a reset link will arrive at {email}. Employees can also ask the owner to reset their password from Admin.",
     "auth.sendResetLink": "Send reset link",

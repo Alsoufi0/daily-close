@@ -77,19 +77,39 @@ export class AuthController {
     };
   }
 
-  @Post("signup-owner")
-  // 5 signups per IP per minute — generous enough for a real user retrying
-  // a typo'd password, tight enough to block enumeration scripts.
+  // Verify-first signup: request a code, then confirm it. The account is created
+  // only in the confirm step, after the email/phone is proven.
+  @Post("signup-owner/request")
+  // 5 sends per IP per minute — enough for a real user retrying, tight enough
+  // to block enumeration / SMS-pumping scripts.
   @Throttle({ default: { ttl: 60_000, limit: 5 } })
-  async signupOwner(@Body() body: { email?: string; phone?: string; name?: string; password?: string }) {
+  async requestSignup(@Body() body: { email?: string; phone?: string; name?: string; password?: string }) {
     if (!body?.email && !body?.phone) throw new BadRequestException("Email or phone is required.");
     if (!body?.name) throw new BadRequestException("Name is required.");
     if (!body?.password) throw new BadRequestException("Password is required.");
-    return this.auth.signupOwner({
+    return this.auth.requestOwnerSignup({
       email: body.email,
       phone: body.phone,
       name: body.name,
       password: body.password
+    });
+  }
+
+  @Post("signup-owner/confirm")
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  async confirmSignup(
+    @Body() body: { email?: string; phone?: string; name?: string; password?: string; code?: string }
+  ) {
+    if (!body?.email && !body?.phone) throw new BadRequestException("Email or phone is required.");
+    if (!body?.name) throw new BadRequestException("Name is required.");
+    if (!body?.password) throw new BadRequestException("Password is required.");
+    if (!body?.code) throw new BadRequestException("Verification code is required.");
+    return this.auth.confirmOwnerSignup({
+      email: body.email,
+      phone: body.phone,
+      name: body.name,
+      password: body.password,
+      code: body.code
     });
   }
 

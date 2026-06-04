@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, Injectable, UnauthorizedExcepti
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { createHash, randomBytes, randomInt } from "crypto";
 import { PrismaService } from "../prisma/prisma.service";
+import { EmailService } from "../notifications/email.service";
 import { RequestUser } from "./request-user";
 
 interface CachedUser {
@@ -18,7 +19,10 @@ export class SupabaseAuthService {
   private static readonly CACHE_TTL_MS = 30_000;
   private static readonly CACHE_MAX = 500;
 
-  constructor(private readonly prisma: PrismaService) {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly email: EmailService
+  ) {
     const url = process.env.SUPABASE_URL;
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (url && key) {
@@ -271,51 +275,137 @@ export class SupabaseAuthService {
     return { email, name, tempPassword, ownerId: user!.owner!.id };
   }
 
-  async signupOwner(input: {
+  // ── Verify-first owner signup ───────────────────────────────────────────────
+  // The account is created only AFTER the email or phone is verified with a
+  // 6-digit code. An abandoned signup leaves nothing behind, and an unverified
+  // contact can never be used to sign in. Email codes go out via Resend, phone
+  // codes via Twilio (Verify if configured, else a hashed code over SMS).
+
+  /** Step 1: validate, ensure the contact is free, and send a verification code. */
+  async requestOwnerSignup(input: {
     email?: string;
     phone?: string;
     name: string;
     password: string;
-  }): Promise<{ email: string; phone: string | null; name: string; ownerId: string }> {
+  }): Promise<{ sent: boolean; channel: "email" | "phone"; message: string }> {
     if (!this.supabase) throw new UnauthorizedException("Supabase is not configured.");
-
     const phone = input.phone ? this.normalizePhone(input.phone) : undefined;
-    const email = input.email?.trim().toLowerCase() || (phone ? this.syntheticPhoneEmail(phone, "owners") : "");
-    const name = input.name.trim();
-    if (!email && !phone) throw new BadRequestException("Enter an email or phone number.");
-    if (input.email && !email.includes("@")) throw new BadRequestException("Enter a valid email.");
-    if (!name) throw new BadRequestException("Name is required.");
+    const rawEmail = input.email?.trim().toLowerCase();
+    if (!rawEmail && !phone) throw new BadRequestException("Enter an email or phone number.");
+    if (rawEmail && !rawEmail.includes("@")) throw new BadRequestException("Enter a valid email.");
+    if (!input.name.trim()) throw new BadRequestException("Name is required.");
     if (input.password.length < 8) throw new BadRequestException("Password must be at least 8 characters.");
 
-    const existing = await this.prisma.user.findUnique({ where: { email } });
-    if (existing) {
-      throw new ConflictException(
-        phone ? "An account with this phone already exists. Please sign in." : "An account with this email already exists. Please sign in."
+    const channel: "email" | "phone" = phone && !rawEmail ? "phone" : "email";
+    const accountEmail = rawEmail || this.syntheticPhoneEmail(phone!, "owners");
+    await this.assertSignupAvailable(accountEmail, channel);
+
+    if (channel === "phone") {
+      if (this.isTwilioVerifyConfigured()) {
+        const sent = await this.startTwilioVerify(phone!);
+        return { sent, channel, message: sent ? "Verification code sent." : "Code could not be sent. Try again." };
+      }
+      const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
+      await this.storeSignupCode(phone!, code);
+      const sent = await this.sendTwilioPhoneMessage(
+        phone!,
+        `Daily Close verification code: ${code}. This code expires in 10 minutes.`
       );
+      return { sent, channel, message: sent ? "Verification code sent." : "Code could not be sent. Try again." };
     }
 
-    const createInput = phone
-      ? {
-          email,
-          password: input.password,
-          email_confirm: true,
-          user_metadata: { name, phone, role: "STORE_OWNER", signup_channel: "phone" }
-        }
-      : {
-          email,
-          password: input.password,
-          email_confirm: true,
-          user_metadata: { name, role: "STORE_OWNER", signup_channel: "email" }
-        };
-    const { data, error } = await this.supabase.auth.admin.createUser(createInput);
+    const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
+    await this.storeSignupCode(accountEmail, code);
+    const result = await this.email.sendSignupCode({ email: accountEmail, name: input.name.trim(), code });
+    return {
+      sent: result.sent,
+      channel,
+      message: result.sent ? "Verification code sent." : "Could not send the email. Check the address and try again."
+    };
+  }
+
+  /** Step 2: verify the code, create the owner account, and return a session. */
+  async confirmOwnerSignup(input: {
+    email?: string;
+    phone?: string;
+    name: string;
+    password: string;
+    code: string;
+  }): Promise<{ tokenHash: string; type: "magiclink"; email: string }> {
+    if (!this.supabase) throw new UnauthorizedException("Supabase is not configured.");
+    const phone = input.phone ? this.normalizePhone(input.phone) : undefined;
+    const rawEmail = input.email?.trim().toLowerCase();
+    if (!rawEmail && !phone) throw new BadRequestException("Enter an email or phone number.");
+    if (!input.name.trim()) throw new BadRequestException("Name is required.");
+    if (input.password.length < 8) throw new BadRequestException("Password must be at least 8 characters.");
+    const code = String(input.code || "").replace(/\D/g, "");
+    if (code.length !== 6) throw new BadRequestException("Enter the 6 digit code.");
+
+    const channel: "email" | "phone" = phone && !rawEmail ? "phone" : "email";
+    const accountEmail = rawEmail || this.syntheticPhoneEmail(phone!, "owners");
+    await this.assertSignupAvailable(accountEmail, channel);
+
+    if (channel === "phone" && this.isTwilioVerifyConfigured()) {
+      const ok = await this.checkTwilioVerify(phone!, code);
+      if (!ok) throw new BadRequestException("Code is invalid or expired.");
+    } else {
+      const ok = await this.consumeSignupCode(channel === "phone" ? phone! : accountEmail, code);
+      if (!ok) throw new BadRequestException("Code is invalid or expired.");
+    }
+
+    await this.createOwnerAccount({
+      email: accountEmail,
+      phone,
+      name: input.name.trim(),
+      password: input.password,
+      channel
+    });
+
+    const { data, error } = await this.supabase.auth.admin.generateLink({ type: "magiclink", email: accountEmail });
+    if (error || !data.properties?.hashed_token) {
+      throw new BadRequestException(error?.message || "Could not create sign-in session.");
+    }
+    return { tokenHash: data.properties.hashed_token, type: "magiclink", email: accountEmail };
+  }
+
+  private async assertSignupAvailable(accountEmail: string, channel: "email" | "phone") {
+    const existing = await this.prisma.user.findUnique({ where: { email: accountEmail } });
+    if (existing) {
+      throw new ConflictException(
+        channel === "phone"
+          ? "An account with this phone already exists. Please sign in."
+          : "An account with this email already exists. Please sign in."
+      );
+    }
+  }
+
+  // Creates the Supabase auth user + public.users/owners rows. The contact is
+  // already verified by the caller, so email_confirm:true is legitimate here.
+  private async createOwnerAccount(input: {
+    email: string;
+    phone?: string;
+    name: string;
+    password: string;
+    channel: "email" | "phone";
+  }): Promise<{ ownerId: string }> {
+    const createInput = {
+      email: input.email,
+      password: input.password,
+      email_confirm: true,
+      user_metadata:
+        input.channel === "phone"
+          ? { name: input.name, phone: input.phone, role: "STORE_OWNER", signup_channel: "phone" }
+          : { name: input.name, role: "STORE_OWNER", signup_channel: "email" }
+    };
+    const { data, error } = await this.supabase!.auth.admin.createUser(createInput);
     if (error || !data.user) {
       throw new BadRequestException(error?.message || "Could not create account.");
     }
 
     const user = await this.prisma.user.create({
       data: {
-        name,
-        email,
+        name: input.name,
+        email: input.email,
         password: "",
         role: "STORE_OWNER",
         authUserId: data.user.id,
@@ -330,7 +420,7 @@ export class SupabaseAuthService {
       include: { owner: true }
     });
 
-    return { email, phone: phone ?? null, name, ownerId: user.owner!.id };
+    return { ownerId: user.owner!.id };
   }
 
   async requestPhonePasswordReset(input: { phone?: string }): Promise<{ sent: boolean; message: string }> {
@@ -755,6 +845,63 @@ export class SupabaseAuthService {
   private hashResetCode(phone: string, code: string) {
     const secret = process.env.CRON_SECRET || process.env.TWILIO_AUTH_TOKEN || "daily-close-dev";
     return createHash("sha256").update(`${phone}:${code}:${secret}`).digest("hex");
+  }
+
+  // Pre-account verification codes for signup (email via Resend, or phone SMS
+  // when Twilio Verify isn't configured). Keyed by contact, not by user — the
+  // account doesn't exist yet.
+  private async ensureSignupCodeTable() {
+    await this.prisma.$executeRawUnsafe(
+      `create table if not exists public.signup_codes (
+        id text primary key,
+        contact text not null,
+        code_hash text not null,
+        expires_at timestamptz not null,
+        consumed_at timestamptz,
+        created_at timestamptz not null default now()
+      )`
+    );
+    await this.prisma.$executeRawUnsafe(
+      `create index if not exists signup_codes_contact_idx
+         on public.signup_codes (contact, created_at desc)`
+    );
+    await this.prisma.$executeRawUnsafe(
+      `alter table public.signup_codes enable row level security`
+    );
+  }
+
+  private async storeSignupCode(contact: string, code: string) {
+    await this.ensureSignupCodeTable();
+    await this.prisma.$executeRawUnsafe(
+      `insert into public.signup_codes (id, contact, code_hash, expires_at)
+       values ($1, $2, $3, now() + interval '10 minutes')`,
+      randomBytes(16).toString("hex"),
+      contact,
+      this.hashResetCode(contact, code)
+    );
+  }
+
+  private async consumeSignupCode(contact: string, code: string): Promise<boolean> {
+    await this.ensureSignupCodeTable();
+    const rows = await this.prisma.$queryRawUnsafe<Array<{ id: string }>>(
+      `select id
+         from public.signup_codes
+        where contact = $1
+          and code_hash = $2
+          and consumed_at is null
+          and expires_at > now()
+        order by created_at desc
+        limit 1`,
+      contact,
+      this.hashResetCode(contact, code)
+    );
+    const row = rows[0];
+    if (!row) return false;
+    await this.prisma.$executeRawUnsafe(
+      `update public.signup_codes set consumed_at = now() where id = $1`,
+      row.id
+    );
+    return true;
   }
 
   private async sendTwilioPhoneMessage(phone: string, body: string): Promise<boolean> {
