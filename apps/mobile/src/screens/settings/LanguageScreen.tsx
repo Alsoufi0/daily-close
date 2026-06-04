@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Banner, Card } from "../../ui";
-import { getMobileLanguage, setMobileLanguage, t } from "../../i18n";
+import { changeLanguage, getMobileLanguage, setMobileLanguage, t } from "../../i18n";
 import type { Language } from "@smokeshop/shared/i18n";
 import { colors, font, radius, spacing } from "../../theme";
 
@@ -29,19 +29,12 @@ export function LanguageScreen() {
     });
   }, []);
 
-  async function pick(code: Language) {
-    setMobileLanguage(code);
+  function pick(code: Language) {
     setCurrent(code);
-    await AsyncStorage.setItem(STORAGE_KEY, code);
-    if (code === "ar") {
-      // RTL switch requires app reload to fully take effect — React Native
-      // I18nManager is read at module init for the layout direction.
-      Alert.alert(
-        t("language.restartTitle"),
-        t("language.restartBody"),
-        [{ text: t("common.ok") }]
-      );
-    }
+    // Persists, applies live, and reloads the app when crossing the Arabic (RTL)
+    // boundary so the mirrored layout direction takes effect without the user
+    // having to fully close and reopen the app.
+    changeLanguage(code).catch(() => {});
   }
 
   return (

@@ -111,7 +111,7 @@ export function AppDrawer({ onSignOut }: { onSignOut: () => Promise<void> | void
       <Drawer.Screen
         name="AdminStores"
         component={AdminStoresScreen}
-        options={{ title: t("nav.adminStores"), drawerLabel: `⚙️  ${t("nav.adminStores")}` }}
+        options={{ title: t("nav.adminStores"), drawerLabel: `🏬  ${t("nav.adminStores")}` }}
       />
 
       <Drawer.Screen
@@ -123,13 +123,13 @@ export function AppDrawer({ onSignOut }: { onSignOut: () => Promise<void> | void
       <Drawer.Screen
         name="Reports"
         component={ReportsScreen}
-        options={{ title: t("nav.reports"), drawerLabel: `📄  ${t("nav.reports")}` }}
+        options={{ title: t("nav.reports"), drawerLabel: `📊  ${t("nav.reports")}` }}
       />
 
       <Drawer.Screen
         name="SettingsRoot"
         component={SettingsStackScreen}
-        options={{ title: t("nav.settings"), drawerLabel: `🔧  ${t("nav.settings")}` }}
+        options={{ title: t("nav.settings"), drawerLabel: `⚙️  ${t("nav.settings")}` }}
       />
     </Drawer.Navigator>
   );

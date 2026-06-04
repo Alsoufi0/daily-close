@@ -1,7 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Language } from "@smokeshop/shared/i18n";
-import { getMobileLanguage, setMobileLanguage } from "../i18n";
+import { changeLanguage, getMobileLanguage } from "../i18n";
 import { colors, font, radius } from "../theme";
 
 // 2-letter codes (not flag emojis) — Android doesn't render country-flag emojis.
@@ -22,8 +21,8 @@ export function LanguageSelector() {
 
   function pick(code: Language) {
     if (code === current) return;
-    setMobileLanguage(code);
-    AsyncStorage.setItem("dailyclose:language", code).catch(() => {});
+    // Persists, and reloads the app when crossing the Arabic (RTL) boundary.
+    changeLanguage(code).catch(() => {});
   }
 
   return (
