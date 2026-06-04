@@ -191,7 +191,7 @@ function CustomDrawerContent({
 }
 
 const s = StyleSheet.create({
-  navLabel: { fontWeight: font.black, fontSize: 14, marginLeft: -16 },
+  navLabel: { fontWeight: font.black, fontSize: 14, marginLeft: 4 },
   header: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.lg,

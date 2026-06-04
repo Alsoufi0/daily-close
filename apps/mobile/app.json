@@ -3,7 +3,7 @@
     "name": "Daily Close",
     "slug": "daily-close",
     "owner": "daily-closes-team",
-    "version": "0.1.0",
+    "version": "1.0.0",
     "runtimeVersion": {
       "policy": "appVersion"
     },
