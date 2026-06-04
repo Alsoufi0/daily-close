@@ -528,6 +528,144 @@ export class SupabaseAuthService {
     return { tokenHash: data.properties.hashed_token, type: "magiclink" };
   }
 
+  // ── Add a phone for SMS sign-in (email-signup owners) ───────────────────────
+  // An owner who signed up with email has no number on file, so the SMS sign-in
+  // on the login screen can never find them. These let them verify a number and
+  // link it to their existing account, after which phone-login/{request,confirm}
+  // work unchanged (findUserByPhone now resolves the alias).
+
+  /** Returns the number currently linked for SMS sign-in, or null. */
+  async getPhoneLoginStatus(user: RequestUser): Promise<{ phone: string | null }> {
+    await this.ensurePhoneLoginAliasTable();
+    const rows = await this.prisma.$queryRawUnsafe<Array<{ phone: string }>>(
+      `select phone from public.phone_login_aliases where user_id = $1 limit 1`,
+      user.id
+    );
+    return { phone: rows[0]?.phone ?? null };
+  }
+
+  /** Send a verification code to a number the signed-in owner wants to add. */
+  async addPhoneForLoginRequest(user: RequestUser, phoneInput?: string): Promise<{ sent: boolean; message: string }> {
+    if (!this.supabase) throw new UnauthorizedException("Supabase is not configured.");
+    const phone = this.normalizePhone(phoneInput || "");
+    const authUserId = user.authUserId || (await this.authUserIdFor(user.id));
+    if (!authUserId) throw new BadRequestException("Account is missing an auth identity.");
+
+    // Don't let a number already used by a *different* account be hijacked.
+    const owner = await this.findUserByPhone(phone);
+    if (owner && owner.id !== user.id) {
+      throw new ConflictException("That number is already linked to another account.");
+    }
+
+    if (this.isTwilioVerifyConfigured()) {
+      const sent = await this.startTwilioVerify(phone);
+      return { sent, message: sent ? "Verification code sent." : "Code could not be sent. Check Twilio setup." };
+    }
+
+    const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
+    await this.ensurePhoneLoginTable();
+    await this.prisma.$executeRawUnsafe(
+      `insert into public.phone_login_codes
+         (id, phone, user_id, auth_user_id, code_hash, expires_at)
+       values ($1, $2, $3, $4, $5, now() + interval '10 minutes')`,
+      randomBytes(16).toString("hex"),
+      phone,
+      user.id,
+      authUserId,
+      this.hashResetCode(phone, code)
+    );
+    const sent = await this.sendTwilioPhoneMessage(
+      phone,
+      `Daily Close verification code: ${code}. This code expires in 10 minutes.`
+    );
+    return { sent, message: sent ? "Verification code sent." : "Code could not be sent. Check Twilio setup." };
+  }
+
+  /** Verify the code and link the number to the signed-in owner's account. */
+  async addPhoneForLoginConfirm(
+    user: RequestUser,
+    phoneInput?: string,
+    codeInput?: string
+  ): Promise<{ phone: string }> {
+    if (!this.supabase) throw new UnauthorizedException("Supabase is not configured.");
+    const phone = this.normalizePhone(phoneInput || "");
+    const code = String(codeInput || "").replace(/\D/g, "");
+    if (code.length !== 6) throw new BadRequestException("Enter the 6 digit code.");
+    const authUserId = user.authUserId || (await this.authUserIdFor(user.id));
+    if (!authUserId) throw new BadRequestException("Account is missing an auth identity.");
+
+    const owner = await this.findUserByPhone(phone);
+    if (owner && owner.id !== user.id) {
+      throw new ConflictException("That number is already linked to another account.");
+    }
+
+    if (this.isTwilioVerifyConfigured()) {
+      const verified = await this.checkTwilioVerify(phone, code);
+      if (!verified) throw new BadRequestException("Code is invalid or expired.");
+    } else {
+      await this.ensurePhoneLoginTable();
+      const rows = await this.prisma.$queryRawUnsafe<Array<{ id: string }>>(
+        `select id
+           from public.phone_login_codes
+          where phone = $1
+            and code_hash = $2
+            and consumed_at is null
+            and expires_at > now()
+          order by created_at desc
+          limit 1`,
+        phone,
+        this.hashResetCode(phone, code)
+      );
+      const row = rows[0];
+      if (!row) throw new BadRequestException("Code is invalid or expired.");
+      await this.prisma.$executeRawUnsafe(
+        `update public.phone_login_codes set consumed_at = now() where id = $1`,
+        row.id
+      );
+    }
+
+    await this.ensurePhoneLoginAliasTable();
+    // One number per account: replace any previous alias for this user.
+    await this.prisma.$executeRawUnsafe(
+      `delete from public.phone_login_aliases where user_id = $1`,
+      user.id
+    );
+    await this.prisma.$executeRawUnsafe(
+      `insert into public.phone_login_aliases (phone, user_id, auth_user_id)
+       values ($1, $2, $3)
+       on conflict (phone) do update set user_id = excluded.user_id, auth_user_id = excluded.auth_user_id`,
+      phone,
+      user.id,
+      authUserId
+    );
+    return { phone };
+  }
+
+  private async authUserIdFor(userId: string): Promise<string | null> {
+    const row = await this.prisma.user.findUnique({ where: { id: userId }, select: { authUserId: true } });
+    return row?.authUserId ?? null;
+  }
+
+  private async ensurePhoneLoginAliasTable() {
+    await this.prisma.$executeRawUnsafe(
+      `create table if not exists public.phone_login_aliases (
+        phone text primary key,
+        user_id text not null references public.users(id) on delete cascade,
+        auth_user_id text not null,
+        created_at timestamptz not null default now()
+      )`
+    );
+    // API connects as a BYPASSRLS role; enabling RLS with no policy keeps the
+    // app (anon/authenticated) from ever reading this table directly.
+    await this.prisma.$executeRawUnsafe(
+      `alter table public.phone_login_aliases enable row level security`
+    );
+    await this.prisma.$executeRawUnsafe(
+      `create index if not exists phone_login_aliases_user_idx
+         on public.phone_login_aliases (user_id)`
+    );
+  }
+
   private primaryEmailForAuthUser(user: { email?: string | null; phone?: string | null }): string | null {
     return this.emailsForAuthUser(user)[0] || null;
   }
@@ -548,13 +686,30 @@ export class SupabaseAuthService {
   }
 
   private async findUserByPhone(phone: string): Promise<{ id: string; email: string; authUserId: string | null } | null> {
-    return this.prisma.user.findFirst({
+    // Phone-signup owners (and invited employees) carry a synthetic email that
+    // encodes the number, so they resolve directly.
+    const direct = await this.prisma.user.findFirst({
       where: {
         OR: [
           { email: this.syntheticPhoneEmail(phone, "owners") },
           { email: this.syntheticPhoneEmail(phone, "invites") }
         ]
       },
+      select: { id: true, email: true, authUserId: true }
+    });
+    if (direct) return direct;
+
+    // Email-signup owners who later added a number for SMS sign-in are mapped
+    // through the alias table. confirmPhoneLogin then mints a session for their
+    // real email, so the linked phone signs into the same account.
+    await this.ensurePhoneLoginAliasTable();
+    const rows = await this.prisma.$queryRawUnsafe<Array<{ user_id: string }>>(
+      `select user_id from public.phone_login_aliases where phone = $1 limit 1`,
+      phone
+    );
+    if (!rows[0]) return null;
+    return this.prisma.user.findUnique({
+      where: { id: rows[0].user_id },
       select: { id: true, email: true, authUserId: true }
     });
   }

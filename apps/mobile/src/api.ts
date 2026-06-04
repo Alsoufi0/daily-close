@@ -136,6 +136,26 @@ export async function confirmPhoneLogin(input: {
   });
 }
 
+// Add a phone for SMS sign-in — for owners who signed up with email and have no
+// number on file. Authed (links to the signed-in account).
+export async function getPhoneLoginStatus(): Promise<{ phone: string | null }> {
+  return apiFetch<{ phone: string | null }>("/auth/phone-login/added");
+}
+
+export async function addPhoneLoginRequest(phone: string): Promise<{ sent: boolean; message: string }> {
+  return apiFetch<{ sent: boolean; message: string }>("/auth/phone-login/add/request", {
+    method: "POST",
+    body: JSON.stringify({ phone })
+  });
+}
+
+export async function addPhoneLoginConfirm(input: { phone: string; code: string }): Promise<{ phone: string }> {
+  return apiFetch<{ phone: string }>("/auth/phone-login/add/confirm", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
 export interface StoreRecord {
   id: string;
   storeName: string;

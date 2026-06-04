@@ -248,7 +248,21 @@ export const translations: Record<Language, Dictionary> = {
     "setup.doneTitle": "You're set up.",
     "setup.doneBody": "Open the owner dashboard to see tonight's close as it happens.",
     "reports.downloadedTo": "Saved to {path}",
-    "reports.downloadFailed": "Download failed"
+    "reports.downloadFailed": "Download failed",
+    "phoneSignin.title": "Phone sign-in",
+    "phoneSignin.listSubtitle": "Add a number to sign in with an SMS code",
+    "phoneSignin.subtitle": "Add a phone number so you can sign in with a one-time SMS code — handy if you ever forget your password.",
+    "phoneSignin.currentlyLinked": "Sign-in number",
+    "phoneSignin.numberLabel": "Phone number",
+    "phoneSignin.numberHelp": "Include the country code, like +15551234567.",
+    "phoneSignin.addNumber": "Send code",
+    "phoneSignin.updateNumber": "Change number",
+    "phoneSignin.confirm": "Verify & link",
+    "phoneSignin.codeSent": "We sent you a 6-digit code.",
+    "phoneSignin.codeFailed": "Could not send the code. Try again.",
+    "phoneSignin.codeInvalid": "That code is invalid or expired.",
+    "phoneSignin.linked": "Done — you can now sign in with this number.",
+    "phoneSignin.loadFailed": "Could not load your sign-in number."
   },
   ar: {
     "common.export": "تصدير",

@@ -124,6 +124,33 @@ export class AuthController {
     });
   }
 
+  // ── Add a phone for SMS sign-in (signed-in owners) ──────────────────────────
+  // Lets an email-signup owner attach a verified number so they can later sign
+  // in with the SMS code. Authed: the number links to the caller's own account.
+
+  @Get("phone-login/added")
+  @ApiBearerAuth()
+  @UseGuards(SupabaseAuthGuard)
+  phoneLoginStatus(@CurrentUser() user: RequestUser) {
+    return this.auth.getPhoneLoginStatus(user);
+  }
+
+  @Post("phone-login/add/request")
+  @ApiBearerAuth()
+  @UseGuards(SupabaseAuthGuard)
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  addPhoneLoginRequest(@CurrentUser() user: RequestUser, @Body() body: { phone?: string }) {
+    return this.auth.addPhoneForLoginRequest(user, body?.phone);
+  }
+
+  @Post("phone-login/add/confirm")
+  @ApiBearerAuth()
+  @UseGuards(SupabaseAuthGuard)
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  addPhoneLoginConfirm(@CurrentUser() user: RequestUser, @Body() body: { phone?: string; code?: string }) {
+    return this.auth.addPhoneForLoginConfirm(user, body?.phone, body?.code);
+  }
+
   /**
    * Admin-only: create an owner with email already confirmed and provision
    * their public.users + owners row. Bypasses Supabase's email verification —

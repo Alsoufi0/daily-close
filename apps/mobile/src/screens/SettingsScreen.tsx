@@ -22,6 +22,7 @@ interface Row {
 function getRows(): Row[] {
   return [
     { title: t("account.changePassword"), subtitle: t("settings.changePasswordSubtitle"), navigate: "ChangePassword" },
+    { title: t("phoneSignin.title"), subtitle: t("phoneSignin.listSubtitle"), navigate: "PhoneSignIn" },
     { title: t("settings.whatsappTitle"), subtitle: t("settings.whatsappListSubtitle"), navigate: "WhatsAppSettings" },
     { title: t("common.language"), subtitle: t("settings.languageSubtitle"), navigate: "Language" },
     { title: t("settings.billingTitle"), subtitle: t("settings.billingSubtitle"), web: "/billing" }

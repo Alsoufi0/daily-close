@@ -11,6 +11,7 @@ import { ReportsScreen } from "../screens/ReportsScreen";
 import { SettingsScreen } from "../screens/SettingsScreen";
 import { ChangePasswordScreen } from "../screens/settings/ChangePasswordScreen";
 import { WhatsAppSettingsScreen } from "../screens/settings/WhatsAppSettingsScreen";
+import { PhoneSignInScreen } from "../screens/settings/PhoneSignInScreen";
 import { LanguageScreen } from "../screens/settings/LanguageScreen";
 import { getMobileLanguage, t } from "../i18n";
 import { colors, font, radius, spacing } from "../theme";
@@ -29,6 +30,7 @@ export type SettingsStackParamList = {
   SettingsHome: undefined;
   ChangePassword: undefined;
   WhatsAppSettings: undefined;
+  PhoneSignIn: undefined;
   Language: undefined;
 };
 
@@ -51,6 +53,7 @@ function SettingsStackScreen() {
       />
       <SettingsStack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ title: t("account.changePassword") }} />
       <SettingsStack.Screen name="WhatsAppSettings" component={WhatsAppSettingsScreen} options={{ title: t("settings.whatsappTitle") }} />
+      <SettingsStack.Screen name="PhoneSignIn" component={PhoneSignInScreen} options={{ title: t("phoneSignin.title") }} />
       <SettingsStack.Screen name="Language" component={LanguageScreen} options={{ title: t("common.language") }} />
     </SettingsStack.Navigator>
   );
