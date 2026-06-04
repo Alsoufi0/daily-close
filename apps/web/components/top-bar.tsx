@@ -17,9 +17,8 @@ const NAV = [
   { href: "/owner/receipts", labelKey: "nav.receipts", adminOnly: true },
   { href: "/close", labelKey: "nav.close" },
   { href: "/admin", labelKey: "nav.admin", adminOnly: true },
-  { href: "/billing", labelKey: "nav.billing", accountOnly: true },
-  { href: "/account/whatsapp", labelKey: "nav.whatsapp", accountOnly: true },
-  { href: "/account/password", labelKey: "nav.password" }
+  // Settings hub groups phone sign-in, WhatsApp, billing, and password.
+  { href: "/account", labelKey: "nav.settings" }
 ] as Array<{ href: string; labelKey: string; adminOnly?: boolean; accountOnly?: boolean }>;
 
 // Public marketing nav shown to signed-out visitors.

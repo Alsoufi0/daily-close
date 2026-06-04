@@ -95,7 +95,7 @@ function WhatsAppSettingsInner() {
   return (
     <main className="mx-auto w-full max-w-xl px-4 py-10 sm:px-6" dir={dir}>
       <Link
-        href="/owner"
+        href="/account"
         className="focus-ring inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm font-black text-ink/65 hover:text-ink"
       >
         <ArrowLeft size={16} aria-hidden /> {t("common.back")}

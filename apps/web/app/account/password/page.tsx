@@ -140,7 +140,7 @@ function ChangePasswordPageInner({
     <main className="mx-auto w-full max-w-md px-4 py-12 sm:px-6">
       {!recovery ? (
         <Link
-          href="/owner"
+          href="/account"
           className="focus-ring inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm font-black text-ink/65 hover:text-ink"
         >
           <ArrowLeft size={16} aria-hidden /> {t("account.back")}
