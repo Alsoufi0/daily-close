@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2, Eye, EyeOff, Loader2, ShieldCheck, Trash2 } from "lucide-react";
 import { createBrowserSupabase } from "../../../lib/supabase-browser";
@@ -10,6 +10,56 @@ import { RequireAuth } from "../../../components/require-auth";
 import { useLanguage } from "../../../components/language-provider";
 
 export default function ChangePasswordPage() {
+  // This page serves two flows: the signed-in "change password" screen (reached
+  // from the nav, behind RequireAuth) AND the landing for the password-reset
+  // email link. The reset link arrives as `?token_hash=...&type=recovery`; we
+  // exchange it for a session with verifyOtp — which, unlike the PKCE `?code=`
+  // flow, needs no browser-stored verifier, so it works even when the email is
+  // opened on a different device than where the reset was requested. Only when
+  // there's no recovery token do we fall back to RequireAuth (which would
+  // otherwise bounce a not-yet-signed-in reset visitor to the login page —
+  // that was the "reset link sends me to login" bug).
+  const [mode, setMode] = useState<"checking" | "recovery" | "normal">("checking");
+  const [recoveryError, setRecoveryError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const tokenHash = params.get("token_hash");
+    if (params.get("type") !== "recovery" || !tokenHash) {
+      setMode("normal");
+      return;
+    }
+    const supabase = createBrowserSupabase();
+    if (!supabase) {
+      setMode("normal");
+      return;
+    }
+    supabase.auth
+      .verifyOtp({ type: "recovery", token_hash: tokenHash })
+      .then(({ error }) => {
+        if (error) setRecoveryError(error.message);
+        // Drop the one-time token from the address bar so a refresh or the
+        // back button can't try to reuse an already-consumed token.
+        else window.history.replaceState(null, "", "/account/password");
+        setMode("recovery");
+      })
+      .catch(() => {
+        setRecoveryError("This reset link is invalid or has expired.");
+        setMode("recovery");
+      });
+  }, []);
+
+  if (mode === "checking") {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center text-ink/55">
+        <Loader2 className="animate-spin" size={20} aria-hidden />
+      </div>
+    );
+  }
+  if (mode === "recovery") {
+    return <ChangePasswordPageInner recovery recoveryError={recoveryError} />;
+  }
   return (
     <RequireAuth>
       <ChangePasswordPageInner />
@@ -17,7 +67,13 @@ export default function ChangePasswordPage() {
   );
 }
 
-function ChangePasswordPageInner() {
+function ChangePasswordPageInner({
+  recovery = false,
+  recoveryError = null
+}: {
+  recovery?: boolean;
+  recoveryError?: string | null;
+}) {
   const { t } = useLanguage();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -57,14 +113,39 @@ function ChangePasswordPageInner() {
     setStatus("done");
   }
 
+  // Reset link arrived but the token was already used / expired — verifyOtp
+  // failed, so there's no session to set a password with. Send them back to
+  // request a fresh link rather than showing a form that can't work.
+  if (recovery && recoveryError) {
+    return (
+      <main className="mx-auto w-full max-w-md px-4 py-12 sm:px-6">
+        <div className="mt-6 rounded-2xl border border-warning/30 bg-red-50 p-6 text-center">
+          <h1 className="text-2xl font-black text-warning">Reset link expired</h1>
+          <p className="mt-2 text-sm font-bold text-ink/70">
+            This password-reset link is invalid or has already been used. Request a new one and
+            try again.
+          </p>
+          <Link
+            href="/forgot-password"
+            className="focus-ring mt-5 inline-flex h-12 items-center justify-center rounded-lg bg-leaf px-5 font-black text-white"
+          >
+            Request a new link
+          </Link>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="mx-auto w-full max-w-md px-4 py-12 sm:px-6">
-      <Link
-        href="/owner"
-        className="focus-ring inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm font-black text-ink/65 hover:text-ink"
-      >
-        <ArrowLeft size={16} aria-hidden /> {t("account.back")}
-      </Link>
+      {!recovery ? (
+        <Link
+          href="/owner"
+          className="focus-ring inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm font-black text-ink/65 hover:text-ink"
+        >
+          <ArrowLeft size={16} aria-hidden /> {t("account.back")}
+        </Link>
+      ) : null}
 
       <div className="mt-6 rounded-2xl border border-ink/10 bg-white p-6 shadow-sm">
         <div className="flex items-center gap-3">
@@ -129,7 +210,7 @@ function ChangePasswordPageInner() {
         )}
       </div>
 
-      <DeleteAccountSection />
+      {!recovery ? <DeleteAccountSection /> : null}
     </main>
   );
 }

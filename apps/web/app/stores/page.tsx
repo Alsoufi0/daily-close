@@ -122,7 +122,7 @@ function StoresPageInner() {
           className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-leaf/10 blur-2xl"
         />
         <Link
-          href="/"
+          href="/owner"
           className="focus-ring inline-flex items-center gap-1.5 text-sm font-black text-ink/60 hover:text-ink"
         >
           <ArrowLeft size={16} aria-hidden /> {t("common.back") || "Dashboard"}

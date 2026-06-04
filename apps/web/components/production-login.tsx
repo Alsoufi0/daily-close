@@ -2,29 +2,38 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import {
-  ArrowRight,
-  BadgeCheck,
-  Clock,
-  Eye,
-  EyeOff,
-  LockKeyhole,
-  Smartphone,
-  Store,
-  TrendingUp
-} from "lucide-react";
+import { ArrowRight, Check, Eye, EyeOff, LockKeyhole } from "lucide-react";
 import { createBrowserSupabase } from "../lib/supabase-browser";
 import { confirmPhoneLogin, requestPhoneLogin } from "../lib/api-client";
 import { useLanguage, LanguageSelect } from "./language-provider";
+import { StoreBadges } from "./marketing/store-badges";
 
-const FEATURES = [
-  { icon: Clock, titleKey: "home.featureCloseTitle", bodyKey: "home.featureCloseBody" },
-  { icon: TrendingUp, titleKey: "home.featureOwnerTitle", bodyKey: "home.featureOwnerBody" },
-  { icon: BadgeCheck, titleKey: "home.featureBooksTitle", bodyKey: "home.featureBooksBody" }
-];
+// Concise, sign-in-context trust points (reusing existing keys) — deliberately
+// NOT the landing's hero copy, so the sign-in page doesn't repeat the marketing
+// page word-for-word.
+const SIGNIN_POINTS = ["home.featureCloseTitle", "billing.multiStoreDashboard", "auth.csvMissedAlerts"];
 
-function syntheticPhoneEmail(phone: string, namespace: "owners" | "invites") {
-  return `phone_${phone.replace(/\D/g, "")}@${namespace}.dailyclose.local`;
+// Mirror the API's phone handling (apps/api/src/common/phone.ts) so a bare US
+// number typed on the sign-in form resolves to the SAME synthetic email the
+// account was provisioned under. We try every digit variant (10-digit vs
+// 1+10-digit) in both namespaces so accounts created before phone
+// normalization still sign in.
+function phoneDigitVariants(raw: string): string[] {
+  const digits = raw.replace(/\D/g, "");
+  const variants = new Set<string>();
+  if (digits) variants.add(digits);
+  if (digits.length === 10) variants.add(`1${digits}`);
+  if (digits.length === 11 && digits.startsWith("1")) variants.add(digits.slice(1));
+  return Array.from(variants);
+}
+
+function syntheticPhoneEmailCandidates(raw: string): string[] {
+  const out: string[] = [];
+  for (const digits of phoneDigitVariants(raw)) {
+    out.push(`phone_${digits}@owners.dailyclose.local`);
+    out.push(`phone_${digits}@invites.dailyclose.local`);
+  }
+  return out;
 }
 
 export function ProductionLogin() {
@@ -71,10 +80,7 @@ export function ProductionLogin() {
       session = result.data.session;
       error = result.error;
     } else {
-      for (const candidate of [
-        syntheticPhoneEmail(phone.trim(), "owners"),
-        syntheticPhoneEmail(phone.trim(), "invites")
-      ]) {
+      for (const candidate of syntheticPhoneEmailCandidates(phone.trim())) {
         const result = await supabase.auth.signInWithPassword({ email: candidate, password });
         session = result.data.session;
         error = result.error;
@@ -146,41 +152,25 @@ export function ProductionLogin() {
         <LanguageSelect />
       </div>
       <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-start lg:gap-10">
-        <div className="hidden lg:block">
-          <span className="inline-flex items-center gap-2 rounded-full bg-leaf/10 px-3 py-1 text-xs font-black uppercase tracking-wide text-leaf">
-            <Store size={14} aria-hidden />
-            {t("home.platforms")}
-          </span>
-          <h1 className="mt-4 text-3xl font-black leading-tight tracking-tight text-ink sm:text-6xl">
-            {t("home.hero")}
+        <div className="hidden lg:flex lg:flex-col lg:justify-center lg:py-6">
+          <h1 className="text-5xl font-black leading-[1.05] tracking-tight text-ink">
+            {t("marketing.signinTitle")}
           </h1>
-          <p className="mt-4 max-w-xl text-base font-bold leading-7 text-ink/70 sm:mt-5 sm:text-xl sm:leading-8">
-            {t("home.value")}
+          <p className="mt-4 max-w-md text-lg font-bold leading-7 text-ink/70">
+            {t("marketing.signinBody")}
           </p>
-          <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-ink/5 px-3 py-1.5 text-sm font-black text-ink/75">
-            {t("home.price")}
-          </p>
-
-          <div className="mt-8 grid gap-3 sm:grid-cols-3">
-            {FEATURES.map(({ icon: Icon, titleKey, bodyKey }) => (
-              <div key={titleKey} className="rounded-xl border border-ink/10 bg-white p-4 shadow-sm">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-leaf/10 text-leaf">
-                  <Icon size={18} aria-hidden />
-                </div>
-                <p className="mt-3 text-base font-black text-ink">{t(titleKey)}</p>
-                <p className="mt-1 text-sm font-semibold leading-6 text-ink/65">{t(bodyKey)}</p>
-              </div>
+          <ul className="mt-8 space-y-3">
+            {SIGNIN_POINTS.map((key) => (
+              <li key={key} className="flex items-center gap-3 text-base font-bold text-ink/75">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-leaf/15 text-leaf">
+                  <Check size={14} aria-hidden />
+                </span>
+                {t(key)}
+              </li>
             ))}
-          </div>
-
-          <div className="mt-8 flex items-center gap-3 rounded-xl border border-ink/10 bg-white/70 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-ink text-white">
-              <Smartphone size={20} aria-hidden />
-            </div>
-            <div>
-              <p className="text-sm font-black text-ink">{t("home.mobileApps")}</p>
-              <p className="text-sm font-semibold text-ink/65">{t("home.mobileAppsBody")}</p>
-            </div>
+          </ul>
+          <div className="mt-10">
+            <StoreBadges />
           </div>
         </div>
 

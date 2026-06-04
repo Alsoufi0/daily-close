@@ -297,7 +297,7 @@ export default function SignupPage() {
 
         <p className="mt-4 text-center text-sm font-bold text-ink/65">
           {t("auth.alreadyHaveAccount")}{" "}
-          <Link href="/" className="text-leaf underline">
+          <Link href="/login" className="text-leaf underline">
             {t("auth.signIn")}
           </Link>
         </p>
