@@ -16,6 +16,7 @@ import { useSession } from "../../lib/use-session";
 import { landingPath } from "../../lib/session-roles";
 import { PhoneFrame } from "./phone-frame";
 import { StoreBadges } from "./store-badges";
+import { Showcase } from "./showcase";
 
 export function MarketingHome() {
   const { t } = useLanguage();
@@ -105,6 +106,9 @@ export function MarketingHome() {
           <Feature icon={<Building2 size={22} />} title={t("marketing.featureMultiTitle")} body={t("marketing.featureMultiBody")} />
         </div>
       </section>
+
+      {/* See it in action — real product shots */}
+      <Showcase />
 
       {/* How it works teaser */}
       <section className="bg-leaf/5">
