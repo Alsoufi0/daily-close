@@ -21,6 +21,18 @@ export function Tutorials() {
       body: t("marketing.tutCreateStoreBody")
     },
     {
+      src: "/videos/daily-close.mp4",
+      poster: "/videos/posters/daily-close.jpg",
+      title: t("marketing.tutDailyCloseTitle"),
+      body: t("marketing.tutDailyCloseBody")
+    },
+    {
+      src: "/videos/dashboard.mp4",
+      poster: "/videos/posters/dashboard.jpg",
+      title: t("marketing.tutDashboardTitle"),
+      body: t("marketing.tutDashboardBody")
+    },
+    {
       src: "/videos/download-reports.mp4",
       poster: "/videos/posters/download-reports.jpg",
       title: t("marketing.tutReportsTitle"),
