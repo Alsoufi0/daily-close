@@ -111,9 +111,25 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   }
   if (!response.ok) {
     const text = await response.text();
-    throw new ApiError(response.status, text || response.statusText);
+    throw new ApiError(response.status, extractApiErrorMessage(text, response.statusText));
   }
   return response.json() as Promise<T>;
+}
+
+// API errors come back as JSON ({ message, error, statusCode }). Show the human
+// `message` (or join an array of validation messages), never the raw blob.
+function extractApiErrorMessage(text: string, fallback: string): string {
+  if (!text) return fallback;
+  try {
+    const parsed = JSON.parse(text);
+    const message = parsed?.message;
+    if (Array.isArray(message)) return message.join(" ");
+    if (typeof message === "string" && message.trim()) return message;
+    if (typeof parsed?.error === "string" && parsed.error.trim()) return parsed.error;
+  } catch {
+    // Non-JSON error bodies are still valid — show them as-is.
+  }
+  return text || fallback;
 }
 
 export async function requestPhonePasswordReset(phone: string): Promise<{ sent: boolean; message: string }> {
