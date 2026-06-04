@@ -422,6 +422,19 @@ export function ReportsScreen() {
               <Card style={{ gap: spacing.sm }}>
                 <DetailRow label={t("reports.status")} value={openReceipt.dailyClose.status} />
                 <DetailRow label={t("dashboard.totalSales")} value={formatMoney(openReceipt.dailyClose.totalSales)} />
+                {openReceipt.dailyClose.refunds > 0 ? (
+                  <DetailRow label={t("closing.refunds")} value={formatMoney(openReceipt.dailyClose.refunds)} tone="bad" />
+                ) : null}
+                <DetailRow
+                  label={t("dashboard.expenses")}
+                  value={formatMoney(openReceipt.dailyClose.expenses)}
+                  tone={openReceipt.dailyClose.expenses > 0 ? "bad" : undefined}
+                />
+                <DetailRow
+                  label={t("dashboard.netProfit")}
+                  value={formatMoney(openReceipt.dailyClose.netProfit)}
+                  tone={openReceipt.dailyClose.netProfit < 0 ? "bad" : "good"}
+                />
                 <DetailRow label={t("common.cash")} value={formatMoney(openReceipt.dailyClose.cashSales)} />
                 <DetailRow label={t("common.card")} value={formatMoney(openReceipt.dailyClose.cardSales)} />
                 <DetailRow

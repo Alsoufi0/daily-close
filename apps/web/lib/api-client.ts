@@ -513,6 +513,9 @@ export interface ReceiptRow {
     cashSales: number;
     cardSales: number;
     difference: number;
+    expenses: number;
+    refunds: number;
+    netProfit: number;
     status: "CLOSED" | "SHORT" | "OVER" | "PENDING";
   } | null;
   createdAt: string;
