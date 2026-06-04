@@ -50,7 +50,7 @@ SMS/WhatsApp; Resend handles transactional email; Google Vision powers POS OCR.
 Prerequisites: Node 18+ and npm. Copy the example env and fill in your own keys:
 
 ```bash
-cp apps/api/.env.example apps/api/.env   # API: Supabase, Stripe, Twilio, Resend, Google Vision
+cp .env.example apps/api/.env   # API: Supabase, Stripe, Twilio, Resend, Google Vision, …
 # Web reads NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY / NEXT_PUBLIC_API_URL
 ```
 
@@ -81,4 +81,4 @@ npm run build                      # production build (web + api)
 > Open a PR and merge it (`gh pr merge`).
 
 Secrets are configured in the Vercel / Render / Supabase dashboards; never commit
-real keys. See `apps/api/.env.example` for the full list of required variables.
+real keys. See `.env.example` for the full list of required variables.
