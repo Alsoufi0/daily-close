@@ -19,6 +19,7 @@ import * as Sharing from "expo-sharing";
 import { Alert } from "react-native";
 import { formatMoney, formatMoneyExact } from "@smokeshop/shared/utils/money";
 import {
+  deleteDailyClose,
   getReceiptsZipDownloadInfo,
   getReportExportDownloadInfo,
   listReceipts,
@@ -30,6 +31,7 @@ import { Banner, Button, Card } from "../ui";
 import { DateField } from "../components/DateField";
 import { saveDownloadedFile } from "../save-file";
 import { SkeletonRow } from "../ui/Skeleton";
+import { useSession } from "../use-session";
 import { t } from "../i18n";
 import { colors, font, radius, spacing } from "../theme";
 
@@ -54,6 +56,34 @@ export function ReportsScreen() {
   const [exporting, setExporting] = useState<"csv" | "pdf" | null>(null);
   const [allStores, setAllStores] = useState(false);
   const [downloadingReceipt, setDownloadingReceipt] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const { profile } = useSession();
+  // Owners + per-store managers can delete a close report; employees cannot
+  // (the API 403s for them anyway, so we just hide the action).
+  const canDelete = !!profile && (profile.role !== "EMPLOYEE" || (profile.managedStoreIds?.length ?? 0) > 0);
+
+  function confirmDeleteClose(r: ReceiptRow) {
+    if (!r.dailyClose) return;
+    Alert.alert(t("history.deleteClose"), t("common.cannotBeUndone"), [
+      { text: t("common.cancel"), style: "cancel" },
+      {
+        text: t("common.delete"),
+        style: "destructive",
+        onPress: async () => {
+          setDeleting(true);
+          try {
+            await deleteDailyClose(r.dailyClose!.id);
+            setOpenReceipt(null);
+            await load();
+          } catch (err: any) {
+            Alert.alert(t("common.somethingBroke"), err?.message || t("common.tryAgain"));
+          } finally {
+            setDeleting(false);
+          }
+        }
+      }
+    ]);
+  }
 
   // Initial: load stores, pre-select first
   useEffect(() => {
@@ -444,6 +474,15 @@ export function ReportsScreen() {
                 />
               </Card>
             ) : null}
+            {canDelete && openReceipt?.dailyClose ? (
+              <TouchableOpacity
+                onPress={() => openReceipt && confirmDeleteClose(openReceipt)}
+                disabled={deleting}
+                style={[s.deleteRow, deleting && { opacity: 0.5 }]}
+              >
+                <Text style={s.deleteText}>{deleting ? `${t("history.deleteClose")}…` : t("history.deleteClose")}</Text>
+              </TouchableOpacity>
+            ) : null}
             <Card style={{ gap: spacing.xs }}>
               <Text style={s.metaLabel}>{t("reports.submittedBy")}</Text>
               <Text style={s.metaValue}>{openReceipt?.employeeName}</Text>
@@ -529,6 +568,8 @@ const s = StyleSheet.create({
   pickerRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
   pickerLabel: { flex: 1, color: colors.ink, fontWeight: font.bold, fontSize: 15 },
   pickerCheck: { color: colors.leaf, fontWeight: font.black, fontSize: 18 },
+  deleteRow: { paddingVertical: spacing.md, alignItems: "center", borderRadius: radius.md, borderWidth: 1, borderColor: colors.warning },
+  deleteText: { color: colors.warning, fontWeight: font.black, fontSize: 14 },
   metaLabel: { color: colors.inkMuted, fontWeight: font.black, fontSize: 11, textTransform: "uppercase", letterSpacing: 0.4 },
   metaValue: { color: colors.ink, fontWeight: font.black, fontSize: 15 },
   showMoreBtn: {
