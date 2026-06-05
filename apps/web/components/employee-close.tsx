@@ -19,7 +19,7 @@ import { clsx } from "clsx";
 import { formatMoney, formatMoneyExact, netProfit, toMoney } from "@smokeshop/shared/utils/money";
 import { suggestBusinessDate, storeLocalDateToUtcNoon } from "@smokeshop/shared/timezones";
 import { scannedReport } from "../lib/mock-data";
-import { ApiError, finishDailyClose, uploadReport } from "../lib/api-client";
+import { ApiError, checkCloseExists, finishDailyClose, uploadReport } from "../lib/api-client";
 import { preprocessReceipt } from "../lib/preprocess-image";
 import { useSession } from "../lib/use-session";
 import { MetricCard } from "./metric-card";
@@ -87,6 +87,8 @@ export function EmployeeClose() {
   const [expenseItems, setExpenseItems] = useState<ExpenseRow[]>([]);
   const [scanningIdx, setScanningIdx] = useState<number | null>(null);
   const [attachedPhotoIds, setAttachedPhotoIds] = useState<Set<string>>(new Set());
+  const [dateClosed, setDateClosed] = useState(false);
+  const [checkingDate, setCheckingDate] = useState(false);
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -128,6 +130,27 @@ export function EmployeeClose() {
     if (!businessDate) setBusinessDate(suggestBusinessDate(activeStore));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [businessDate, activeStore.id]);
+
+  // Up-front guard: as soon as a store + date are chosen, check whether that
+  // store is already closed for the day — so the employee is stopped here, not
+  // after doing the whole close. Only while still on the start screen.
+  useEffect(() => {
+    if (step !== "start" || !businessDate || !session.token) {
+      setDateClosed(false);
+      return;
+    }
+    let cancelled = false;
+    setCheckingDate(true);
+    const dateIso = storeLocalDateToUtcNoon(businessDate, activeStore.timezone);
+    checkCloseExists(session.token, activeStore.id, dateIso)
+      .then((r) => !cancelled && setDateClosed(r.closed))
+      .catch(() => !cancelled && setDateClosed(false))
+      .finally(() => !cancelled && setCheckingDate(false));
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, businessDate, activeStore.id, session.token]);
 
   async function handleFile(rawFile: File | null) {
     if (!rawFile) return;
@@ -336,16 +359,28 @@ export function EmployeeClose() {
 
         {step === "start" ? (
           <div className="grid gap-4 fade-in">
+            {dateClosed ? (
+              <div className="rounded-xl border border-gold/40 bg-yellow-50 p-4 text-center">
+                <p className="text-lg font-black text-ink">{t("closing.alreadyClosedDate")}</p>
+                <p className="mt-1 text-sm font-bold text-ink/65">{t("closing.alreadyClosedDateBody")}</p>
+              </div>
+            ) : null}
             <button
               className="focus-ring flex min-h-28 w-full items-center justify-center gap-3 rounded-xl bg-leaf px-6 text-2xl font-black text-white shadow-sm transition-transform active:scale-[0.99] disabled:opacity-50"
               onClick={() => setStep("upload")}
-              disabled={!businessDate}
+              disabled={!businessDate || dateClosed || checkingDate}
             >
               <Receipt size={32} aria-hidden />
               {t("closing.start")}
             </button>
             <p className="text-center text-base font-bold text-ink/60">
-              {businessDate ? t("closing.followSteps") : t("closing.pickDateFirst")}
+              {checkingDate
+                ? t("common.loading")
+                : dateClosed
+                  ? t("closing.alreadyClosedDateBody")
+                  : businessDate
+                    ? t("closing.followSteps")
+                    : t("closing.pickDateFirst")}
             </p>
           </div>
         ) : null}

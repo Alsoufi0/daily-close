@@ -167,6 +167,26 @@ export class DailyCloseService {
     }
   }
 
+  // Mirrors finishClosing's "already closed" guard (lines below) without writing
+  // anything, so the close flow can warn up front instead of at submit. `date`
+  // is the same UTC-noon ISO the client would send to /finish.
+  async closeExistsForDate(user: RequestUser, storeId: string, date: string): Promise<{ closed: boolean }> {
+    if (!storeId || !date) throw new BadRequestException("storeId and date are required.");
+    await this.assertCanCloseStore(user, storeId);
+    const eventDate = new Date(date);
+    if (Number.isNaN(eventDate.getTime())) throw new BadRequestException("Invalid date.");
+    const store = await this.prisma.store.findUnique({
+      where: { id: storeId },
+      select: { timezone: true }
+    });
+    const { start, end } = DashboardService.storeLocalDayRange(
+      store?.timezone || "America/New_York",
+      eventDate
+    );
+    const existing = await this.repository.findByStoreAndRange(storeId, start, end);
+    return { closed: Boolean(existing) };
+  }
+
   async finishClosing(
     input: CreateDailyCloseDto,
     user?: RequestUser,

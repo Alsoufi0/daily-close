@@ -484,6 +484,13 @@ function isQueueableFailure(err: unknown): boolean {
   return [408, 429, 502, 503, 504].includes(err.status);
 }
 
+// Up-front check: is this store already closed for the chosen date? `date` is
+// the same UTC-noon ISO sent to /finish.
+export async function checkCloseExists(storeId: string, date: string): Promise<{ closed: boolean }> {
+  const params = new URLSearchParams({ storeId, date });
+  return apiFetch<{ closed: boolean }>(`/daily-close/exists?${params.toString()}`);
+}
+
 export async function finishClose(input: DailyCloseInput, idempotencyKey?: string) {
   const key = idempotencyKey || generateIdempotencyKey();
   // Import lazily to avoid a circular dep with outbox.ts (outbox imports

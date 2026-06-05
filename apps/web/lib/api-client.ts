@@ -475,6 +475,17 @@ export interface ExpenseItemInput {
   description?: string;
 }
 
+// Up-front check: is this store already closed for the chosen date? `date` is
+// the same UTC-noon ISO sent to /finish.
+export async function checkCloseExists(
+  token: string | undefined,
+  storeId: string,
+  date: string
+): Promise<{ closed: boolean }> {
+  const params = new URLSearchParams({ storeId, date });
+  return apiFetch(`/daily-close/exists?${params.toString()}`, requireToken(token));
+}
+
 export async function finishDailyClose(
   token: string | undefined,
   input: DailyCloseInput & { expenseItems?: ExpenseItemInput[] },

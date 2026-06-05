@@ -144,6 +144,8 @@ export const translations: Record<Language, Dictionary> = {
     "closing.expenseDescription": "Description",
     "closing.expensesTotal": "Expenses Total",
     "closing.pickDateFirst": "Pick the closing date above to begin.",
+    "closing.alreadyClosedDate": "Already closed for this date",
+    "closing.alreadyClosedDateBody": "This store already has a close for the selected day. Pick a different date to continue.",
     "closing.attachPhoto": "Add receipt photo",
     "closing.photoAttached": "Photo attached",
     "closing.attachPhotoBody": "Take a photo of the expense document to keep a record. Enter the amount yourself.",

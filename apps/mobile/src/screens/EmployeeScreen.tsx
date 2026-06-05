@@ -17,7 +17,7 @@ import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
 import { formatMoney, formatMoneyExact, netProfit, toMoney } from "@smokeshop/shared/utils/money";
 import type { ParsedPOSReport } from "@smokeshop/shared/types";
-import { ApiError, finishClose, generateIdempotencyKey, uploadReport } from "../api";
+import { ApiError, checkCloseExists, finishClose, generateIdempotencyKey, uploadReport } from "../api";
 import { suggestBusinessDate, storeLocalDateToUtcNoon } from "@smokeshop/shared/timezones";
 import { QueuedForRetryError } from "../outbox";
 import { clearDraft, loadDraft, loadSelectedStoreId, saveDraft, saveSelectedStoreId } from "../persistence";
@@ -99,9 +99,11 @@ export function EmployeeScreen({ onSignOut }: { onSignOut: () => void }) {
   // Expense rows whose receipt photo has been attached this session (by row id).
   const [attachedPhotoIds, setAttachedPhotoIds] = useState<Set<string>>(new Set());
   const [notes, setNotes] = useState("");
-  // The business date the close is filed under. Defaults to the smart-suggested
-  // store-local day, but the user confirms/changes it at the Finish step (#2).
+  // The business date the close is filed under. Chosen up front, next to the
+  // store; defaults to the smart-suggested store-local day.
   const [businessDate, setBusinessDate] = useState("");
+  const [dateClosed, setDateClosed] = useState(false);
+  const [checkingDate, setCheckingDate] = useState(false);
 
   function goBack() {
     setStep((sCur) =>
@@ -197,6 +199,30 @@ export function EmployeeScreen({ onSignOut }: { onSignOut: () => void }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [businessDate, activeStore.id]);
+
+  // Up-front guard: once a store + date are chosen, check whether that store is
+  // already closed for the day — so the employee is stopped on the start screen,
+  // not after doing the whole close.
+  useEffect(() => {
+    if (step !== "start" || !businessDate) {
+      setDateClosed(false);
+      return;
+    }
+    let cancelled = false;
+    setCheckingDate(true);
+    const dateIso = storeLocalDateToUtcNoon(
+      businessDate,
+      (activeStore as { timezone?: string }).timezone
+    );
+    checkCloseExists(activeStore.id, dateIso)
+      .then((r) => !cancelled && setDateClosed(r.closed))
+      .catch(() => !cancelled && setDateClosed(false))
+      .finally(() => !cancelled && setCheckingDate(false));
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, businessDate, activeStore.id]);
 
   function pickStore(storeId: string) {
     setSelectedStoreId(storeId);
@@ -453,6 +479,13 @@ export function EmployeeScreen({ onSignOut }: { onSignOut: () => void }) {
             maximumDate={new Date()}
           />
         </View>
+        {dateClosed && step === "start" ? (
+          <Banner
+            tone="warn"
+            title={t("closing.alreadyClosedDate")}
+            body={t("closing.alreadyClosedDateBody")}
+          />
+        ) : null}
         {restored ? (
           <Banner tone="warn" title={t("closing.resumedTitle")} body={t("closing.resumedBody")} />
         ) : null}
@@ -472,7 +505,7 @@ export function EmployeeScreen({ onSignOut }: { onSignOut: () => void }) {
 
           {step === "start" ? (
             <>
-              <Button title={t("closing.start")} icon="🧾" onPress={() => setStep("upload")} disabled={!businessDate} />
+              <Button title={t("closing.start")} icon="🧾" onPress={() => setStep("upload")} disabled={!businessDate || dateClosed || checkingDate} />
               {!businessDate ? <Text style={s.helper}>{t("closing.pickDateFirst")}</Text> : null}
               <Text style={s.helper}>{t("closing.about2Minutes")}</Text>
             </>

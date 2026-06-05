@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Headers, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Headers, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { EditDailyCloseDto } from "./dto/edit-daily-close.dto";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
@@ -39,6 +39,19 @@ export class DailyCloseController {
   @UseGuards(SupabaseAuthGuard, SubscriptionGuard)
   uploadReport(@Body() input: UploadReportDto, @CurrentUser() user: RequestUser) {
     return this.dailyCloseService.uploadReport(input, user);
+  }
+
+  // Up-front guard for the close flow: tells the client whether this store is
+  // already closed for the chosen date, BEFORE the employee does the whole
+  // close only to be rejected at submit. Read-only — no SubscriptionGuard.
+  @Get("exists")
+  @UseGuards(SupabaseAuthGuard)
+  closeExists(
+    @Query("storeId") storeId: string,
+    @Query("date") date: string,
+    @CurrentUser() user: RequestUser
+  ) {
+    return this.dailyCloseService.closeExistsForDate(user, storeId, date);
   }
 
   @Post("finish")
