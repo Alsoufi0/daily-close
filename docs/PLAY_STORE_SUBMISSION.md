@@ -159,7 +159,8 @@ The app is behind a login, so Google's reviewers need a working account:
 ---
 
 ## Open blockers before submitting
-- [ ] Privacy policy completeness for the Data safety label (P1 #5)
-- [ ] POS-image **retention policy** + cleanup, documented in privacy (P1 #8)
-- [ ] **Prod API deployed** (`main`) so the demo login + features work for reviewers
-- [ ] Feature graphic designed; screenshots captured; 512 icon exported
+- [x] **Privacy policy** expanded to cover the Data-safety categories + in-app deletion (`dailyclose.us/privacy`) — done in code (P1 #5)
+- [x] **POS-image retention**: abandoned uploads (never attached to a close) are purged after 7 days by a new daily cron (`POST /daily-close/cron/purge-receipts`), documented in the privacy policy — done in code (P1 #8)
+- [ ] **Render: add the `daily-close-purge-receipts-cron`** service (it's in `render.yaml`) with `CRON_API_URL` + `CRON_SECRET` set — partner, one-time
+- [ ] **Prod API deployed** (`main`) so the demo login + features work for reviewers — partner
+- [ ] Feature graphic designed; screenshots captured; 512 icon exported — partner/you

@@ -76,4 +76,18 @@ export class SupabaseStorageService {
       return null;
     }
   }
+
+  /**
+   * Delete an object by its bucket-relative path. Returns true on success.
+   * Used by the receipt-retention cleanup to purge abandoned upload images.
+   */
+  async remove(path: string): Promise<boolean> {
+    if (!this.supabase) return false;
+    try {
+      const { error } = await this.supabase.storage.from(this.bucket).remove([path]);
+      return !error;
+    } catch {
+      return false;
+    }
+  }
 }

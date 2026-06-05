@@ -136,3 +136,21 @@ services:
         sync: false
     dockerCommand: >
       sh -c "wget -q -O- --header=\"x-cron-secret: $CRON_SECRET\" --post-data='' $CRON_API_URL/notifications/weekly-summary && echo done"
+
+  # Receipt retention — daily 04:30 UTC. Purges abandoned upload images (never
+  # attached to a completed close) older than 7 days, per the privacy policy.
+  - type: cron
+    name: daily-close-purge-receipts-cron
+    runtime: docker
+    plan: starter
+    region: oregon
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    schedule: "30 4 * * *"
+    envVars:
+      - key: CRON_API_URL
+        sync: false
+      - key: CRON_SECRET
+        sync: false
+    dockerCommand: >
+      sh -c "wget -q -O- --header=\"x-cron-secret: $CRON_SECRET\" --post-data='' $CRON_API_URL/daily-close/cron/purge-receipts && echo done"

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Headers, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, ForbiddenException, Get, Headers, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { EditDailyCloseDto } from "./dto/edit-daily-close.dto";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
@@ -52,6 +52,22 @@ export class DailyCloseController {
     @CurrentUser() user: RequestUser
   ) {
     return this.dailyCloseService.closeExistsForDate(user, storeId, date);
+  }
+
+  // Cron: purge abandoned receipt uploads (never attached to a completed close)
+  // older than the retention window. Guarded by x-cron-secret like the other
+  // crons; run daily from Render. Backs the privacy policy's 7-day promise.
+  @Post("cron/purge-receipts")
+  purgeReceipts(@Headers("x-cron-secret") provided: string | undefined) {
+    const expected = process.env.CRON_SECRET;
+    if (!expected) {
+      if (process.env.NODE_ENV === "production") {
+        throw new ForbiddenException("CRON_SECRET is not configured.");
+      }
+    } else if (provided !== expected) {
+      throw new ForbiddenException("Bad cron secret.");
+    }
+    return this.dailyCloseService.purgeAbandonedReceipts(7);
   }
 
   @Post("finish")
