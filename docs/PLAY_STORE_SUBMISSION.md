@@ -69,11 +69,14 @@ Questions? dailyclose.us
 
 ## 2. Graphic assets (checklist — these must be created)
 
+> **Listing copy + Data Safety + content rating:** see [PLAY_STORE_LISTING.md](PLAY_STORE_LISTING.md).
+> **All graphic assets** are generated and live in `docs/store-assets/play/`.
+
 | Asset | Spec | Status |
 |---|---|---|
-| App icon | **512×512** PNG | ✅ `store-assets/play/icon-512.png` |
-| Feature graphic | **1024×500** PNG | ✅ `store-assets/play/feature-graphic-1024x500.png` |
-| Phone screenshots | 2–8, PNG/JPG, 16:9 or 9:16, min 320px, max 3840px | ⬜ **Capture on a phone** from the preview APK (only human-needed asset) |
+| App icon | **512×512** 32-bit PNG | ✅ `docs/store-assets/play/icon-512.png` |
+| Feature graphic | **1024×500** PNG | ✅ `docs/store-assets/play/feature-graphic.png` |
+| Phone screenshots (5) | **1080×2400** 24-bit PNG | ✅ `docs/store-assets/play/screenshots/0{1..5}-*.png` (re-render: `screenshots/render.sh`) |
 
 **Screenshots to capture** (from the running app — the production/preview build):
 1. Sign-in / Get Started

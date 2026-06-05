@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700;800;900&display=swap');
+:root{
+  --green:#0e3b34; --gold:#c2872b; --ink:#18221d;
+  --ink-soft:rgba(24,34,29,.62); --ink-muted:rgba(24,34,29,.42);
+  --bg:#f8f7f3; --smoke:#f4f1eb; --border:#e5e0d6; --leaf:#1f7a4d;
+  --leaf-soft:#ecfdf3; --leaf-border:#bbf7d0; --warn:#b42318; --warn-soft:#fef3f2; --warn-border:#fecaca;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1080px;height:2400px}
+.canvas{width:1080px;height:2400px;background:var(--green);display:flex;flex-direction:column;align-items:center;overflow:hidden;position:relative;font-family:Inter,system-ui,sans-serif}
+.canvas::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 60% at 50% 8%,rgba(255,255,255,.05),transparent 60%);pointer-events:none}
+.caption{width:100%;padding:104px 92px 0;z-index:2}
+.eyebrow{font-size:26px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--gold)}
+.headline{font-family:Fraunces,Georgia,serif;font-weight:600;font-size:82px;line-height:1.04;color:#fff;margin-top:22px;letter-spacing:-.01em}
+.rule{width:132px;height:9px;background:var(--gold);border-radius:6px;margin-top:34px}
+.sub{font-size:31px;line-height:1.45;font-weight:500;color:rgba(255,255,255,.72);margin-top:30px;max-width:860px}
+.phone{position:absolute;left:50%;transform:translateX(-50%);bottom:-70px;width:812px;height:1720px;border-radius:74px;background:#04201a;padding:20px;box-shadow:0 50px 130px rgba(0,0,0,.5),0 0 0 2px rgba(255,255,255,.04) inset;z-index:1}
+.screen{width:100%;height:100%;border-radius:56px;background:var(--bg);overflow:hidden;position:relative}
+.statusbar{height:64px;display:flex;align-items:center;justify-content:space-between;padding:0 44px;color:var(--ink);font-weight:700;font-size:26px}
+.statusbar .dots{display:flex;gap:9px;align-items:center}
+.statusbar .dots span{width:13px;height:13px;border-radius:50%;background:var(--ink)}
+.statusbar .bat{width:34px;height:17px;border:2.5px solid var(--ink);border-radius:4px}
+.appbar{display:flex;align-items:center;gap:20px;padding:18px 40px 8px}
+.appbar .burger{display:flex;flex-direction:column;gap:6px}
+.appbar .burger i{width:34px;height:4px;background:var(--ink);border-radius:3px}
+.appbar .title{font-size:34px;font-weight:900;color:var(--ink)}
+.content{padding:14px 40px 40px}
+
+/* close-specific */
+.ctxrow{display:flex;gap:14px;margin:6px 0 22px}
+.ctxrow .seg{background:#fff;border:2px solid var(--border);border-radius:16px;padding:14px 22px;font-size:25px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:12px}
+.ctxrow .seg .k{color:var(--ink-muted);font-weight:600}
+.steps{display:flex;align-items:center;gap:0;margin:8px 0 30px;justify-content:space-between}
+.step{display:flex;flex-direction:column;align-items:center;gap:10px;flex:1;position:relative}
+.step .bub{width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:27px;font-weight:800;background:var(--smoke);color:var(--ink-muted);border:2px solid var(--border)}
+.step.done .bub{background:var(--leaf);color:#fff;border-color:var(--leaf)}
+.step.active .bub{background:var(--green);color:#fff;border-color:var(--green)}
+.step .t{font-size:21px;font-weight:700;color:var(--ink-muted)}
+.step.active .t,.step.done .t{color:var(--ink)}
+.step::before{content:"";position:absolute;top:30px;left:-50%;width:100%;height:4px;background:var(--border);z-index:-1}
+.step:first-child::before{display:none}
+.step.done::before,.step.active::before{background:var(--leaf)}
+
+.bigcard{background:#fff;border:2px solid var(--border);border-radius:30px;padding:40px}
+.bigcard .h{font-size:34px;font-weight:900;color:var(--ink)}
+.bigcard .lbl{font-size:24px;font-weight:700;color:var(--ink-muted);margin-top:30px;letter-spacing:.04em;text-transform:uppercase}
+.field{margin-top:14px;height:104px;border:2px solid var(--border);border-radius:20px;background:#fff;display:flex;align-items:center;padding:0 30px;font-size:52px;font-weight:900;color:var(--ink)}
+.result{margin-top:26px;background:var(--leaf-soft);border:2px solid var(--leaf-border);border-radius:22px;padding:28px 32px;display:flex;align-items:center;gap:20px}
+.result .ck{width:64px;height:64px;border-radius:50%;background:var(--leaf);color:#fff;display:flex;align-items:center;justify-content:center;font-size:36px;flex:none}
+.result .rt{font-size:31px;font-weight:800;color:var(--leaf)}
+.result .rs{font-size:24px;font-weight:600;color:var(--ink-soft);margin-top:4px}
+.metric{display:flex;justify-content:space-between;margin-top:24px;font-size:27px;font-weight:700;color:var(--ink-soft)}
+.metric b{color:var(--ink);font-weight:900}
+.cta{margin-top:30px;height:108px;background:var(--green);border-radius:24px;color:#fff;display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:800;gap:16px}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="caption">
+    <div class="eyebrow">For staff</div>
+    <div class="headline">Close up in<br/>two minutes.</div>
+    <div class="rule"></div>
+    <div class="sub">A guided, one-step-at-a-time close. Photograph the report, count the drawer, done. No training needed.</div>
+  </div>
+
+  <div class="phone">
+    <div class="screen">
+      <div class="statusbar"><span>9:41</span><span class="dots"><span></span><span></span><span></span><span class="bat"></span></span></div>
+      <div class="appbar"><span class="burger"><i></i><i></i><i></i></span><span class="title">Close store</span></div>
+      <div class="content">
+        <div class="ctxrow">
+          <div class="seg"><span class="k">Store</span> Main Street</div>
+          <div class="seg"><span class="k">Date</span> Jun 5</div>
+        </div>
+        <div class="steps">
+          <div class="step done"><div class="bub">✓</div><div class="t">Upload</div></div>
+          <div class="step done"><div class="bub">✓</div><div class="t">Sales</div></div>
+          <div class="step active"><div class="bub">3</div><div class="t">Cash</div></div>
+          <div class="step"><div class="bub">4</div><div class="t">Expenses</div></div>
+          <div class="step"><div class="bub">5</div><div class="t">Finish</div></div>
+        </div>
+
+        <div class="bigcard">
+          <div class="h">Count the drawer</div>
+          <div class="lbl">Cash counted</div>
+          <div class="field">$1,840.00</div>
+          <div class="result">
+            <div class="ck">✓</div>
+            <div>
+              <div class="rt">Drawer matches</div>
+              <div class="rs">Counted cash equals what's expected.</div>
+            </div>
+          </div>
+          <div class="metric"><span>Expected cash</span><b>$1,840.00</b></div>
+          <div class="metric"><span>Over / short</span><b>$0.00</b></div>
+          <div class="cta">Next: Expenses →</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
