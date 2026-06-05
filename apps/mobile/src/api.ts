@@ -291,6 +291,12 @@ export async function deleteEmployee(employeeId: string): Promise<void> {
   await apiFetch<unknown>(`/employees/${employeeId}`, { method: "DELETE" });
 }
 
+// Delete a daily close (report). API restricts this to account owners and the
+// per-store managers scoped to that store; employees get 403.
+export async function deleteDailyClose(id: string): Promise<void> {
+  await apiFetch<unknown>(`/daily-close/${id}`, { method: "DELETE" });
+}
+
 export async function assignEmployeeToStore(
   employeeId: string,
   storeId: string
