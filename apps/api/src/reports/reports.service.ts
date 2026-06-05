@@ -314,7 +314,12 @@ export class ReportsService {
         })
         .join(",")
     );
-    return `\uFEFF${headers.map(([, label]) => this.csvEscape(label)).join(",")}\n${body.join("\n")}\n`;
+    // No UTF-8 BOM: prepending \uFEFF before the first (always-quoted) header
+    // cell made spreadsheets render it as garbage (e.g. Google Sheets showed
+    // `\u00EE\u203A\u00BF"Store"` in A1, since the BOM sits before the opening quote and can't
+    // be stripped). The response is already served as charset=utf-8, so modern
+    // Excel/Sheets/Numbers read it correctly without the BOM.
+    return `${headers.map(([, label]) => this.csvEscape(label)).join(",")}\n${body.join("\n")}\n`;
   }
 
   async buildFilteredCsv(user: RequestUser, query: ReportQueryDto): Promise<string> {
