@@ -71,9 +71,9 @@ Questions? dailyclose.us
 
 | Asset | Spec | Status |
 |---|---|---|
-| App icon | **512×512** PNG, 32-bit, no alpha rounding needed | Resize from `apps/mobile/assets/icon.png` (1024×1024) |
-| Feature graphic | **1024×500** PNG/JPG (no transparency) | **Needs design** — banner with logo + tagline on the brand green (#0e3b34) |
-| Phone screenshots | 2–8, PNG/JPG, 16:9 or 9:16, min 320px, max 3840px | **Capture from the Android build** |
+| App icon | **512×512** PNG | ✅ `store-assets/play/icon-512.png` |
+| Feature graphic | **1024×500** PNG | ✅ `store-assets/play/feature-graphic-1024x500.png` |
+| Phone screenshots | 2–8, PNG/JPG, 16:9 or 9:16, min 320px, max 3840px | ⬜ **Capture on a phone** from the preview APK (only human-needed asset) |
 
 **Screenshots to capture** (from the running app — the production/preview build):
 1. Sign-in / Get Started
