@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   Banknote,
@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { clsx } from "clsx";
 import { formatMoney, formatMoneyExact, netProfit, toMoney } from "@smokeshop/shared/utils/money";
-import { suggestBusinessDate, shouldConfirmBusinessDate, storeLocalDateToUtcNoon } from "@smokeshop/shared/timezones";
+import { suggestBusinessDate, storeLocalDateToUtcNoon } from "@smokeshop/shared/timezones";
 import { scannedReport } from "../lib/mock-data";
 import { ApiError, finishDailyClose, uploadReport } from "../lib/api-client";
 import { preprocessReceipt } from "../lib/preprocess-image";
@@ -92,7 +92,6 @@ export function EmployeeClose() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [ocrRawText, setOcrRawText] = useState<string | null>(null);
-  const [confirmingBusinessDate, setConfirmingBusinessDate] = useState(false);
   const [businessDate, setBusinessDate] = useState("");
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const libraryInputRef = useRef<HTMLInputElement>(null);
@@ -120,6 +119,14 @@ export function EmployeeClose() {
       : [{ id: "store-1", storeName: t("closing.defaultStore") }];
   const activeStore = availableStores[storeIdx] ?? availableStores[0];
   const employeeId = session.profile?.employeeId ?? "employee-maya";
+
+  // The close date is chosen up front (next to the store), not at the end.
+  // Default it to the store's suggested business day; the employee can adjust
+  // it before starting. Re-defaults when the store changes (resetForm clears it).
+  useEffect(() => {
+    if (!businessDate) setBusinessDate(suggestBusinessDate(activeStore));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [businessDate, activeStore.id]);
 
   async function handleFile(rawFile: File | null) {
     if (!rawFile) return;
@@ -183,14 +190,8 @@ export function EmployeeClose() {
   }
 
   async function requestSubmitClose() {
-    const suggested = suggestBusinessDate(activeStore);
-    const needsConfirm = shouldConfirmBusinessDate(activeStore, suggested);
-    if (needsConfirm && !confirmingBusinessDate) {
-      setBusinessDate(suggested);
-      setConfirmingBusinessDate(true);
-      return;
-    }
-    await submitClose(businessDate || suggested);
+    // The date is chosen up front now, so just submit with it.
+    await submitClose(businessDate || suggestBusinessDate(activeStore));
   }
 
   async function submitClose(closeDate: string) {
@@ -220,7 +221,6 @@ export function EmployeeClose() {
         notes
       });
       setStep("finish");
-      setConfirmingBusinessDate(false);
     } catch (err) {
       if (err instanceof ApiError && err.status === 400 && /already.*closed/i.test(err.message)) {
         setStep("blocked");
@@ -252,7 +252,6 @@ export function EmployeeClose() {
     setOcrRawText(null);
     setUploadError(null);
     setSubmitError(null);
-    setConfirmingBusinessDate(false);
     setBusinessDate("");
   }
 
@@ -275,20 +274,32 @@ export function EmployeeClose() {
       <div>
         <p className="text-base font-bold text-ink/65">{t("closing.followSteps")}</p>
 
-        {availableStores.length > 1 ? (
-          <label className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-ink/70">
-            <span>{t("common.store")}:</span>
-            <select
+        <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">
+          {availableStores.length > 1 ? (
+            <label className="inline-flex items-center gap-2 text-sm font-bold text-ink/70">
+              <span>{t("common.store")}:</span>
+              <select
+                className="focus-ring rounded-lg border border-ink/15 bg-white px-2 py-1 font-black"
+                value={storeIdx}
+                onChange={(e) => changeStore(Number(e.target.value))}
+              >
+                {availableStores.map((s, i) => (
+                  <option key={s.id} value={i}>{s.storeName}</option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+          <label className="inline-flex items-center gap-2 text-sm font-bold text-ink/70">
+            <span>{t("closing.closingDate")}:</span>
+            <input
+              type="date"
               className="focus-ring rounded-lg border border-ink/15 bg-white px-2 py-1 font-black"
-              value={storeIdx}
-              onChange={(e) => changeStore(Number(e.target.value))}
-            >
-              {availableStores.map((s, i) => (
-                <option key={s.id} value={i}>{s.storeName}</option>
-              ))}
-            </select>
+              value={businessDate}
+              max={suggestBusinessDate(activeStore)}
+              onChange={(e) => setBusinessDate(e.target.value)}
+            />
           </label>
-        ) : null}
+        </div>
       </div>
 
       {step !== "start" && step !== "blocked" ? (
@@ -329,14 +340,15 @@ export function EmployeeClose() {
         {step === "start" ? (
           <div className="grid gap-4 fade-in">
             <button
-              className="focus-ring flex min-h-28 w-full items-center justify-center gap-3 rounded-xl bg-leaf px-6 text-2xl font-black text-white shadow-sm transition-transform active:scale-[0.99]"
+              className="focus-ring flex min-h-28 w-full items-center justify-center gap-3 rounded-xl bg-leaf px-6 text-2xl font-black text-white shadow-sm transition-transform active:scale-[0.99] disabled:opacity-50"
               onClick={() => setStep("upload")}
+              disabled={!businessDate}
             >
               <Receipt size={32} aria-hidden />
               {t("closing.start")}
             </button>
             <p className="text-center text-base font-bold text-ink/60">
-              {t("closing.followSteps")}
+              {businessDate ? t("closing.followSteps") : t("closing.pickDateFirst")}
             </p>
           </div>
         ) : null}
@@ -626,23 +638,6 @@ export function EmployeeClose() {
             {submitError ? (
               <div className="rounded-lg border border-warning/30 bg-red-50 p-3 text-sm font-bold text-warning">
                 {submitError}
-              </div>
-            ) : null}
-            {confirmingBusinessDate ? (
-              <div className="rounded-xl border border-gold/30 bg-yellow-50 p-4 text-ink">
-                <p className="text-lg font-black">{t("closing.confirmBusinessDate")}</p>
-                <p className="mt-1 text-sm font-bold text-ink/65">
-                  {t("closing.confirmBusinessDateBody")}
-                </p>
-                <label className="mt-3 block">
-                  <span className="text-sm font-black">{t("closing.closingDate")}</span>
-                  <input
-                    type="date"
-                    className="focus-ring mt-2 h-12 w-full rounded-lg border border-ink/15 px-4 text-lg font-black"
-                    value={businessDate}
-                    onChange={(event) => setBusinessDate(event.target.value)}
-                  />
-                </label>
               </div>
             ) : null}
             <button

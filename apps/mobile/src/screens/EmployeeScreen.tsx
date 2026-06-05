@@ -181,6 +181,21 @@ export function EmployeeScreen({ onSignOut }: { onSignOut: () => void }) {
       ? { id: session.profile.storeId, storeName: "My Store" }
       : { id: "store-1", storeName: "Store #1" });
 
+  // The close date is chosen up front (next to the store), not at the end.
+  // Default it to the store's suggested business day; the employee can adjust
+  // it before starting. Re-defaults when the store changes (reset clears it).
+  useEffect(() => {
+    if (!businessDate) {
+      setBusinessDate(
+        suggestBusinessDate({
+          timezone: (activeStore as { timezone?: string }).timezone,
+          closeTime: (activeStore as { closeTime?: string }).closeTime
+        })
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [businessDate, activeStore.id]);
+
   function pickStore(storeId: string) {
     setSelectedStoreId(storeId);
     saveSelectedStoreId(storeId);
@@ -431,6 +446,16 @@ export function EmployeeScreen({ onSignOut }: { onSignOut: () => void }) {
             <Text style={s.storePickerChevron}>▾</Text>
           </Pressable>
         ) : null}
+        {/* Close date — chosen up front, next to the store. Required before the
+            close can begin. */}
+        <View style={s.dateTop}>
+          <DateField
+            label={t("closing.closingDate")}
+            value={businessDate}
+            onChange={setBusinessDate}
+            maximumDate={new Date()}
+          />
+        </View>
         {restored ? (
           <Banner tone="warn" title={t("closing.resumedTitle")} body={t("closing.resumedBody")} />
         ) : null}
@@ -450,7 +475,8 @@ export function EmployeeScreen({ onSignOut }: { onSignOut: () => void }) {
 
           {step === "start" ? (
             <>
-              <Button title={t("closing.start")} icon="🧾" onPress={() => setStep("upload")} />
+              <Button title={t("closing.start")} icon="🧾" onPress={() => setStep("upload")} disabled={!businessDate} />
+              {!businessDate ? <Text style={s.helper}>{t("closing.pickDateFirst")}</Text> : null}
               <Text style={s.helper}>{t("closing.about2Minutes")}</Text>
             </>
           ) : null}
@@ -644,18 +670,6 @@ export function EmployeeScreen({ onSignOut }: { onSignOut: () => void }) {
                 placeholderTextColor={colors.inkMuted}
                 multiline
               />
-              <DateField
-                label={t("closing.businessDate")}
-                value={
-                  businessDate ||
-                  suggestBusinessDate({
-                    timezone: (activeStore as { timezone?: string }).timezone,
-                    closeTime: (activeStore as { closeTime?: string }).closeTime
-                  })
-                }
-                onChange={setBusinessDate}
-                maximumDate={new Date()}
-              />
               <Button title={t("closing.finish")} variant="dark" loading={submitting} onPress={submit} />
             </>
           ) : null}
@@ -799,6 +813,7 @@ const s = StyleSheet.create({
   doneTitle: { color: colors.ink, fontWeight: font.black, fontSize: 22, textAlign: "center" },
 
   // Multi-store picker (Phase 3)
+  dateTop: { marginTop: spacing.xs },
   storePicker: {
     flexDirection: "row",
     alignItems: "center",

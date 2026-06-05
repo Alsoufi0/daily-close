@@ -143,6 +143,7 @@ export const translations: Record<Language, Dictionary> = {
     "closing.expenseAmount": "Amount",
     "closing.expenseDescription": "Description",
     "closing.expensesTotal": "Expenses Total",
+    "closing.pickDateFirst": "Pick the closing date above to begin.",
     "closing.scanExpense": "Scan receipt",
     "closing.scanExpenseBody": "Take a photo of the expense receipt to fill in the amount.",
     "closing.scanNoAmount": "No amount found",
