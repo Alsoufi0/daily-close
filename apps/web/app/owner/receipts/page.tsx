@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { clsx } from "clsx";
 import { ArrowLeft, Download, ImageIcon, Loader2, X } from "lucide-react";
 import { formatMoney, formatMoneyExact } from "@smokeshop/shared/utils/money";
 import {
@@ -30,6 +31,7 @@ function ReceiptsView() {
   const [from, setFrom] = useState<string>(todayMinus(7));
   const [to, setTo] = useState<string>(todayMinus(0));
   const [employeeFilter, setEmployeeFilter] = useState<string>("");
+  const [kindFilter, setKindFilter] = useState<"all" | "close" | "expense">("all");
   const [rows, setRows] = useState<ReceiptRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,13 +46,18 @@ function ReceiptsView() {
   // Store + date are filtered server-side; employee is a client-side refinement
   // over the loaded set (the API already returns just this store/date's receipts).
   const filteredRows = useMemo(
-    () => (employeeFilter ? rows.filter((r) => (r.employeeName || "") === employeeFilter) : rows),
-    [rows, employeeFilter]
+    () =>
+      rows.filter(
+        (r) =>
+          (kindFilter === "all" || r.kind === kindFilter) &&
+          (!employeeFilter || (r.employeeName || "") === employeeFilter)
+      ),
+    [rows, employeeFilter, kindFilter]
   );
   const { visible, hasMore, remaining, canShowLess, showMore, showLess } = useShowMore(
     filteredRows,
     6,
-    `${storeId}:${from}:${to}:${employeeFilter}`
+    `${storeId}:${from}:${to}:${employeeFilter}:${kindFilter}`
   );
 
   const stores = session.stores;
@@ -193,6 +200,31 @@ function ReceiptsView() {
       {error ? (
         <div className="rounded-xl border border-warning/30 bg-red-50 p-3 text-sm font-bold text-warning">
           {error}
+        </div>
+      ) : null}
+
+      {rows.length > 0 ? (
+        <div className="flex flex-wrap gap-2">
+          {(["all", "close", "expense"] as const).map((k) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => setKindFilter(k)}
+              aria-pressed={kindFilter === k}
+              className={clsx(
+                "focus-ring rounded-lg border px-4 py-2 text-sm font-black transition-colors",
+                kindFilter === k
+                  ? "border-leaf bg-leaf text-white"
+                  : "border-ink/15 bg-white text-ink/65 hover:bg-smoke"
+              )}
+            >
+              {k === "all"
+                ? t("reports.filterAll")
+                : k === "close"
+                  ? t("reports.filterCloses")
+                  : t("reports.filterExpenses")}
+            </button>
+          ))}
         </div>
       ) : null}
 

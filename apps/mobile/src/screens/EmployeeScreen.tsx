@@ -239,49 +239,84 @@ export function EmployeeScreen({ onSignOut }: { onSignOut: () => void }) {
     });
   }, [step, activeStore.id, report, cashCounted, safeDrop, expenseItems, notes]);
 
+  // Shared capture+preprocess for both the sales receipt and expense documents:
+  // bake in EXIF orientation, resize the longest edge to ~1800px, re-encode to
+  // JPEG. This fixes iOS HEIC photos, rotated images, and huge/slow uploads. The
+  // base64 goes straight to the API, which stores it with the service key and
+  // runs OCR (no client-side Storage upload, so no RLS error). Returns null if
+  // the user cancels or denies permission.
+  async function captureProcessedImage(source: "camera" | "library"): Promise<string | null> {
+    let result: ImagePicker.ImagePickerResult;
+    if (source === "camera") {
+      const perm = await ImagePicker.requestCameraPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert(t("alerts.cameraNeeded"), t("alerts.cameraNeededBody"));
+        return null;
+      }
+      result = await ImagePicker.launchCameraAsync({ quality: 0.6 });
+    } else {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert(t("alerts.photoNeeded"), t("alerts.photoNeededBody"));
+        return null;
+      }
+      result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.6
+      });
+    }
+    if (result.canceled || !result.assets?.length) return null;
+    const asset = result.assets[0];
+    const resize =
+      (asset.width ?? 0) >= (asset.height ?? 0) ? { width: 1800 } : { height: 1800 };
+    const processed = await ImageManipulator.manipulateAsync(
+      asset.uri,
+      [{ resize }],
+      { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+    );
+    return processed.base64 ?? null;
+  }
+
   async function pickImage(source: "camera" | "library") {
     setLoading(true);
     try {
-      let result: ImagePicker.ImagePickerResult;
-      if (source === "camera") {
-        const perm = await ImagePicker.requestCameraPermissionsAsync();
-        if (!perm.granted) {
-          Alert.alert(t("alerts.cameraNeeded"), t("alerts.cameraNeededBody"));
-          return;
-        }
-        result = await ImagePicker.launchCameraAsync({ quality: 0.6 });
-      } else {
-        const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (!perm.granted) {
-          Alert.alert(t("alerts.photoNeeded"), t("alerts.photoNeededBody"));
-          return;
-        }
-        result = await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ImagePicker.MediaTypeOptions.Images,
-          quality: 0.6
-        });
-      }
-      if (result.canceled || !result.assets?.length) return;
-      const asset = result.assets[0];
-
-      // Preprocess to match the web upload: bake in EXIF orientation, resize the
-      // longest edge to ~1800px, and re-encode to JPEG. This fixes iOS HEIC
-      // photos, rotated images, and huge/slow uploads — the things that made
-      // native OCR return zeros or fail. The base64 output goes straight to the
-      // API, which stores it with the service key and runs OCR (no client-side
-      // Storage upload, so no RLS error).
-      const resize =
-        (asset.width ?? 0) >= (asset.height ?? 0) ? { width: 1800 } : { height: 1800 };
-      const processed = await ImageManipulator.manipulateAsync(
-        asset.uri,
-        [{ resize }],
-        { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG, base64: true }
-      );
-      if (!processed.base64) throw new Error(t("closing.uploadFailedBody"));
-
-      const parsed = await uploadReport(activeStore.id, processed.base64, "pos-report.jpg", "image/jpeg");
+      const base64 = await captureProcessedImage(source);
+      if (!base64) return;
+      const parsed = await uploadReport(activeStore.id, base64, "pos-report.jpg", "image/jpeg");
       setReport(parsed);
       setStep("sales");
+    } catch (e: any) {
+      Alert.alert(t("closing.uploadFailed"), e?.message || t("closing.uploadFailedBody"));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Scan an expense document: OCR reads a single amount and pre-fills the row's
+  // amount (the employee can still edit it). The photo is saved as an expense
+  // receipt and shows up on the Receipts page under Expenses.
+  function scanExpense(idx: number) {
+    Alert.alert(t("closing.scanExpense"), t("closing.scanExpenseBody"), [
+      { text: t("closing.takePhoto"), onPress: () => runExpenseScan(idx, "camera") },
+      { text: t("closing.uploadReport"), onPress: () => runExpenseScan(idx, "library") },
+      { text: t("common.cancel"), style: "cancel" }
+    ]);
+  }
+
+  async function runExpenseScan(idx: number, source: "camera" | "library") {
+    setLoading(true);
+    try {
+      const base64 = await captureProcessedImage(source);
+      if (!base64) return;
+      const res = await uploadReport(activeStore.id, base64, "expense.jpg", "image/jpeg", "expense");
+      const amount = res.amount;
+      if (amount != null) {
+        setExpenseItems((prev) =>
+          prev.map((it, i) => (i === idx ? { ...it, amount: String(amount) } : it))
+        );
+      } else {
+        Alert.alert(t("closing.scanNoAmount"), t("closing.scanNoAmountBody"));
+      }
     } catch (e: any) {
       Alert.alert(t("closing.uploadFailed"), e?.message || t("closing.uploadFailedBody"));
     } finally {
@@ -546,6 +581,14 @@ export function EmployeeScreen({ onSignOut }: { onSignOut: () => void }) {
                       setExpenseItems(next);
                     }}
                   />
+                  <TouchableOpacity
+                    onPress={() => scanExpense(idx)}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("closing.scanExpense")}
+                    style={s.scanExpenseBtn}
+                  >
+                    <Text style={s.scanExpenseText}>📷  {t("closing.scanExpense")}</Text>
+                  </TouchableOpacity>
                   {item.category === "Other" ? (
                     <>
                       <Text style={s.inputLabel}>{t("closing.expenseDescription")}</Text>
@@ -741,6 +784,17 @@ const s = StyleSheet.create({
     paddingVertical: 6
   },
   removeBtnText: { color: colors.warning ?? "#b42318", fontWeight: font.black, fontSize: 13 },
+  scanExpenseBtn: {
+    alignSelf: "flex-start",
+    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.leaf,
+    backgroundColor: colors.leafSoft
+  },
+  scanExpenseText: { color: colors.leaf, fontWeight: font.black, fontSize: 13 },
   doneIcon: { fontSize: 56 },
   doneTitle: { color: colors.ink, fontWeight: font.black, fontSize: 22, textAlign: "center" },
 

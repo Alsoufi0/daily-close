@@ -85,6 +85,7 @@ export function EmployeeClose() {
   const [cashCounted, setCashCounted] = useState("0");
   const [safeDrop, setSafeDrop] = useState("0");
   const [expenseItems, setExpenseItems] = useState<ExpenseRow[]>([]);
+  const [scanningIdx, setScanningIdx] = useState<number | null>(null);
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -149,6 +150,35 @@ export function EmployeeClose() {
       setUploadError(err?.message || t("closing.uploadFailed"));
     } finally {
       setIsReading(false);
+    }
+  }
+
+  // Scan an expense document: OCR reads a single amount and pre-fills the row's
+  // amount (still editable). The photo is saved as an expense receipt and shows
+  // up on the Receipts page under Expenses.
+  async function handleExpenseFile(idx: number, rawFile: File | null) {
+    if (!rawFile || !session.token) return;
+    setUploadError(null);
+    setScanningIdx(idx);
+    try {
+      const file = await preprocessReceipt(rawFile);
+      const upload = {
+        base64Data: await fileToDataUrl(file, t("closing.fileReadFailed")),
+        fileName: file.name,
+        contentType: file.type || "image/jpeg"
+      };
+      const res = await uploadReport(session.token, activeStore.id, upload, "expense");
+      if (res.amount != null) {
+        setExpenseItems((prev) =>
+          prev.map((it, i) => (i === idx ? { ...it, amount: String(res.amount) } : it))
+        );
+      } else {
+        setUploadError(t("closing.scanNoAmountBody"));
+      }
+    } catch (err: any) {
+      setUploadError(err?.message || t("closing.uploadFailed"));
+    } finally {
+      setScanningIdx(null);
     }
   }
 
@@ -509,6 +539,28 @@ export function EmployeeClose() {
                           const next = [...expenseItems];
                           next[idx] = { ...item, amount: event.target.value };
                           setExpenseItems(next);
+                        }}
+                      />
+                    </label>
+                    <label
+                      aria-label={t("closing.scanExpense")}
+                      className="focus-ring flex h-12 cursor-pointer items-center justify-center gap-1.5 self-end rounded-lg border border-leaf bg-leaf/5 px-3 text-sm font-black text-leaf hover:bg-leaf/10"
+                    >
+                      {scanningIdx === idx ? (
+                        <Loader2 className="animate-spin" size={16} aria-hidden />
+                      ) : (
+                        <Camera size={16} aria-hidden />
+                      )}
+                      <span className="hidden sm:inline">{t("closing.scanExpense")}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        className="sr-only"
+                        disabled={scanningIdx !== null}
+                        onChange={(event) => {
+                          handleExpenseFile(idx, event.target.files?.[0] ?? null);
+                          event.target.value = "";
                         }}
                       />
                     </label>

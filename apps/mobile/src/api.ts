@@ -329,6 +329,7 @@ export interface ReceiptRow {
   storeName: string;
   closeDate: string;
   employeeName: string;
+  kind: "close" | "expense";
   parsedJson: unknown;
   dailyClose: {
     id: string;
@@ -438,8 +439,9 @@ export async function uploadReport(
   storeId: string,
   base64Data: string,
   fileName = "pos-report.jpg",
-  contentType = "image/jpeg"
-): Promise<ParsedPOSReport> {
+  contentType = "image/jpeg",
+  kind: "close" | "expense" = "close"
+): Promise<ParsedPOSReport & { kind?: "close" | "expense"; amount?: number | null }> {
   // The API's storage + OCR pipeline expect a data: URL (that's what the web
   // app sends). expo-image-manipulator returns RAW base64, so wrap it — without
   // the data: prefix the OCR step tries to fetch() the raw base64 as a URL,
@@ -447,9 +449,9 @@ export async function uploadReport(
   const dataUrl = base64Data.startsWith("data:")
     ? base64Data
     : `data:${contentType};base64,${base64Data}`;
-  return apiFetch<ParsedPOSReport>("/daily-close/upload-report", {
+  return apiFetch("/daily-close/upload-report", {
     method: "POST",
-    body: JSON.stringify({ storeId, fileName, contentType, base64Data: dataUrl })
+    body: JSON.stringify({ storeId, fileName, contentType, base64Data: dataUrl, kind })
   });
 }
 
