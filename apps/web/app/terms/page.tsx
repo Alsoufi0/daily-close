@@ -55,7 +55,7 @@ export default function TermsPage() {
           occasional account or security notifications.
         </p>
         <p>
-          <strong>Message frequency:</strong> low — typically one message
+          <strong>Message frequency:</strong> low, typically one message
           per invite, plus rare account or security alerts.
         </p>
         <p>
