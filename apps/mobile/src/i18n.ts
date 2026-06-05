@@ -30,8 +30,12 @@ export function setMobileLanguage(lang: Language) {
  */
 export async function changeLanguage(lang: Language) {
   if (lang === currentLanguage) return;
-  await AsyncStorage.setItem(LANGUAGE_KEY, lang).catch(() => {});
+  // Apply FIRST, synchronously (before any await) so the UI flips on the first
+  // tap. The previous order awaited AsyncStorage before applying, which made
+  // the picker feel one tap behind (you'd tap Spanish and it stayed English
+  // until the next tap). Persisting can happen after; the language is live.
   setMobileLanguage(lang);
+  await AsyncStorage.setItem(LANGUAGE_KEY, lang).catch(() => {});
 }
 
 export function onLanguageChange(cb: () => void): () => void {
