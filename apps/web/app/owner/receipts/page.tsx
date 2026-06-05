@@ -367,6 +367,19 @@ function ReceiptDetail({
         {dc ? (
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <DetailRow label={t("receipts.totalSales")} value={formatMoney(dc.totalSales)} />
+            {dc.refunds > 0 ? (
+              <DetailRow label={t("closing.refunds")} value={formatMoney(dc.refunds)} tone="bad" />
+            ) : null}
+            <DetailRow
+              label={t("dashboard.expenses")}
+              value={formatMoney(dc.expenses)}
+              tone={dc.expenses > 0 ? "bad" : undefined}
+            />
+            <DetailRow
+              label={t("dashboard.netProfit")}
+              value={formatMoney(dc.netProfit)}
+              tone={dc.netProfit < 0 ? "bad" : "good"}
+            />
             <DetailRow label={t("common.cash")} value={formatMoney(dc.cashSales)} />
             <DetailRow label={t("common.card")} value={formatMoney(dc.cardSales)} />
             <DetailRow

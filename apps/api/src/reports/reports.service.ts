@@ -777,6 +777,14 @@ export class ReportsService {
               cashSales: Number(dc.cashSales),
               cardSales: Number(dc.cardSales),
               difference: Number(dc.difference),
+              expenses: Number(dc.expenses),
+              refunds: Number(dc.refunds),
+              netProfit: netProfit({
+                totalSales: Number(dc.totalSales),
+                tax: Number(dc.tax),
+                refunds: Number(dc.refunds),
+                expenses: Number(dc.expenses)
+              }),
               status: dc.status
             }
           : null,
