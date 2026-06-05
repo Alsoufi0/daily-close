@@ -18,7 +18,7 @@ import * as ImageManipulator from "expo-image-manipulator";
 import { formatMoney, formatMoneyExact, netProfit, toMoney } from "@smokeshop/shared/utils/money";
 import type { ParsedPOSReport } from "@smokeshop/shared/types";
 import { ApiError, checkCloseExists, finishClose, generateIdempotencyKey, uploadReport } from "../api";
-import { suggestBusinessDate, storeLocalDateToUtcNoon } from "@smokeshop/shared/timezones";
+import { isClosingEarly, suggestBusinessDate, storeLocalDateToUtcNoon } from "@smokeshop/shared/timezones";
 import { QueuedForRetryError } from "../outbox";
 import { clearDraft, loadDraft, loadSelectedStoreId, saveDraft, saveSelectedStoreId } from "../persistence";
 import { AccountFooter } from "../components/AccountFooter";
@@ -362,6 +362,21 @@ export function EmployeeScreen({ onSignOut }: { onSignOut: () => void }) {
   }
 
   async function submit() {
+    // Closing well before the store's close time is usually a mistake — confirm.
+    if (
+      isClosingEarly({
+        timezone: (activeStore as { timezone?: string }).timezone,
+        closeTime: (activeStore as { closeTime?: string }).closeTime
+      })
+    ) {
+      const proceed = await new Promise<boolean>((resolve) => {
+        Alert.alert(t("closing.confirmEarlyTitle"), t("closing.confirmEarlyBody"), [
+          { text: t("common.cancel"), style: "cancel", onPress: () => resolve(false) },
+          { text: t("closing.confirmEarlyYes"), style: "destructive", onPress: () => resolve(true) }
+        ]);
+      });
+      if (!proceed) return;
+    }
     setSubmitting(true);
     try {
       // Anchor the close to the STORE's business day (its timezone + close

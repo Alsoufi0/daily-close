@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { clsx } from "clsx";
 import { formatMoney, formatMoneyExact, netProfit, toMoney } from "@smokeshop/shared/utils/money";
-import { suggestBusinessDate, storeLocalDateToUtcNoon } from "@smokeshop/shared/timezones";
+import { isClosingEarly, suggestBusinessDate, storeLocalDateToUtcNoon } from "@smokeshop/shared/timezones";
 import { scannedReport } from "../lib/mock-data";
 import { ApiError, checkCloseExists, finishDailyClose, uploadReport } from "../lib/api-client";
 import { preprocessReceipt } from "../lib/preprocess-image";
@@ -209,6 +209,15 @@ export function EmployeeClose() {
   }
 
   async function requestSubmitClose() {
+    // Closing well before the store's close time is usually a mistake (wrong
+    // store, or the count isn't final yet) — confirm first.
+    if (
+      isClosingEarly({ timezone: activeStore.timezone, closeTime: (activeStore as any).closeTime }) &&
+      typeof window !== "undefined" &&
+      !window.confirm(`${t("closing.confirmEarlyTitle")}\n\n${t("closing.confirmEarlyBody")}`)
+    ) {
+      return;
+    }
     // The date is chosen up front now, so just submit with it.
     await submitClose(businessDate || suggestBusinessDate(activeStore));
   }

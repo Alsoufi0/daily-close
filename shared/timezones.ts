@@ -118,6 +118,22 @@ function timezoneOffsetMinutes(timezone: string, date: Date): number {
 // in that store's timezone. Anchoring to noon (rather than midnight) keeps the
 // stored instant safely inside the intended local day for every timezone, so
 // the server's day-range math attributes it unambiguously.
+/**
+ * True when "now" in the store's timezone is more than `minutes` BEFORE the
+ * store's close time — i.e. the employee is closing early, so the UI should ask
+ * them to confirm. Overnight wrap is ignored (an afternoon is never "early" for
+ * a 2 AM close).
+ */
+export function isClosingEarly(
+  store: { timezone?: string; closeTime?: string },
+  minutes = 5,
+  now = new Date()
+): boolean {
+  const nowMin = localParts(store.timezone, now).minutes;
+  const closeMin = parseCloseTime(store.closeTime);
+  return nowMin < closeMin - minutes;
+}
+
 export function storeLocalDateToUtcNoon(date: string, timezone = "America/New_York"): string {
   const [year, month, day] = date.split("-").map((part) => Number(part));
   const guess = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));

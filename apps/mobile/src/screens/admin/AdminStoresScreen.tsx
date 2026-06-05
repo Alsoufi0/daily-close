@@ -25,6 +25,7 @@ import {
 } from "../../api";
 import { Button, Card } from "../../ui";
 import { SkeletonRow } from "../../ui/Skeleton";
+import { TimeField } from "../../components/TimeField";
 import { t } from "../../i18n";
 import { colors, font, radius, spacing } from "../../theme";
 
@@ -313,15 +314,7 @@ function StoreFormModal({
           </Field>
 
           <Field label={t("admin.dailyCloseTime")}>
-            <TextInput
-              value={closeTime}
-              onChangeText={setCloseTime}
-              placeholder="23:30"
-              placeholderTextColor={colors.inkMuted}
-              style={[modal.input, { width: 120 }]}
-              keyboardType="numbers-and-punctuation"
-              maxLength={5}
-            />
+            <TimeField value={closeTime} onChange={setCloseTime} />
             <Text style={modal.help}>{t("admin.closeTimeHelp")}</Text>
           </Field>
 
