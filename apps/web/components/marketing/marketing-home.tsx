@@ -34,12 +34,13 @@ export function MarketingHome() {
           className="pointer-events-none absolute -right-20 -top-16 -z-10 h-72 w-72 rounded-full bg-leaf/10 blur-3xl"
         />
         <div>
-          <p className="text-xs font-black uppercase tracking-wide text-leaf sm:text-sm">{t("marketing.heroEyebrow")}</p>
-          <h1 className="mt-3 text-3xl font-black leading-[1.08] tracking-tight text-ink sm:text-5xl sm:leading-[1.05] lg:text-6xl">
+          <p className="lr lr-1 text-xs font-black uppercase tracking-[0.18em] text-gold sm:text-sm">{t("marketing.heroEyebrow")}</p>
+          <h1 className="lr lr-1 mt-3 font-display text-4xl font-semibold leading-[1.06] tracking-tight text-ink sm:text-5xl lg:text-6xl">
             {t("marketing.heroTitle")}
           </h1>
-          <p className="mx-auto mt-4 max-w-md text-base font-bold text-ink/70 sm:mx-0 sm:mt-5 sm:max-w-xl sm:text-lg">{t("marketing.heroBody")}</p>
-          <div className="mt-6 flex flex-col items-center gap-3 sm:mt-7 sm:flex-row sm:flex-wrap sm:items-center">
+          <span aria-hidden className="gold-rule mx-auto mt-5 block h-[3px] w-16 rounded-full bg-gold sm:mx-0" />
+          <p className="lr lr-2 mx-auto mt-5 max-w-md text-base font-bold text-ink/70 sm:mx-0 sm:max-w-xl sm:text-lg">{t("marketing.heroBody")}</p>
+          <div className="lr lr-3 mt-6 flex flex-col items-center gap-3 sm:mt-7 sm:flex-row sm:flex-wrap sm:items-center">
             {signedIn ? (
               <Link
                 href={dashHref}
@@ -62,8 +63,8 @@ export function MarketingHome() {
               {t("marketing.heroSecondaryCta")} <ArrowRight size={16} aria-hidden className="sm:hidden" />
             </Link>
           </div>
-          <p className="mt-4 text-sm font-bold text-ink/55">{t("marketing.heroNote")}</p>
-          <div className="mt-7 flex justify-center sm:mt-8 sm:justify-start">
+          <p className="lr lr-4 mt-4 text-sm font-bold text-ink/55">{t("marketing.heroNote")}</p>
+          <div className="lr lr-4 mt-7 flex justify-center sm:mt-8 sm:justify-start">
             <StoreBadges />
           </div>
         </div>
@@ -95,7 +96,7 @@ export function MarketingHome() {
       {/* Features */}
       <section className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-12 lg:py-16">
         <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-3xl font-black tracking-tight text-ink sm:text-4xl">{t("marketing.featuresTitle")}</h2>
+          <h2 className="font-display text-3xl font-semibold tracking-tight text-ink sm:text-4xl">{t("marketing.featuresTitle")}</h2>
           <p className="mt-3 text-base font-bold text-ink/65">{t("marketing.featuresBody")}</p>
         </div>
         <div className="mt-7 grid grid-cols-2 gap-3 sm:mt-10 sm:gap-4 lg:grid-cols-3">
@@ -115,8 +116,8 @@ export function MarketingHome() {
       <section className="bg-leaf/5">
         <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-12 lg:py-16">
           <div className="mx-auto max-w-2xl text-center">
-            <p className="text-sm font-black uppercase tracking-wide text-leaf">{t("marketing.howEyebrow")}</p>
-            <h2 className="mt-2 text-3xl font-black tracking-tight text-ink sm:text-4xl">{t("marketing.howTitle")}</h2>
+            <p className="text-sm font-black uppercase tracking-[0.18em] text-gold">{t("marketing.howEyebrow")}</p>
+            <h2 className="mt-2 font-display text-3xl font-semibold tracking-tight text-ink sm:text-4xl">{t("marketing.howTitle")}</h2>
           </div>
           <ol className="mt-7 grid grid-cols-2 gap-3 sm:mt-10 sm:gap-4 lg:grid-cols-4">
             <Step n={1} title={t("marketing.step1Title")} body={t("marketing.step1Body")} />
@@ -135,8 +136,8 @@ export function MarketingHome() {
       {/* Tutorials teaser */}
       <section className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-12 lg:py-16">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-sm font-black uppercase tracking-wide text-leaf">{t("marketing.tutEyebrow")}</p>
-          <h2 className="mt-2 text-3xl font-black tracking-tight text-ink sm:text-4xl">{t("marketing.tutTitle")}</h2>
+          <p className="text-sm font-black uppercase tracking-[0.18em] text-gold">{t("marketing.tutEyebrow")}</p>
+          <h2 className="mt-2 font-display text-3xl font-semibold tracking-tight text-ink sm:text-4xl">{t("marketing.tutTitle")}</h2>
           <p className="mt-3 text-base font-bold text-ink/65">{t("marketing.tutBody")}</p>
         </div>
         {/* Mobile: horizontal swipe/flip carousel (peeks the next card) so the
@@ -161,13 +162,13 @@ export function MarketingHome() {
       </section>
 
       {/* Pricing teaser */}
-      <section className="bg-ink text-white">
-        <div className="mx-auto flex w-full max-w-6xl flex-col items-center gap-5 px-4 py-10 text-center sm:gap-6 sm:px-6 sm:py-14">
-          <p className="text-sm font-black uppercase tracking-wide text-white/70">{t("marketing.pricingEyebrow")}</p>
-          <h2 className="text-3xl font-black tracking-tight sm:text-4xl">{t("marketing.pricingTitle")}</h2>
-          <p className="flex items-baseline gap-2 text-4xl font-black sm:text-5xl">
+      <section className="bg-deepgreen text-white">
+        <div className="mx-auto flex w-full max-w-6xl flex-col items-center gap-5 px-4 py-12 text-center sm:gap-6 sm:px-6 sm:py-16">
+          <p className="text-sm font-black uppercase tracking-[0.18em] text-gold">{t("marketing.pricingEyebrow")}</p>
+          <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">{t("marketing.pricingTitle")}</h2>
+          <p className="flex items-baseline gap-2 font-display text-5xl font-semibold text-gold sm:text-6xl">
             {t("marketing.priceAmount")}
-            <span className="text-base font-bold text-white/70">{t("marketing.pricePer")}</span>
+            <span className="font-sans text-base font-bold text-white/70">{t("marketing.pricePer")}</span>
           </p>
           <p className="text-sm font-bold text-white/70">{t("marketing.priceTrial")}</p>
           <ul className="mt-1 grid w-full max-w-xl gap-x-6 gap-y-2.5 text-left sm:grid-cols-2">
@@ -193,7 +194,7 @@ export function MarketingHome() {
         <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-leaf/10 text-leaf">
           <BadgeCheck size={28} aria-hidden />
         </span>
-        <h2 className="mt-5 text-3xl font-black tracking-tight text-ink sm:text-4xl">{t("marketing.ctaTitle")}</h2>
+        <h2 className="mt-5 font-display text-3xl font-semibold tracking-tight text-ink sm:text-4xl">{t("marketing.ctaTitle")}</h2>
         <p className="mt-3 text-lg font-bold text-ink/70">{t("marketing.ctaBody")}</p>
         <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
           <Link href={signedIn ? dashHref : "/signup"} className="focus-ring inline-flex items-center gap-2 rounded-xl bg-leaf px-6 py-3 text-base font-black text-white hover:bg-leaf/90">

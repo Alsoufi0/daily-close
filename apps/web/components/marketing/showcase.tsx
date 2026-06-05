@@ -30,8 +30,8 @@ export function Showcase() {
   return (
     <section className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-12 lg:py-16">
       <div className="mx-auto max-w-2xl text-center">
-        <p className="text-sm font-black uppercase tracking-wide text-leaf">{t("marketing.showcaseEyebrow")}</p>
-        <h2 className="mt-2 text-3xl font-black tracking-tight text-ink sm:text-4xl">{t("marketing.showcaseTitle")}</h2>
+        <p className="text-sm font-black uppercase tracking-[0.18em] text-gold">{t("marketing.showcaseEyebrow")}</p>
+        <h2 className="mt-2 font-display text-3xl font-semibold tracking-tight text-ink sm:text-4xl">{t("marketing.showcaseTitle")}</h2>
         <p className="mt-3 text-base font-bold text-ink/65">{t("marketing.showcaseSub")}</p>
       </div>
 
