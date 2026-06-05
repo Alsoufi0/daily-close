@@ -66,7 +66,12 @@ export class DailyCloseService {
     };
   }
 
-  async uploadReport(input: UploadReportDto, user: RequestUser): Promise<ParsedPOSReport & { imageUrl: string }> {
+  async uploadReport(
+    input: UploadReportDto,
+    user: RequestUser
+  ): Promise<
+    ParsedPOSReport & { imageUrl: string; kind?: "close" | "expense"; amount?: number | null; rawText?: string }
+  > {
     await this.assertCanCloseStore(user, input.storeId);
 
     let imageUrl = input.imageUrl;
@@ -97,30 +102,85 @@ export class DailyCloseService {
 
     const imageForOcr = input.base64Data || imageUrl;
     if (!imageForOcr) throw new BadRequestException("Report image is required.");
+    // From here imageUrl is the value we persist/return; default it so the type
+    // is a definite string (storage may have failed, or only imageUrl was sent).
+    imageUrl = imageUrl || "report-upload-not-stored";
+
+    // Expense receipts: OCR a single amount instead of parsing POS sales, and
+    // file the row under Expenses (parserType "EXPENSE" + a parsedJson.kind
+    // tag) so the Receipts page can separate them from close receipts. The
+    // close flow uses the returned amount to pre-fill the expense row — the
+    // employee can still edit it if the OCR misread a handwritten total.
+    if (input.kind === "expense") {
+      const { amount, rawText } = await this.scanExpense(imageForOcr);
+      await this.persistUploadedReport({
+        imageUrl,
+        storagePath,
+        parsedJson: { kind: "expense", amount, rawText },
+        parserType: "EXPENSE",
+        storeId: input.storeId,
+        userId: user.id
+      });
+      // Spread an empty parsed shape so the return type stays a single object
+      // (the close path + tests read ParsedPOSReport fields); the expense client
+      // only reads `amount`/`kind`.
+      return { ...this.posParser.parse(""), kind: "expense", amount, rawText, imageUrl };
+    }
 
     const parsed = await this.scanReport({ imageUrl: imageForOcr, storeId: input.storeId });
-
     // Persist the upload so the owner Receipts page can show it. The row is
     // intentionally created BEFORE finishClosing — daily_close_id stays null
     // until the close lands and finishClosing links the newest matching upload.
+    await this.persistUploadedReport({
+      imageUrl,
+      storagePath,
+      parsedJson: parsed as any,
+      parserType: parsed.parserType || "UNKNOWN",
+      storeId: input.storeId,
+      userId: user.id
+    });
+
+    return { ...parsed, imageUrl } as ParsedPOSReport & { imageUrl: string };
+  }
+
+  // OCR an expense document and pull a single best-guess amount. Best-effort:
+  // returns a null amount (with the raw text) when nothing money-like is found,
+  // so the UI can fall back to manual entry.
+  async scanExpense(imageUrl: string): Promise<{ amount: number | null; rawText?: string }> {
+    let text = "";
+    try {
+      text = await this.ocr.extractText(imageUrl);
+    } catch (err: any) {
+      this.logger.warn(`Expense OCR failed, manual entry: ${err?.message || err}`);
+    }
+    const amount = extractExpenseAmount(text);
+    return amount != null ? { amount } : { amount: null, rawText: text.slice(0, 2000) };
+  }
+
+  private async persistUploadedReport(data: {
+    imageUrl: string | undefined;
+    storagePath: string | null;
+    parsedJson: any;
+    parserType: string;
+    storeId: string;
+    userId: string;
+  }) {
     try {
       await this.prisma.uploadedReport.create({
         data: {
-          imageUrl: imageUrl || "report-upload-not-stored",
-          storagePath,
-          parsedJson: parsed as any,
-          parserType: parsed.parserType || "UNKNOWN",
-          storeId: input.storeId,
-          uploadedByUserId: user.id
+          imageUrl: data.imageUrl || "report-upload-not-stored",
+          storagePath: data.storagePath,
+          parsedJson: data.parsedJson,
+          parserType: data.parserType,
+          storeId: data.storeId,
+          uploadedByUserId: data.userId
         }
       });
     } catch (err: any) {
-      // The Receipts page is a read-only owner feature; failing to persist
-      // here must not block the employee's close. Log and move on.
+      // The Receipts page is a read-only owner feature; failing to persist here
+      // must never block the employee's close. Log and move on.
       this.logger.warn(`UploadedReport persist failed (non-fatal): ${err?.message || err}`);
     }
-
-    return { ...parsed, imageUrl } as ParsedPOSReport & { imageUrl: string };
   }
 
   async finishClosing(
@@ -240,27 +300,23 @@ export class DailyCloseService {
     }
 
     // A receipt is only "recorded" once the close actually concludes. The
-    // upload step stores the image and creates an UploadedReport row, but that
-    // row stays UNLINKED (dailyCloseId = null) until here. We now link the most
-    // recent unlinked upload for this store + user to the close. The Receipts
-    // page only lists LINKED rows, so step-1 images the employee abandoned or
-    // re-selected never show up — only the image that backed a completed close.
+    // upload step stores each image and creates an UploadedReport row, but those
+    // rows stay UNLINKED (dailyCloseId = null) until here. We now link ALL the
+    // unlinked uploads for this store + user from the current session — the
+    // sales receipt AND any expense-document photos — so they all attach to the
+    // close. A 12-hour window keeps images abandoned in a prior session from
+    // being swept in. The Receipts page only lists LINKED rows.
     try {
-      const latestUpload = await this.prisma.uploadedReport.findFirst({
+      const since = new Date(Date.now() - 12 * 60 * 60 * 1000);
+      await this.prisma.uploadedReport.updateMany({
         where: {
           storeId: input.storeId,
           uploadedByUserId: submittedByUserId,
-          dailyCloseId: null
+          dailyCloseId: null,
+          createdAt: { gte: since }
         },
-        orderBy: { createdAt: "desc" },
-        select: { id: true }
+        data: { dailyCloseId: created.id }
       });
-      if (latestUpload) {
-        await this.prisma.uploadedReport.update({
-          where: { id: latestUpload.id },
-          data: { dailyCloseId: created.id }
-        });
-      }
     } catch (err: any) {
       // Non-fatal: the close is already persisted. A missing receipt link just
       // means that close won't have a thumbnail on the Receipts page.
@@ -483,4 +539,34 @@ export class DailyCloseService {
     });
     return created.id;
   }
+}
+
+// Best-guess single amount from an expense receipt's OCR text. Prefers a value
+// on a line mentioning total/amount/due/balance; otherwise the largest money
+// value (usually the total). Returns null when nothing money-like is found.
+const MONEY_TOKEN = /(?:\$|usd)?\s*(\d{1,3}(?:[,\s]\d{3})+(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)/i;
+const MONEY_TOKEN_G = new RegExp(MONEY_TOKEN.source, "gi");
+
+export function extractExpenseAmount(text: string): number | null {
+  if (!text) return null;
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+  const parse = (raw: string) => {
+    const n = parseFloat(raw.replace(/[,\s]/g, ""));
+    return Number.isFinite(n) && n > 0 && n < 1_000_000 ? round2(n) : null;
+  };
+
+  const lines = text.split(/\r?\n/);
+  for (const kw of [/total/i, /amount\s*due/i, /balance/i, /\bdue\b/i, /\bamount\b/i]) {
+    for (const line of lines) {
+      if (!kw.test(line)) continue;
+      const m = line.match(MONEY_TOKEN);
+      const v = m ? parse(m[1]) : null;
+      if (v != null) return v;
+    }
+  }
+
+  const all = [...text.matchAll(MONEY_TOKEN_G)]
+    .map((m) => parse(m[1]))
+    .filter((n): n is number => n != null);
+  return all.length ? Math.max(...all) : null;
 }

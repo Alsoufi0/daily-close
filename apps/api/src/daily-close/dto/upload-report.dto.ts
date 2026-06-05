@@ -1,4 +1,4 @@
-import { IsOptional, IsString, Matches, MaxLength } from "class-validator";
+import { IsIn, IsOptional, IsString, Matches, MaxLength } from "class-validator";
 
 // Base64 of a ~25 MB image is ~33.5 MB of characters; the express body limit is
 // 25 MB (REQUEST_BODY_LIMIT). Cap a little above that so a legitimate large
@@ -30,4 +30,11 @@ export class UploadReportDto {
   @IsOptional()
   @MaxLength(2048)
   imageUrl?: string;
+
+  // "close" (default) = the POS/sales receipt that backs the close. "expense" =
+  // a photographed expense document; OCR extracts a single amount instead of
+  // parsing POS sales, and the receipt is filed under Expenses.
+  @IsOptional()
+  @IsIn(["close", "expense"])
+  kind?: "close" | "expense";
 }

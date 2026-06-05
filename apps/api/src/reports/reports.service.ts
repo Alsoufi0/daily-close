@@ -417,11 +417,12 @@ export class ReportsService {
     const colHeaders = [
       this.t(lang, "closeDate"),
       this.t(lang, "totalSales"),
+      this.t(lang, "expenses"),
       this.t(lang, "difference"),
       this.t(lang, "netProfit"),
       this.t(lang, "status")
     ];
-    const widths = [115, 100, 100, 100, 90];
+    const widths = [95, 90, 85, 85, 90, 67];
     const xPositions = widths.reduce<number[]>((acc, width, index) => {
       acc.push(index === 0 ? margin : acc[index - 1] + widths[index - 1]);
       return acc;
@@ -456,6 +457,7 @@ export class ReportsService {
         const values = [
           row.closeDate,
           pdfMoney(row.totalSales),
+          pdfMoney(row.expenses),
           pdfMoney(row.difference),
           pdfMoney(row.netProfit),
           row.status
@@ -639,8 +641,13 @@ export class ReportsService {
         ? this.localDate(tz, dailyClose.date)
         : this.localDate(tz, row.createdAt);
       const ext = this.guessExt(row.imageUrl, row.storagePath);
+      // Two folders in the zip — closes/ and expenses/ — so the owner can tell
+      // sales receipts from photographed expense documents at a glance.
+      const isExpense = receiptKind(row) === "expense";
+      const folder = isExpense ? "expenses" : "closes";
+      const prefix = isExpense ? "expense" : "receipt";
       return {
-        filename: `receipt-${this.sanitizeFilenameSegment(store.storeName)}-${dateStr}-${row.id}.${ext}`,
+        filename: `${folder}/${prefix}-${this.sanitizeFilenameSegment(store.storeName)}-${dateStr}-${row.id}.${ext}`,
         storagePath: row.storagePath,
         imageUrl: row.imageUrl
       };
@@ -727,6 +734,7 @@ export class ReportsService {
         storeName: store.storeName,
         closeDate,
         employeeName,
+        kind: receiptKind(row),
         parsedJson: row.parsedJson,
         dailyClose: dc
           ? {
@@ -742,4 +750,14 @@ export class ReportsService {
       };
     });
   }
+}
+
+// Whether an UploadedReport is a close/sales receipt or a photographed expense
+// document. Expense uploads are tagged with parserType "EXPENSE" (and a
+// parsedJson.kind marker); everything else — including legacy rows — is a close.
+export function receiptKind(row: { parserType?: string | null; parsedJson?: unknown }): "close" | "expense" {
+  if (row.parserType === "EXPENSE") return "expense";
+  const pj = row.parsedJson;
+  if (pj && typeof pj === "object" && (pj as { kind?: string }).kind === "expense") return "expense";
+  return "close";
 }
