@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Banner, Card } from "../../ui";
+import { Card } from "../../ui";
 import { changeLanguage, getMobileLanguage, setMobileLanguage, t } from "../../i18n";
 import type { Language } from "@smokeshop/shared/i18n";
 import { colors, font, radius, spacing } from "../../theme";
@@ -47,12 +47,6 @@ export function LanguageScreen() {
             <Text style={s.subtitle}>{t("language.subtitle")}</Text>
           </View>
         </View>
-
-        <Banner
-          tone="warn"
-          title={t("language.partialTitle")}
-          body={t("language.partialBody")}
-        />
 
         <View style={{ gap: spacing.xs }}>
           {LANGUAGES.map((lang) => {
