@@ -12,8 +12,8 @@
     "scheme": "dailyclose",
     "icon": "./assets/icon.png",
     "splash": {
-      "image": "./assets/icon.png",
-      "resizeMode": "contain",
+      "image": "./assets/splash.png",
+      "resizeMode": "cover",
       "backgroundColor": "#0e3b34"
     },
     "ios": {
