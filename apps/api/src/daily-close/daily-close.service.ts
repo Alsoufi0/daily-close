@@ -106,25 +106,23 @@ export class DailyCloseService {
     // is a definite string (storage may have failed, or only imageUrl was sent).
     imageUrl = imageUrl || "report-upload-not-stored";
 
-    // Expense receipts: OCR a single amount instead of parsing POS sales, and
-    // file the row under Expenses (parserType "EXPENSE" + a parsedJson.kind
-    // tag) so the Receipts page can separate them from close receipts. The
-    // close flow uses the returned amount to pre-fill the expense row — the
-    // employee can still edit it if the OCR misread a handwritten total.
+    // Expense documents (often handwritten) are kept as a PHOTO RECORD only — no
+    // OCR, since it can't reliably read scrawled totals. The amount is entered
+    // manually in the close flow. We still file the row under Expenses
+    // (parserType "EXPENSE" + a parsedJson.kind tag) so the Receipts page can
+    // separate it from close receipts and it shows up in the Expenses folder.
     if (input.kind === "expense") {
-      const { amount, rawText } = await this.scanExpense(imageForOcr);
       await this.persistUploadedReport({
         imageUrl,
         storagePath,
-        parsedJson: { kind: "expense", amount, rawText },
+        parsedJson: { kind: "expense" },
         parserType: "EXPENSE",
         storeId: input.storeId,
         userId: user.id
       });
       // Spread an empty parsed shape so the return type stays a single object
-      // (the close path + tests read ParsedPOSReport fields); the expense client
-      // only reads `amount`/`kind`.
-      return { ...this.posParser.parse(""), kind: "expense", amount, rawText, imageUrl };
+      // (the close path + tests read ParsedPOSReport fields).
+      return { ...this.posParser.parse(""), kind: "expense", imageUrl };
     }
 
     const parsed = await this.scanReport({ imageUrl: imageForOcr, storeId: input.storeId });
@@ -141,20 +139,6 @@ export class DailyCloseService {
     });
 
     return { ...parsed, imageUrl } as ParsedPOSReport & { imageUrl: string };
-  }
-
-  // OCR an expense document and pull a single best-guess amount. Best-effort:
-  // returns a null amount (with the raw text) when nothing money-like is found,
-  // so the UI can fall back to manual entry.
-  async scanExpense(imageUrl: string): Promise<{ amount: number | null; rawText?: string }> {
-    let text = "";
-    try {
-      text = await this.ocr.extractText(imageUrl);
-    } catch (err: any) {
-      this.logger.warn(`Expense OCR failed, manual entry: ${err?.message || err}`);
-    }
-    const amount = extractExpenseAmount(text);
-    return amount != null ? { amount } : { amount: null, rawText: text.slice(0, 2000) };
   }
 
   private async persistUploadedReport(data: {
@@ -539,34 +523,4 @@ export class DailyCloseService {
     });
     return created.id;
   }
-}
-
-// Best-guess single amount from an expense receipt's OCR text. Prefers a value
-// on a line mentioning total/amount/due/balance; otherwise the largest money
-// value (usually the total). Returns null when nothing money-like is found.
-const MONEY_TOKEN = /(?:\$|usd)?\s*(\d{1,3}(?:[,\s]\d{3})+(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)/i;
-const MONEY_TOKEN_G = new RegExp(MONEY_TOKEN.source, "gi");
-
-export function extractExpenseAmount(text: string): number | null {
-  if (!text) return null;
-  const round2 = (n: number) => Math.round(n * 100) / 100;
-  const parse = (raw: string) => {
-    const n = parseFloat(raw.replace(/[,\s]/g, ""));
-    return Number.isFinite(n) && n > 0 && n < 1_000_000 ? round2(n) : null;
-  };
-
-  const lines = text.split(/\r?\n/);
-  for (const kw of [/total/i, /amount\s*due/i, /balance/i, /\bdue\b/i, /\bamount\b/i]) {
-    for (const line of lines) {
-      if (!kw.test(line)) continue;
-      const m = line.match(MONEY_TOKEN);
-      const v = m ? parse(m[1]) : null;
-      if (v != null) return v;
-    }
-  }
-
-  const all = [...text.matchAll(MONEY_TOKEN_G)]
-    .map((m) => parse(m[1]))
-    .filter((n): n is number => n != null);
-  return all.length ? Math.max(...all) : null;
 }

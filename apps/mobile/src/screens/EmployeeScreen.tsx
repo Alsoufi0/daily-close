@@ -96,6 +96,8 @@ export function EmployeeScreen({ onSignOut }: { onSignOut: () => void }) {
   const [cashCounted, setCashCounted] = useState("");
   const [safeDrop, setSafeDrop] = useState("0");
   const [expenseItems, setExpenseItems] = useState<ExpenseRow[]>([]);
+  // Expense rows whose receipt photo has been attached this session (by row id).
+  const [attachedPhotoIds, setAttachedPhotoIds] = useState<Set<string>>(new Set());
   const [notes, setNotes] = useState("");
   // The business date the close is filed under. Defaults to the smart-suggested
   // store-local day, but the user confirms/changes it at the Finish step (#2).
@@ -307,11 +309,11 @@ export function EmployeeScreen({ onSignOut }: { onSignOut: () => void }) {
     }
   }
 
-  // Scan an expense document: OCR reads a single amount and pre-fills the row's
-  // amount (the employee can still edit it). The photo is saved as an expense
-  // receipt and shows up on the Receipts page under Expenses.
+  // Attach a photo of the expense document for record-keeping. No OCR — the
+  // amount is entered manually. The photo is saved as an expense receipt and
+  // shows up on the Receipts page under Expenses.
   function scanExpense(idx: number) {
-    Alert.alert(t("closing.scanExpense"), t("closing.scanExpenseBody"), [
+    Alert.alert(t("closing.attachPhoto"), t("closing.attachPhotoBody"), [
       { text: t("closing.takePhoto"), onPress: () => runExpenseScan(idx, "camera") },
       { text: t("closing.uploadReport"), onPress: () => runExpenseScan(idx, "library") },
       { text: t("common.cancel"), style: "cancel" }
@@ -323,15 +325,9 @@ export function EmployeeScreen({ onSignOut }: { onSignOut: () => void }) {
     try {
       const base64 = await captureProcessedImage(source);
       if (!base64) return;
-      const res = await uploadReport(activeStore.id, base64, "expense.jpg", "image/jpeg", "expense");
-      const amount = res.amount;
-      if (amount != null) {
-        setExpenseItems((prev) =>
-          prev.map((it, i) => (i === idx ? { ...it, amount: String(amount) } : it))
-        );
-      } else {
-        Alert.alert(t("closing.scanNoAmount"), t("closing.scanNoAmountBody"));
-      }
+      await uploadReport(activeStore.id, base64, "expense.jpg", "image/jpeg", "expense");
+      const id = expenseItems[idx]?.id;
+      if (id) setAttachedPhotoIds((prev) => new Set(prev).add(id));
     } catch (e: any) {
       Alert.alert(t("closing.uploadFailed"), e?.message || t("closing.uploadFailedBody"));
     } finally {
@@ -406,6 +402,7 @@ export function EmployeeScreen({ onSignOut }: { onSignOut: () => void }) {
     setCashCounted("");
     setSafeDrop("0");
     setExpenseItems([]);
+    setAttachedPhotoIds(new Set());
     setNotes("");
     // Fresh key for the next close attempt — otherwise the server would
     // return the previous close on the first submit of the new one.
@@ -610,10 +607,12 @@ export function EmployeeScreen({ onSignOut }: { onSignOut: () => void }) {
                   <TouchableOpacity
                     onPress={() => scanExpense(idx)}
                     accessibilityRole="button"
-                    accessibilityLabel={t("closing.scanExpense")}
-                    style={s.scanExpenseBtn}
+                    accessibilityLabel={t("closing.attachPhoto")}
+                    style={[s.scanExpenseBtn, attachedPhotoIds.has(item.id) && s.scanExpenseBtnDone]}
                   >
-                    <Text style={s.scanExpenseText}>📷  {t("closing.scanExpense")}</Text>
+                    <Text style={[s.scanExpenseText, attachedPhotoIds.has(item.id) && s.scanExpenseTextDone]}>
+                      {attachedPhotoIds.has(item.id) ? `✓  ${t("closing.photoAttached")}` : `📷  ${t("closing.attachPhoto")}`}
+                    </Text>
                   </TouchableOpacity>
                   {item.category === "Other" ? (
                     <>
@@ -808,7 +807,9 @@ const s = StyleSheet.create({
     borderColor: colors.leaf,
     backgroundColor: colors.leafSoft
   },
+  scanExpenseBtnDone: { backgroundColor: colors.leaf, borderColor: colors.leaf },
   scanExpenseText: { color: colors.leaf, fontWeight: font.black, fontSize: 13 },
+  scanExpenseTextDone: { color: colors.white },
   doneIcon: { fontSize: 56 },
   doneTitle: { color: colors.ink, fontWeight: font.black, fontSize: 22, textAlign: "center" },
 

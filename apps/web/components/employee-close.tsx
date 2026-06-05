@@ -86,6 +86,7 @@ export function EmployeeClose() {
   const [safeDrop, setSafeDrop] = useState("0");
   const [expenseItems, setExpenseItems] = useState<ExpenseRow[]>([]);
   const [scanningIdx, setScanningIdx] = useState<number | null>(null);
+  const [attachedPhotoIds, setAttachedPhotoIds] = useState<Set<string>>(new Set());
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -160,9 +161,9 @@ export function EmployeeClose() {
     }
   }
 
-  // Scan an expense document: OCR reads a single amount and pre-fills the row's
-  // amount (still editable). The photo is saved as an expense receipt and shows
-  // up on the Receipts page under Expenses.
+  // Attach a photo of the expense document for record-keeping. No OCR — the
+  // amount is entered manually. The photo is saved as an expense receipt and
+  // shows up on the Receipts page under Expenses.
   async function handleExpenseFile(idx: number, rawFile: File | null) {
     if (!rawFile || !session.token) return;
     setUploadError(null);
@@ -174,14 +175,9 @@ export function EmployeeClose() {
         fileName: file.name,
         contentType: file.type || "image/jpeg"
       };
-      const res = await uploadReport(session.token, activeStore.id, upload, "expense");
-      if (res.amount != null) {
-        setExpenseItems((prev) =>
-          prev.map((it, i) => (i === idx ? { ...it, amount: String(res.amount) } : it))
-        );
-      } else {
-        setUploadError(t("closing.scanNoAmountBody"));
-      }
+      await uploadReport(session.token, activeStore.id, upload, "expense");
+      const id = expenseItems[idx]?.id;
+      if (id) setAttachedPhotoIds((prev) => new Set(prev).add(id));
     } catch (err: any) {
       setUploadError(err?.message || t("closing.uploadFailed"));
     } finally {
@@ -253,6 +249,7 @@ export function EmployeeClose() {
     setUploadError(null);
     setSubmitError(null);
     setBusinessDate("");
+    setAttachedPhotoIds(new Set());
   }
 
   function reset() {
@@ -555,15 +552,24 @@ export function EmployeeClose() {
                       />
                     </label>
                     <label
-                      aria-label={t("closing.scanExpense")}
-                      className="focus-ring flex h-12 cursor-pointer items-center justify-center gap-1.5 self-end rounded-lg border border-leaf bg-leaf/5 px-3 text-sm font-black text-leaf hover:bg-leaf/10"
+                      aria-label={t("closing.attachPhoto")}
+                      className={clsx(
+                        "focus-ring flex h-12 cursor-pointer items-center justify-center gap-1.5 self-end rounded-lg border px-3 text-sm font-black",
+                        attachedPhotoIds.has(item.id)
+                          ? "border-leaf bg-leaf text-white"
+                          : "border-leaf bg-leaf/5 text-leaf hover:bg-leaf/10"
+                      )}
                     >
                       {scanningIdx === idx ? (
                         <Loader2 className="animate-spin" size={16} aria-hidden />
+                      ) : attachedPhotoIds.has(item.id) ? (
+                        <CheckCircle2 size={16} aria-hidden />
                       ) : (
                         <Camera size={16} aria-hidden />
                       )}
-                      <span className="hidden sm:inline">{t("closing.scanExpense")}</span>
+                      <span className="hidden sm:inline">
+                        {attachedPhotoIds.has(item.id) ? t("closing.photoAttached") : t("closing.attachPhoto")}
+                      </span>
                       <input
                         type="file"
                         accept="image/*"
