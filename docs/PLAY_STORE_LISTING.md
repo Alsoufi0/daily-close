@@ -59,11 +59,23 @@ retail, point of sale, cash register, store management, daily closing, end of da
 |---|---|---|
 | App icon | 512×512, 32-bit PNG | `icon-512.png` |
 | Feature graphic | 1024×500 PNG | `feature-graphic.png` |
-| Screenshot 1 — dashboard | 1080×2400 | `screenshots/01-dashboard.png` |
-| Screenshot 2 — 2-minute close | 1080×2400 | `screenshots/02-close.png` |
-| Screenshot 3 — reports | 1080×2400 | `screenshots/03-reports.png` |
-| Screenshot 4 — export | 1080×2400 | `screenshots/04-export.png` |
-| Screenshot 5 — built for shops | 1080×2400 | `screenshots/05-features.png` |
+
+**Screenshots — PRIMARY (real app captures, framed):** in `screenshots-real/`,
+captured on a device via the android-emulator skill, with the real UI inside the
+brand frame + a modern status bar / gesture pill. Upload these, in this order:
+| # | Scene | File |
+|---|---|---|
+| 1 | Every store, one screen (multi-store) | `screenshots-real/01-stores.png` |
+| 2 | Close up in two minutes (close flow) | `screenshots-real/02-close.png` |
+| 3 | Export it all in a tap (reports) | `screenshots-real/04-export.png` |
+| 4 | Tonight, at a glance (dashboard) | `screenshots-real/05-dashboard.png` |
+
+> A 5th scene (close detail) was dropped because it showed a real customer
+> receipt. Re-render any from `screenshots-real/frame.template.html`.
+
+**Alternate (hand-built mockups):** `screenshots/0{1..5}-*.png` — same brand
+style, generic data, no real customer info. Use if you prefer not to ship real
+figures.
 
 Tablet screenshots: skipped (app is phone-first; do not mark tablet-supported).
 
