@@ -21,6 +21,7 @@ import { DashboardService } from "../dashboard/dashboard.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { SmsService } from "../notifications/sms.service";
 import { WhatsAppService } from "../notifications/whatsapp.service";
+import { PushService } from "../notifications/push.service";
 
 @Injectable()
 export class DailyCloseService {
@@ -34,7 +35,8 @@ export class DailyCloseService {
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
     private readonly whatsapp: WhatsAppService,
-    private readonly sms: SmsService
+    private readonly sms: SmsService,
+    private readonly push: PushService
   ) {}
 
   async scanReport(input: ScanReportDto): Promise<ParsedPOSReport & { rawText?: string }> {
@@ -165,30 +167,6 @@ export class DailyCloseService {
       // must never block the employee's close. Log and move on.
       this.logger.warn(`UploadedReport persist failed (non-fatal): ${err?.message || err}`);
     }
-  }
-
-  // Receipt retention: purge uploads that were created but never attached to a
-  // completed close (dailyCloseId stays null) and are older than the window —
-  // i.e. abandoned step-1 photos. The privacy policy promises these go within
-  // 7 days. Receipts that DID back a close (linked) are kept for the owner's
-  // records. Deletes the storage object first, then the row.
-  async purgeAbandonedReceipts(olderThanDays = 7): Promise<{ purged: number }> {
-    const cutoff = new Date(Date.now() - olderThanDays * 24 * 60 * 60 * 1000);
-    const stale = await this.prisma.uploadedReport.findMany({
-      where: { dailyCloseId: null, createdAt: { lt: cutoff } },
-      select: { id: true, storagePath: true }
-    });
-    for (const row of stale) {
-      if (row.storagePath) {
-        const ok = await this.storage.remove(row.storagePath);
-        if (!ok) this.logger.warn(`Receipt cleanup: could not delete object ${row.storagePath}`);
-      }
-    }
-    if (stale.length) {
-      await this.prisma.uploadedReport.deleteMany({ where: { id: { in: stale.map((s) => s.id) } } });
-    }
-    this.logger.log(`Receipt retention: purged ${stale.length} abandoned upload(s) older than ${olderThanDays}d`);
-    return { purged: stale.length };
   }
 
   // Mirrors finishClosing's "already closed" guard (lines below) without writing
@@ -352,6 +330,7 @@ export class DailyCloseService {
     }
 
     await this.sendCloseCompletedWhatsApp(input.storeId);
+    await this.sendCloseCompletedPush(input.storeId, submittedByUserId, status, difference);
 
     return {
       id: created.id,
@@ -456,6 +435,45 @@ export class DailyCloseService {
     if (user.role !== "EMPLOYEE") throw new ForbiddenException("Only employees can submit daily closes.");
     if (user.storeId !== storeId) throw new ForbiddenException("Employee cannot close another store.");
     if (!user.employeeId) throw new ForbiddenException("Employee profile is incomplete.");
+  }
+
+  // Native push to the owner when a store finishes closing. Skipped when the
+  // owner submitted the close themselves (they were just looking at it). The
+  // body summarises the cash result so the owner gets the gist without opening
+  // the app. Best-effort: a push failure never affects the close.
+  private async sendCloseCompletedPush(
+    storeId: string,
+    submittedByUserId: string,
+    status: "CLOSED" | "SHORT" | "OVER",
+    difference: number
+  ) {
+    try {
+      const store = await this.prisma.store.findUnique({
+        where: { id: storeId },
+        select: { storeName: true, owner: { select: { userId: true } } }
+      });
+      if (!store?.owner) return;
+      const ownerUserId = store.owner.userId;
+      if (ownerUserId === submittedByUserId) return; // owner closed it themselves
+
+      const amount = Math.abs(difference).toLocaleString("en-US", {
+        style: "currency",
+        currency: "USD"
+      });
+      const summary =
+        status === "SHORT"
+          ? `short ${amount}`
+          : status === "OVER"
+          ? `over ${amount}`
+          : "cash balanced";
+      await this.push.sendToUser(ownerUserId, {
+        title: "Store closed",
+        body: `${store.storeName} finished closing — ${summary}.`,
+        data: { type: "close_completed", storeId }
+      });
+    } catch (err: any) {
+      this.logger.warn(`Close-completed push skipped: ${err?.message || err}`);
+    }
   }
 
   private async sendCloseCompletedWhatsApp(storeId: string) {

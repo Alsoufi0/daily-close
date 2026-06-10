@@ -22,6 +22,7 @@ import { SmsService } from "./sms.service";
 import { WhatsAppService } from "./whatsapp.service";
 import { WeeklySummaryService } from "./weekly-summary.service";
 import { EmailService } from "./email.service";
+import { PushService } from "./push.service";
 
 @ApiTags("Notifications")
 @Controller("notifications")
@@ -32,7 +33,8 @@ export class NotificationsController {
     private readonly weekly: WeeklySummaryService,
     private readonly whatsapp: WhatsAppService,
     private readonly sms: SmsService,
-    private readonly email: EmailService
+    private readonly email: EmailService,
+    private readonly push: PushService
   ) {}
 
   @Post("contact")
@@ -93,6 +95,28 @@ export class NotificationsController {
   @UseGuards(SupabaseAuthGuard, SubscriptionGuard)
   remove(@Param("id") id: string, @CurrentUser() user: RequestUser) {
     return this.notifications.remove(id, user);
+  }
+
+  // Register a device's Expo push token. NOT subscription-gated on purpose:
+  // a locked/unpaid owner should still be reachable (e.g. a "renew" nudge),
+  // and an employee can register regardless of the owner's billing state.
+  @Post("push-token")
+  @ApiBearerAuth()
+  @UseGuards(SupabaseAuthGuard)
+  registerPushToken(
+    @CurrentUser() user: RequestUser,
+    @Body() body: { token?: string; platform?: string }
+  ) {
+    if (!body?.token) throw new BadRequestException("token is required.");
+    return this.push.registerToken(user.id, body.token, body.platform);
+  }
+
+  @Delete("push-token")
+  @ApiBearerAuth()
+  @UseGuards(SupabaseAuthGuard)
+  removePushToken(@Body() body: { token?: string }) {
+    if (!body?.token) throw new BadRequestException("token is required.");
+    return this.push.removeToken(body.token);
   }
 
   @Get("whatsapp-settings")
