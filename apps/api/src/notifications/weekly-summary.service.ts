@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { NotificationsService } from "./notifications.service";
 import { WhatsAppService } from "./whatsapp.service";
+import { SmsService } from "./sms.service";
 
 /**
  * Weekly owner summary email — the habit-hook that keeps owners signed in.
@@ -22,7 +23,8 @@ export class WeeklySummaryService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly whatsapp: WhatsAppService,
-    private readonly notifications: NotificationsService
+    private readonly notifications: NotificationsService,
+    private readonly sms: SmsService
   ) {}
 
   async sendForAllOwners(now = new Date()): Promise<{ sent: number; skipped: number }> {
@@ -111,16 +113,39 @@ export class WeeklySummaryService {
   ): Promise<boolean> {
     const prefs = await this.notifications.getOwnerWhatsAppPreferences(owner.id);
     if (!prefs.reportsEnabled || !prefs.phone) return false;
-    return this.whatsapp.sendSummaryTemplate({
-      toPhone: prefs.phone,
-      period: summary.period,
-      ownerName: summary.ownerName,
-      sales: money(summary.sales),
-      closes: String(summary.closes),
-      cashDifference: money(summary.diff),
-      from: summary.from,
-      to: summary.to
-    });
+    let sent = false;
+    if (this.whatsapp.isConfigured()) {
+      sent = await this.whatsapp.sendSummaryTemplate({
+        toPhone: prefs.phone,
+        period: summary.period,
+        ownerName: summary.ownerName,
+        sales: money(summary.sales),
+        closes: String(summary.closes),
+        cashDifference: money(summary.diff),
+        from: summary.from,
+        to: summary.to
+      });
+    }
+    if (!sent) {
+      // Fall back to the APPROVED Twilio WhatsApp template. WhatsApp rejects
+      // freeform text (63016), and Meta templates aren't approved, so without
+      // this the weekly/monthly WhatsApp never delivered (only the email did).
+      // daily_close_{weekly,monthly}_v2: {{1}}=name {{2}}=from {{3}}=to
+      // {{4}}=sales {{5}}=closings {{6}}=cash difference.
+      const sid = summary.period === "weekly"
+        ? (process.env.TWILIO_TEMPLATE_WEEKLY_SID || "HX65eeafe2b4aeeb89bbb442a16c89d6a7")
+        : (process.env.TWILIO_TEMPLATE_MONTHLY_SID || "HXeb87cd1609d49f8bd9273e03db746829");
+      const r = await this.sms.sendWhatsAppTemplate(prefs.phone, sid, {
+        "1": summary.ownerName,
+        "2": summary.from,
+        "3": summary.to,
+        "4": money(summary.sales),
+        "5": String(summary.closes),
+        "6": money(summary.diff)
+      });
+      sent = r.sent;
+    }
+    return sent;
   }
 
   private async send(to: string, subject: string, html: string): Promise<boolean> {
