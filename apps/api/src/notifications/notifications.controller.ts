@@ -83,23 +83,11 @@ export class NotificationsController {
     return this.notifications.listForUser(user);
   }
 
-  @Patch(":id/read")
-  @ApiBearerAuth()
-  @UseGuards(SupabaseAuthGuard, SubscriptionGuard)
-  markRead(@Param("id") id: string, @CurrentUser() user: RequestUser) {
-    return this.notifications.markRead(id, user);
-  }
-
-  @Delete(":id")
-  @ApiBearerAuth()
-  @UseGuards(SupabaseAuthGuard, SubscriptionGuard)
-  remove(@Param("id") id: string, @CurrentUser() user: RequestUser) {
-    return this.notifications.remove(id, user);
-  }
-
-  // Register a device's Expo push token. NOT subscription-gated on purpose:
-  // a locked/unpaid owner should still be reachable (e.g. a "renew" nudge),
-  // and an employee can register regardless of the owner's billing state.
+  // Register a device's Expo push token. Declared BEFORE the ":id" routes so
+  // the static "push-token" path isn't swallowed by @Delete(":id"). NOT
+  // subscription-gated on purpose: a locked/unpaid owner should still be
+  // reachable (e.g. a "renew" nudge), and an employee can register regardless
+  // of the owner's billing state.
   @Post("push-token")
   @ApiBearerAuth()
   @UseGuards(SupabaseAuthGuard)
@@ -117,6 +105,20 @@ export class NotificationsController {
   removePushToken(@Body() body: { token?: string }) {
     if (!body?.token) throw new BadRequestException("token is required.");
     return this.push.removeToken(body.token);
+  }
+
+  @Patch(":id/read")
+  @ApiBearerAuth()
+  @UseGuards(SupabaseAuthGuard, SubscriptionGuard)
+  markRead(@Param("id") id: string, @CurrentUser() user: RequestUser) {
+    return this.notifications.markRead(id, user);
+  }
+
+  @Delete(":id")
+  @ApiBearerAuth()
+  @UseGuards(SupabaseAuthGuard, SubscriptionGuard)
+  remove(@Param("id") id: string, @CurrentUser() user: RequestUser) {
+    return this.notifications.remove(id, user);
   }
 
   @Get("whatsapp-settings")
