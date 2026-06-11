@@ -169,6 +169,30 @@ export class DailyCloseService {
     }
   }
 
+  // Receipt retention: purge uploads that were created but never attached to a
+  // completed close (dailyCloseId stays null) and are older than the window —
+  // i.e. abandoned step-1 photos. The privacy policy promises these go within
+  // 7 days. Receipts that DID back a close (linked) are kept for the owner's
+  // records. Deletes the storage object first, then the row.
+  async purgeAbandonedReceipts(olderThanDays = 7): Promise<{ purged: number }> {
+    const cutoff = new Date(Date.now() - olderThanDays * 24 * 60 * 60 * 1000);
+    const stale = await this.prisma.uploadedReport.findMany({
+      where: { dailyCloseId: null, createdAt: { lt: cutoff } },
+      select: { id: true, storagePath: true }
+    });
+    for (const row of stale) {
+      if (row.storagePath) {
+        const ok = await this.storage.remove(row.storagePath);
+        if (!ok) this.logger.warn(`Receipt cleanup: could not delete object ${row.storagePath}`);
+      }
+    }
+    if (stale.length) {
+      await this.prisma.uploadedReport.deleteMany({ where: { id: { in: stale.map((s) => s.id) } } });
+    }
+    this.logger.log(`Receipt retention: purged ${stale.length} abandoned upload(s) older than ${olderThanDays}d`);
+    return { purged: stale.length };
+  }
+
   // Mirrors finishClosing's "already closed" guard (lines below) without writing
   // anything, so the close flow can warn up front instead of at submit. `date`
   // is the same UTC-noon ISO the client would send to /finish.
