@@ -66,6 +66,12 @@ function makeService(overrides: Partial<{
     send: jest.fn().mockResolvedValue({ sent: true }),
     sendWhatsAppTemplate: jest.fn().mockResolvedValue({ sent: true })
   };
+  const push = {
+    sendToUser: jest.fn().mockResolvedValue({ sent: 0 }),
+    sendToUsers: jest.fn().mockResolvedValue({ sent: 0 }),
+    registerToken: jest.fn().mockResolvedValue({ saved: true }),
+    removeToken: jest.fn().mockResolvedValue({ removed: true })
+  };
   const service = new DailyCloseService(
     repository as any,
     posParser as any,
@@ -74,9 +80,10 @@ function makeService(overrides: Partial<{
     prisma as any,
     notifications as any,
     whatsapp as any,
-    sms as any
+    sms as any,
+    push as any
   );
-  return { service, repository, prisma, ocr, posParser, storage, notifications, whatsapp, sms };
+  return { service, repository, prisma, ocr, posParser, storage, notifications, whatsapp, sms, push };
 }
 
 const baseInput: CreateDailyCloseDto = {
