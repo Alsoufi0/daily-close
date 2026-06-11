@@ -121,7 +121,13 @@ export class MissedCloseService {
         sent = await this.whatsapp.sendMissedCloseTemplate(prefs.phone, store.storeName);
       }
       if (!sent) {
-        await this.sms.send(prefs.phone, `Daily Close: ${message}`);
+        // Use the APPROVED Twilio WhatsApp template. WhatsApp rejects freeform
+        // business-initiated text (error 63016), which is why the old
+        // `sms.send(...)` fallback never delivered the missed-close alert even
+        // though completed-close worked. daily_close_missed_v2 takes {{1}} =
+        // store name. Mirrors the working close-completed path.
+        const missedSid = process.env.TWILIO_TEMPLATE_MISSED_SID || "HX0476d1783a3fb41887af1b102bf7ebea";
+        await this.sms.sendWhatsAppTemplate(prefs.phone, missedSid, { "1": store.storeName });
       }
     }
   }
