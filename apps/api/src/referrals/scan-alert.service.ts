@@ -26,8 +26,10 @@ export class ScanAlertService {
 
   async notifyScan(input: ScanAlertInput): Promise<void> {
     try {
-      const to = process.env.SCAN_ALERT_TO;
-      if (!to) return; // alerts disabled
+      // Default to the platform ops inbox so prod alerts work without extra
+      // env wiring. Override with SCAN_ALERT_TO, or set it to "" to disable.
+      const to = process.env.SCAN_ALERT_TO ?? "dailyclose@yahoo.com";
+      if (!to) return; // explicitly disabled
       const subject = `QR scanned — ${input.partnerName} (${input.refCode})`;
       const text =
         `A referral link was just opened.\n\n` +
