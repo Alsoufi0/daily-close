@@ -84,6 +84,26 @@ export class PartnersService {
   }
 
   /**
+   * Hard-delete a partner. Guard: refuse when any commission has been PAID, so
+   * real payout history can't be erased (deactivate those instead). Otherwise
+   * the delete cascades away pending/approved/reversed commission rows and nulls
+   * the attribution on any referred owners (FK on delete set null).
+   */
+  async delete(id: string) {
+    await this.get(id); // 404 if missing
+    const paid = await this.prisma.commission.count({
+      where: { partnerId: id, status: "PAID" }
+    });
+    if (paid > 0) {
+      throw new BadRequestException(
+        "This partner has paid commissions on record — deactivate it instead so the payout history is preserved."
+      );
+    }
+    await this.prisma.partner.delete({ where: { id } });
+    return { id, deleted: true };
+  }
+
+  /**
    * Resolve an active partner by referral code, returning its id, or null. Used
    * by both the public scan endpoint and signup stamping. Inactive partners do
    * not attribute new signups.

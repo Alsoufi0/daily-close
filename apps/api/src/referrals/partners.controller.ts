@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
 import { SuperAdminGuard } from "../auth/super-admin.guard";
@@ -41,5 +41,10 @@ export class PartnersController {
   @Patch(":id")
   update(@Param("id") id: string, @Body() dto: UpdatePartnerDto) {
     return this.partners.update(id, dto);
+  }
+
+  @Delete(":id")
+  remove(@Param("id") id: string) {
+    return this.partners.delete(id);
   }
 }
