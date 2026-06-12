@@ -53,6 +53,25 @@ enum NotificationType {
   @@map("notification_type")
 }
 
+// Lifecycle of a row in the partner payout ledger.
+enum CommissionStatus {
+  PENDING
+  APPROVED
+  PAID
+  REVERSED
+
+  @@map("commission_status")
+}
+
+// COMMISSION rows are auto-minted from a Stripe invoice. ADJUSTMENT rows are
+// entered by an admin (bonus = positive, clawback = negative amount).
+enum CommissionKind {
+  COMMISSION
+  ADJUSTMENT
+
+  @@map("commission_kind")
+}
+
 model User {
   id              String         @id @default(cuid())
   authUserId      String?        @unique @map("auth_user_id")
@@ -85,9 +104,16 @@ model Owner {
   trialEndsAt          DateTime? @map("trial_ends_at")
   stripeCustomerId     String?   @unique @map("stripe_customer_id")
   stripeSubscriptionId String?   @unique @map("stripe_subscription_id")
+  // First-touch referral attribution: the partner whose QR/link this owner
+  // signed up through. Stamped ONCE at signup, never reassigned (the API only
+  // writes it when it is currently null). See migration 011.
+  referredByPartnerId  String?   @map("referred_by_partner_id")
   user                 User      @relation(fields: [userId], references: [id])
+  referredBy           Partner?  @relation(fields: [referredByPartnerId], references: [id])
   stores               Store[]
+  commissions          Commission[]
 
+  @@index([referredByPartnerId])
   @@map("owners")
 }
 
@@ -271,4 +297,74 @@ model AuditLog {
   @@index([userId, createdAt])
   @@index([storeId, createdAt])
   @@map("audit_logs")
+}
+
+// A sales distributor who refers store owners via a QR/link and earns a
+// recurring % while a referred owner keeps paying. See migration 011.
+model Partner {
+  id             String       @id @default(cuid())
+  name           String
+  contact        String?
+  payoutDetails  String?      @map("payout_details")
+  // Short, random, non-sequential, no ambiguous chars (no O/0/I/1). Generated
+  // once on create in the API; never regenerated.
+  refCode        String       @unique @map("ref_code")
+  // Per-partner override of the platform default rate. Null = use the default
+  // from AppSetting at the time a commission is created.
+  commissionRate Decimal?     @map("commission_rate") @db.Decimal(5, 4)
+  active         Boolean      @default(true)
+  // Raw QR/link visit count (top of funnel). Not deduplicated.
+  scanCount      Int          @default(0) @map("scan_count")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  referredOwners Owner[]
+  commissions    Commission[]
+
+  @@map("partners")
+}
+
+// One row in the payout ledger. COMMISSION rows are minted from a real Stripe
+// invoice payment; ADJUSTMENT rows are entered by an admin for bonuses /
+// clawbacks so the ledger reconciles. Driven by payment events, never by
+// subscription status.
+model Commission {
+  id                String           @id @default(cuid())
+  partnerId         String           @map("partner_id")
+  // Set for COMMISSION rows (the paying account); null for partner-level
+  // ADJUSTMENT rows.
+  ownerId           String?          @map("owner_id")
+  // The Stripe invoice that triggered this row (COMMISSION only). Unique so
+  // webhook retries are idempotent. Null for ADJUSTMENT rows.
+  stripeInvoiceId   String?          @unique @map("stripe_invoice_id")
+  // Billing period label, e.g. "2026-06", for grouping the payout queue.
+  period            String
+  // Snapshot of the rate applied, so later rate changes never rewrite history.
+  rate              Decimal          @db.Decimal(5, 4)
+  // Commission amount in `currency`. Negative for an ADJUSTMENT clawback.
+  amount            Decimal          @db.Decimal(12, 2)
+  currency          String           @default("usd")
+  // The invoice amount (cents) this was computed from — reconciliation aid.
+  sourceAmountCents Int?             @map("source_amount_cents")
+  status            CommissionStatus @default(PENDING)
+  kind              CommissionKind   @default(COMMISSION)
+  note              String?
+  payoutReference   String?          @map("payout_reference")
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @default(now()) @updatedAt @map("updated_at")
+  partner           Partner          @relation(fields: [partnerId], references: [id])
+  owner             Owner?           @relation(fields: [ownerId], references: [id])
+
+  @@index([partnerId, status])
+  @@index([ownerId])
+  @@index([period])
+  @@map("commissions")
+}
+
+// Single-row platform settings (id is always "global"). Holds the default
+// commission rate applied when a partner has no per-partner override.
+model AppSetting {
+  id                    String   @id @default("global")
+  defaultCommissionRate Decimal  @default(0.25) @map("default_commission_rate") @db.Decimal(5, 4)
+  updatedAt             DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("app_settings")
 }

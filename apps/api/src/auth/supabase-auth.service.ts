@@ -115,7 +115,11 @@ export class SupabaseAuthService {
 
   // Idempotently provision a public.users + owners row for a Supabase Auth user.
   // Used the first time a brand-new owner signs up.
-  async bootstrapOwnerFromToken(token: string, fallbackName?: string): Promise<RequestUser> {
+  async bootstrapOwnerFromToken(
+    token: string,
+    fallbackName?: string,
+    refCode?: string
+  ): Promise<RequestUser> {
     if (!this.supabase) throw new UnauthorizedException("Supabase is not configured.");
     const { data, error } = await this.supabase.auth.getUser(token);
     if (error || !data.user) throw new UnauthorizedException("Invalid session.");
@@ -127,6 +131,11 @@ export class SupabaseAuthService {
       fallbackName ||
       (data.user.user_metadata as any)?.name ||
       email.split("@")[0];
+
+    // First-touch referral attribution: resolved once, applied ONLY where a new
+    // owner row is created below. An existing owner is never re-stamped, so the
+    // very first signup wins and later bootstrap calls can't reassign it.
+    const referredByPartnerId = await this.partnerIdForRef(refCode);
 
     let user = await this.prisma.user.findFirst({
       where: { OR: [{ authUserId: authId }, { email }] },
@@ -145,7 +154,8 @@ export class SupabaseAuthService {
             create: {
               subscriptionPlan: "Standard",
               subscriptionStatus: "TRIALING",
-              trialEndsAt: new Date(Date.now() + 14 * 86_400_000)
+              trialEndsAt: new Date(Date.now() + 14 * 86_400_000),
+              referredByPartnerId
             }
           }
         },
@@ -165,7 +175,8 @@ export class SupabaseAuthService {
           userId: user.id,
           subscriptionPlan: "Standard",
           subscriptionStatus: "TRIALING",
-          trialEndsAt: new Date(Date.now() + 14 * 86_400_000)
+          trialEndsAt: new Date(Date.now() + 14 * 86_400_000),
+          referredByPartnerId
         }
       });
       user = (await this.prisma.user.findUnique({
@@ -336,6 +347,7 @@ export class SupabaseAuthService {
     name: string;
     password: string;
     code: string;
+    refCode?: string;
   }): Promise<{ tokenHash: string; type: "magiclink"; email: string }> {
     if (!this.supabase) throw new UnauthorizedException("Supabase is not configured.");
     const phone = input.phone ? normalizePhone(input.phone) : undefined;
@@ -363,7 +375,8 @@ export class SupabaseAuthService {
       phone,
       name: input.name.trim(),
       password: input.password,
-      channel
+      channel,
+      refCode: input.refCode
     });
 
     const { data, error } = await this.supabase.auth.admin.generateLink({ type: "magiclink", email: accountEmail });
@@ -384,6 +397,23 @@ export class SupabaseAuthService {
     }
   }
 
+  /**
+   * Resolve a referral code to the partner it belongs to, for FIRST-TOUCH
+   * attribution at signup. Returns the partner id only when the code maps to an
+   * ACTIVE partner; an unknown or deactivated code attributes nothing (returns
+   * null) rather than failing signup. Inlined here (a single Prisma lookup) to
+   * avoid an Auth↔Referrals module cycle.
+   */
+  private async partnerIdForRef(refCode?: string | null): Promise<string | null> {
+    const code = refCode?.trim();
+    if (!code) return null;
+    const partner = await this.prisma.partner.findUnique({
+      where: { refCode: code },
+      select: { id: true, active: true }
+    });
+    return partner && partner.active ? partner.id : null;
+  }
+
   // Creates the Supabase auth user + public.users/owners rows. The contact is
   // already verified by the caller, so email_confirm:true is legitimate here.
   private async createOwnerAccount(input: {
@@ -392,6 +422,7 @@ export class SupabaseAuthService {
     name: string;
     password: string;
     channel: "email" | "phone";
+    refCode?: string | null;
   }): Promise<{ ownerId: string }> {
     const createInput = {
       email: input.email,
@@ -407,6 +438,10 @@ export class SupabaseAuthService {
       throw new BadRequestException(error?.message || "Could not create account.");
     }
 
+    // First-touch referral attribution: stamp the referring partner at account
+    // creation. This owner is brand new here, so it's first-touch by construction.
+    const referredByPartnerId = await this.partnerIdForRef(input.refCode);
+
     const user = await this.prisma.user.create({
       data: {
         name: input.name,
@@ -418,7 +453,8 @@ export class SupabaseAuthService {
           create: {
             subscriptionPlan: "Standard",
             subscriptionStatus: "TRIALING",
-            trialEndsAt: new Date(Date.now() + 14 * 86_400_000)
+            trialEndsAt: new Date(Date.now() + 14 * 86_400_000),
+            referredByPartnerId
           }
         }
       },

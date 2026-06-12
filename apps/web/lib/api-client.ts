@@ -78,10 +78,21 @@ export async function getProfile(token: string): Promise<SessionProfile> {
   return apiFetch<SessionProfile>("/auth/profile", token);
 }
 
+/**
+ * Read the first-touch referral code dropped by the /r/[code] landing route.
+ * Non-httpOnly so the signup flow can attach it; the server stamps it onto the
+ * owner exactly once at account creation.
+ */
+export function readRefCookie(): string | undefined {
+  if (typeof document === "undefined") return undefined;
+  const m = document.cookie.match(/(?:^|;\s*)dc_ref=([^;]+)/);
+  return m ? decodeURIComponent(m[1]) : undefined;
+}
+
 export async function bootstrapOwner(token: string, name?: string): Promise<SessionProfile> {
   return apiFetch<SessionProfile>("/auth/bootstrap-owner", token, {
     method: "POST",
-    body: JSON.stringify({ name })
+    body: JSON.stringify({ name, ref: readRefCookie() })
   });
 }
 
@@ -106,9 +117,11 @@ export async function confirmSignup(input: {
   password: string;
   code: string;
 }): Promise<{ tokenHash: string; type: "magiclink"; email: string }> {
+  // Attach the first-touch referral code (if any) so the new owner is stamped
+  // at creation. The server ignores unknown/inactive codes.
   return apiFetch("/auth/signup-owner/confirm", undefined, {
     method: "POST",
-    body: JSON.stringify(input)
+    body: JSON.stringify({ ...input, ref: readRefCookie() })
   });
 }
 
@@ -625,4 +638,140 @@ export async function downloadReport(
     throw new ApiError(response.status, extractApiErrorMessage(text, response.statusText));
   }
   return response.blob();
+}
+
+// ── Referrals / partner commissions (SUPER_ADMIN) ───────────────────────────
+
+export interface PartnerRecord {
+  id: string;
+  name: string;
+  contact: string | null;
+  payoutDetails: string | null;
+  refCode: string;
+  commissionRate: number | null;
+  active: boolean;
+  scanCount: number;
+  createdAt: string;
+  referredOwnerCount?: number;
+}
+
+export interface CommissionRecord {
+  id: string;
+  partnerId: string;
+  ownerId: string | null;
+  stripeInvoiceId: string | null;
+  period: string;
+  rate: number;
+  amount: number;
+  currency: string;
+  status: "PENDING" | "APPROVED" | "PAID" | "REVERSED";
+  kind: "COMMISSION" | "ADJUSTMENT";
+  note: string | null;
+  payoutReference: string | null;
+  createdAt: string;
+  partner?: { id: string; name: string; refCode: string };
+}
+
+export interface PartnerFunnel {
+  partner: PartnerRecord;
+  funnel: {
+    scanned: number;
+    signedUp: number;
+    inTrial: number;
+    active: number;
+    thisMonthPayout: number;
+    lifetimeApprovedOrPaid: number;
+  };
+}
+
+export async function listPartners(token: string): Promise<PartnerRecord[]> {
+  return apiFetch<PartnerRecord[]>("/partners", token);
+}
+
+export async function createPartner(
+  token: string,
+  input: { name: string; contact?: string; payoutDetails?: string; commissionRate?: number }
+): Promise<PartnerRecord> {
+  return apiFetch<PartnerRecord>("/partners", token, {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function updatePartner(
+  token: string,
+  id: string,
+  input: {
+    name?: string;
+    contact?: string;
+    payoutDetails?: string;
+    active?: boolean;
+    commissionRate?: number | null;
+  }
+): Promise<PartnerRecord> {
+  return apiFetch<PartnerRecord>(`/partners/${id}`, token, {
+    method: "PATCH",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function getPartnerFunnel(token: string, id: string): Promise<PartnerFunnel> {
+  return apiFetch<PartnerFunnel>(`/partners/${id}/funnel`, token);
+}
+
+export async function listCommissions(
+  token: string,
+  filter: { status?: string; period?: string; partnerId?: string } = {}
+): Promise<CommissionRecord[]> {
+  const params = new URLSearchParams();
+  if (filter.status) params.set("status", filter.status);
+  if (filter.period) params.set("period", filter.period);
+  if (filter.partnerId) params.set("partnerId", filter.partnerId);
+  const qs = params.toString();
+  return apiFetch<CommissionRecord[]>(`/commissions${qs ? `?${qs}` : ""}`, token);
+}
+
+export async function getCommissionSummary(
+  token: string,
+  period?: string
+): Promise<Record<string, { count: number; amount: number }>> {
+  return apiFetch(`/commissions/summary${period ? `?period=${period}` : ""}`, token);
+}
+
+export async function updateCommissionStatus(
+  token: string,
+  id: string,
+  status: "APPROVED" | "PAID" | "REVERSED",
+  payoutReference?: string
+): Promise<CommissionRecord> {
+  return apiFetch<CommissionRecord>(`/commissions/${id}/status`, token, {
+    method: "PATCH",
+    body: JSON.stringify({ status, payoutReference })
+  });
+}
+
+export async function createCommissionAdjustment(
+  token: string,
+  input: { partnerId: string; amount: number; note: string; period?: string }
+): Promise<CommissionRecord> {
+  return apiFetch<CommissionRecord>("/commissions/adjustment", token, {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function getReferralSettings(
+  token: string
+): Promise<{ defaultCommissionRate: number; updatedAt: string }> {
+  return apiFetch("/referral-settings", token);
+}
+
+export async function updateReferralSettings(
+  token: string,
+  defaultCommissionRate: number
+): Promise<{ defaultCommissionRate: number; updatedAt: string }> {
+  return apiFetch("/referral-settings", token, {
+    method: "PATCH",
+    body: JSON.stringify({ defaultCommissionRate })
+  });
 }

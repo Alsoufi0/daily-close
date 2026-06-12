@@ -59,12 +59,12 @@ export class AuthController {
   @Throttle({ default: { ttl: 60_000, limit: 10 } })
   async bootstrapOwner(
     @Headers("authorization") authorization: string | undefined,
-    @Body() body: { name?: string }
+    @Body() body: { name?: string; ref?: string }
   ): Promise<SessionProfile> {
     const token = authorization?.startsWith("Bearer ") ? authorization.slice(7) : undefined;
     if (!token) throw new UnauthorizedException("Missing bearer token.");
     if (body?.name && body.name.length > 80) throw new BadRequestException("Name too long.");
-    const user = await this.auth.bootstrapOwnerFromToken(token, body?.name);
+    const user = await this.auth.bootstrapOwnerFromToken(token, body?.name, body?.ref);
     return {
       id: user.id,
       name: user.name,
@@ -98,7 +98,14 @@ export class AuthController {
   @Post("signup-owner/confirm")
   @Throttle({ default: { ttl: 60_000, limit: 10 } })
   async confirmSignup(
-    @Body() body: { email?: string; phone?: string; name?: string; password?: string; code?: string }
+    @Body() body: {
+      email?: string;
+      phone?: string;
+      name?: string;
+      password?: string;
+      code?: string;
+      ref?: string;
+    }
   ) {
     if (!body?.email && !body?.phone) throw new BadRequestException("Email or phone is required.");
     if (!body?.name) throw new BadRequestException("Name is required.");
@@ -109,7 +116,8 @@ export class AuthController {
       phone: body.phone,
       name: body.name,
       password: body.password,
-      code: body.code
+      code: body.code,
+      refCode: body.ref
     });
   }
 
