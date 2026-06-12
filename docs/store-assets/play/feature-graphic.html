@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@500;700;800&display=swap');
+:root{--green:#0e3b34;--gold:#c2872b}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1024px;height:500px;background:#0e3b34}
+.g{width:1024px;height:500px;background:var(--green);position:relative;overflow:hidden;display:flex;align-items:center;gap:60px;padding:0 80px;font-family:Inter,system-ui,sans-serif}
+.g::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 120% at 12% 30%,rgba(255,255,255,.06),transparent 55%);pointer-events:none}
+.icon{width:280px;height:280px;border-radius:62px;flex:none;box-shadow:0 30px 70px rgba(0,0,0,.45);background-image:url('icon-art.png');background-size:cover;background-position:center}
+.copy{flex:1;z-index:2}
+.eyebrow{font-size:24px;font-weight:800;letter-spacing:.28em;text-transform:uppercase;color:var(--gold)}
+.h{font-family:Fraunces,Georgia,serif;font-weight:600;font-size:76px;line-height:1.02;color:#fff;margin-top:18px;letter-spacing:-.01em}
+.rule{width:120px;height:8px;background:var(--gold);border-radius:5px;margin-top:26px}
+.sub{font-size:27px;font-weight:500;color:rgba(255,255,255,.72);margin-top:24px}
+</style>
+</head>
+<body>
+<div class="g">
+  <div class="icon"></div>
+  <div class="copy">
+    <div class="eyebrow">Daily Close</div>
+    <div class="h">Close your store<br/>in minutes.</div>
+    <div class="rule"></div>
+    <div class="sub">Nightly cash-up and multi-store reports for shop owners.</div>
+  </div>
+</div>
+</body>
+</html>

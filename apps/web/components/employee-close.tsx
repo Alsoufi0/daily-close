@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   Banknote,
@@ -17,9 +17,9 @@ import {
 } from "lucide-react";
 import { clsx } from "clsx";
 import { formatMoney, formatMoneyExact, netProfit, toMoney } from "@smokeshop/shared/utils/money";
-import { suggestBusinessDate, shouldConfirmBusinessDate, storeLocalDateToUtcNoon } from "@smokeshop/shared/timezones";
+import { isClosingEarly, suggestBusinessDate, storeLocalDateToUtcNoon } from "@smokeshop/shared/timezones";
 import { scannedReport } from "../lib/mock-data";
-import { ApiError, finishDailyClose, uploadReport } from "../lib/api-client";
+import { ApiError, checkCloseExists, finishDailyClose, uploadReport } from "../lib/api-client";
 import { preprocessReceipt } from "../lib/preprocess-image";
 import { useSession } from "../lib/use-session";
 import { MetricCard } from "./metric-card";
@@ -85,13 +85,16 @@ export function EmployeeClose() {
   const [cashCounted, setCashCounted] = useState("0");
   const [safeDrop, setSafeDrop] = useState("0");
   const [expenseItems, setExpenseItems] = useState<ExpenseRow[]>([]);
+  const [scanningIdx, setScanningIdx] = useState<number | null>(null);
+  const [attachedPhotoIds, setAttachedPhotoIds] = useState<Set<string>>(new Set());
+  const [dateClosed, setDateClosed] = useState(false);
+  const [checkingDate, setCheckingDate] = useState(false);
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [ocrRawText, setOcrRawText] = useState<string | null>(null);
-  const [confirmingBusinessDate, setConfirmingBusinessDate] = useState(false);
   const [businessDate, setBusinessDate] = useState("");
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const libraryInputRef = useRef<HTMLInputElement>(null);
@@ -119,6 +122,35 @@ export function EmployeeClose() {
       : [{ id: "store-1", storeName: t("closing.defaultStore") }];
   const activeStore = availableStores[storeIdx] ?? availableStores[0];
   const employeeId = session.profile?.employeeId ?? "employee-maya";
+
+  // The close date is chosen up front (next to the store), not at the end.
+  // Default it to the store's suggested business day; the employee can adjust
+  // it before starting. Re-defaults when the store changes (resetForm clears it).
+  useEffect(() => {
+    if (!businessDate) setBusinessDate(suggestBusinessDate(activeStore));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [businessDate, activeStore.id]);
+
+  // Up-front guard: as soon as a store + date are chosen, check whether that
+  // store is already closed for the day — so the employee is stopped here, not
+  // after doing the whole close. Only while still on the start screen.
+  useEffect(() => {
+    if (step !== "start" || !businessDate || !session.token) {
+      setDateClosed(false);
+      return;
+    }
+    let cancelled = false;
+    setCheckingDate(true);
+    const dateIso = storeLocalDateToUtcNoon(businessDate, activeStore.timezone);
+    checkCloseExists(session.token, activeStore.id, dateIso)
+      .then((r) => !cancelled && setDateClosed(r.closed))
+      .catch(() => !cancelled && setDateClosed(false))
+      .finally(() => !cancelled && setCheckingDate(false));
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, businessDate, activeStore.id, session.token]);
 
   async function handleFile(rawFile: File | null) {
     if (!rawFile) return;
@@ -152,15 +184,42 @@ export function EmployeeClose() {
     }
   }
 
+  // Attach a photo of the expense document for record-keeping. No OCR — the
+  // amount is entered manually. The photo is saved as an expense receipt and
+  // shows up on the Receipts page under Expenses.
+  async function handleExpenseFile(idx: number, rawFile: File | null) {
+    if (!rawFile || !session.token) return;
+    setUploadError(null);
+    setScanningIdx(idx);
+    try {
+      const file = await preprocessReceipt(rawFile);
+      const upload = {
+        base64Data: await fileToDataUrl(file, t("closing.fileReadFailed")),
+        fileName: file.name,
+        contentType: file.type || "image/jpeg"
+      };
+      await uploadReport(session.token, activeStore.id, upload, "expense");
+      const id = expenseItems[idx]?.id;
+      if (id) setAttachedPhotoIds((prev) => new Set(prev).add(id));
+    } catch (err: any) {
+      setUploadError(err?.message || t("closing.uploadFailed"));
+    } finally {
+      setScanningIdx(null);
+    }
+  }
+
   async function requestSubmitClose() {
-    const suggested = suggestBusinessDate(activeStore);
-    const needsConfirm = shouldConfirmBusinessDate(activeStore, suggested);
-    if (needsConfirm && !confirmingBusinessDate) {
-      setBusinessDate(suggested);
-      setConfirmingBusinessDate(true);
+    // Closing well before the store's close time is usually a mistake (wrong
+    // store, or the count isn't final yet) — confirm first.
+    if (
+      isClosingEarly({ timezone: activeStore.timezone, closeTime: (activeStore as any).closeTime }) &&
+      typeof window !== "undefined" &&
+      !window.confirm(`${t("closing.confirmEarlyTitle")}\n\n${t("closing.confirmEarlyBody")}`)
+    ) {
       return;
     }
-    await submitClose(businessDate || suggested);
+    // The date is chosen up front now, so just submit with it.
+    await submitClose(businessDate || suggestBusinessDate(activeStore));
   }
 
   async function submitClose(closeDate: string) {
@@ -190,7 +249,6 @@ export function EmployeeClose() {
         notes
       });
       setStep("finish");
-      setConfirmingBusinessDate(false);
     } catch (err) {
       if (err instanceof ApiError && err.status === 400 && /already.*closed/i.test(err.message)) {
         setStep("blocked");
@@ -222,8 +280,8 @@ export function EmployeeClose() {
     setOcrRawText(null);
     setUploadError(null);
     setSubmitError(null);
-    setConfirmingBusinessDate(false);
     setBusinessDate("");
+    setAttachedPhotoIds(new Set());
   }
 
   function reset() {
@@ -245,20 +303,32 @@ export function EmployeeClose() {
       <div>
         <p className="text-base font-bold text-ink/65">{t("closing.followSteps")}</p>
 
-        {availableStores.length > 1 ? (
-          <label className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-ink/70">
-            <span>{t("common.store")}:</span>
-            <select
+        <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">
+          {availableStores.length > 1 ? (
+            <label className="inline-flex items-center gap-2 text-sm font-bold text-ink/70">
+              <span>{t("common.store")}:</span>
+              <select
+                className="focus-ring rounded-lg border border-ink/15 bg-white px-2 py-1 font-black"
+                value={storeIdx}
+                onChange={(e) => changeStore(Number(e.target.value))}
+              >
+                {availableStores.map((s, i) => (
+                  <option key={s.id} value={i}>{s.storeName}</option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+          <label className="inline-flex items-center gap-2 text-sm font-bold text-ink/70">
+            <span>{t("closing.closingDate")}:</span>
+            <input
+              type="date"
               className="focus-ring rounded-lg border border-ink/15 bg-white px-2 py-1 font-black"
-              value={storeIdx}
-              onChange={(e) => changeStore(Number(e.target.value))}
-            >
-              {availableStores.map((s, i) => (
-                <option key={s.id} value={i}>{s.storeName}</option>
-              ))}
-            </select>
+              value={businessDate}
+              max={suggestBusinessDate(activeStore)}
+              onChange={(e) => setBusinessDate(e.target.value)}
+            />
           </label>
-        ) : null}
+        </div>
       </div>
 
       {step !== "start" && step !== "blocked" ? (
@@ -298,15 +368,28 @@ export function EmployeeClose() {
 
         {step === "start" ? (
           <div className="grid gap-4 fade-in">
+            {dateClosed ? (
+              <div className="rounded-xl border border-gold/40 bg-yellow-50 p-4 text-center">
+                <p className="text-lg font-black text-ink">{t("closing.alreadyClosedDate")}</p>
+                <p className="mt-1 text-sm font-bold text-ink/65">{t("closing.alreadyClosedDateBody")}</p>
+              </div>
+            ) : null}
             <button
-              className="focus-ring flex min-h-28 w-full items-center justify-center gap-3 rounded-xl bg-leaf px-6 text-2xl font-black text-white shadow-sm transition-transform active:scale-[0.99]"
+              className="focus-ring flex min-h-28 w-full items-center justify-center gap-3 rounded-xl bg-leaf px-6 text-2xl font-black text-white shadow-sm transition-transform active:scale-[0.99] disabled:opacity-50"
               onClick={() => setStep("upload")}
+              disabled={!businessDate || dateClosed || checkingDate}
             >
               <Receipt size={32} aria-hidden />
               {t("closing.start")}
             </button>
             <p className="text-center text-base font-bold text-ink/60">
-              {t("closing.followSteps")}
+              {checkingDate
+                ? t("common.loading")
+                : dateClosed
+                  ? t("closing.alreadyClosedDateBody")
+                  : businessDate
+                    ? t("closing.followSteps")
+                    : t("closing.pickDateFirst")}
             </p>
           </div>
         ) : null}
@@ -512,6 +595,37 @@ export function EmployeeClose() {
                         }}
                       />
                     </label>
+                    <label
+                      aria-label={t("closing.attachPhoto")}
+                      className={clsx(
+                        "focus-ring flex h-12 cursor-pointer items-center justify-center gap-1.5 self-end rounded-lg border px-3 text-sm font-black",
+                        attachedPhotoIds.has(item.id)
+                          ? "border-leaf bg-leaf text-white"
+                          : "border-leaf bg-leaf/5 text-leaf hover:bg-leaf/10"
+                      )}
+                    >
+                      {scanningIdx === idx ? (
+                        <Loader2 className="animate-spin" size={16} aria-hidden />
+                      ) : attachedPhotoIds.has(item.id) ? (
+                        <CheckCircle2 size={16} aria-hidden />
+                      ) : (
+                        <Camera size={16} aria-hidden />
+                      )}
+                      <span className="hidden sm:inline">
+                        {attachedPhotoIds.has(item.id) ? t("closing.photoAttached") : t("closing.attachPhoto")}
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        className="sr-only"
+                        disabled={scanningIdx !== null}
+                        onChange={(event) => {
+                          handleExpenseFile(idx, event.target.files?.[0] ?? null);
+                          event.target.value = "";
+                        }}
+                      />
+                    </label>
                     <button
                       type="button"
                       onClick={() => setExpenseItems(expenseItems.filter((_, i) => i !== idx))}
@@ -574,23 +688,6 @@ export function EmployeeClose() {
             {submitError ? (
               <div className="rounded-lg border border-warning/30 bg-red-50 p-3 text-sm font-bold text-warning">
                 {submitError}
-              </div>
-            ) : null}
-            {confirmingBusinessDate ? (
-              <div className="rounded-xl border border-gold/30 bg-yellow-50 p-4 text-ink">
-                <p className="text-lg font-black">{t("closing.confirmBusinessDate")}</p>
-                <p className="mt-1 text-sm font-bold text-ink/65">
-                  {t("closing.confirmBusinessDateBody")}
-                </p>
-                <label className="mt-3 block">
-                  <span className="text-sm font-black">{t("closing.closingDate")}</span>
-                  <input
-                    type="date"
-                    className="focus-ring mt-2 h-12 w-full rounded-lg border border-ink/15 px-4 text-lg font-black"
-                    value={businessDate}
-                    onChange={(event) => setBusinessDate(event.target.value)}
-                  />
-                </label>
               </div>
             ) : null}
             <button

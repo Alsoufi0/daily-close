@@ -291,6 +291,12 @@ export async function deleteEmployee(employeeId: string): Promise<void> {
   await apiFetch<unknown>(`/employees/${employeeId}`, { method: "DELETE" });
 }
 
+// Delete a daily close (report). API restricts this to account owners and the
+// per-store managers scoped to that store; employees get 403.
+export async function deleteDailyClose(id: string): Promise<void> {
+  await apiFetch<unknown>(`/daily-close/${id}`, { method: "DELETE" });
+}
+
 export async function assignEmployeeToStore(
   employeeId: string,
   storeId: string
@@ -329,6 +335,7 @@ export interface ReceiptRow {
   storeName: string;
   closeDate: string;
   employeeName: string;
+  kind: "close" | "expense";
   parsedJson: unknown;
   dailyClose: {
     id: string;
@@ -336,6 +343,9 @@ export interface ReceiptRow {
     cashSales: number;
     cardSales: number;
     difference: number;
+    expenses: number;
+    refunds: number;
+    netProfit: number;
     status: "CLOSED" | "SHORT" | "OVER" | "PENDING";
   } | null;
   createdAt: string;
@@ -438,8 +448,9 @@ export async function uploadReport(
   storeId: string,
   base64Data: string,
   fileName = "pos-report.jpg",
-  contentType = "image/jpeg"
-): Promise<ParsedPOSReport> {
+  contentType = "image/jpeg",
+  kind: "close" | "expense" = "close"
+): Promise<ParsedPOSReport & { kind?: "close" | "expense"; amount?: number | null }> {
   // The API's storage + OCR pipeline expect a data: URL (that's what the web
   // app sends). expo-image-manipulator returns RAW base64, so wrap it — without
   // the data: prefix the OCR step tries to fetch() the raw base64 as a URL,
@@ -447,9 +458,9 @@ export async function uploadReport(
   const dataUrl = base64Data.startsWith("data:")
     ? base64Data
     : `data:${contentType};base64,${base64Data}`;
-  return apiFetch<ParsedPOSReport>("/daily-close/upload-report", {
+  return apiFetch("/daily-close/upload-report", {
     method: "POST",
-    body: JSON.stringify({ storeId, fileName, contentType, base64Data: dataUrl })
+    body: JSON.stringify({ storeId, fileName, contentType, base64Data: dataUrl, kind })
   });
 }
 
@@ -480,6 +491,13 @@ function isQueueableFailure(err: unknown): boolean {
   if (!(err instanceof ApiError)) return false;
   if (err.status === 0) return true;
   return [408, 429, 502, 503, 504].includes(err.status);
+}
+
+// Up-front check: is this store already closed for the chosen date? `date` is
+// the same UTC-noon ISO sent to /finish.
+export async function checkCloseExists(storeId: string, date: string): Promise<{ closed: boolean }> {
+  const params = new URLSearchParams({ storeId, date });
+  return apiFetch<{ closed: boolean }>(`/daily-close/exists?${params.toString()}`);
 }
 
 export async function finishClose(input: DailyCloseInput, idempotencyKey?: string) {

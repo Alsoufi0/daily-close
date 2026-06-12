@@ -1,5 +1,16 @@
 # Audit Backlog
 
+## 📱 Next mobile update (post-launch) — added 2026-06-07
+Captured during the Android Play submission work (v1.0.0 / versionCode 3 is what ships first).
+- [ ] **Loading spinner in the "Uploading & reading report…" box.** During the POS upload/parse
+  step (close flow → step 1 Upload), the yellow status box is static text. Add an animated
+  loading circle so it reads as in-progress. File: `apps/mobile/src/screens/EmployeeScreen.tsx`
+  (the upload/parse status block).
+- [ ] **Push notification system for mobile.** Native push (Expo notifications) for missed-close
+  alerts and daily summaries — currently those only go out via email/SMS/WhatsApp. Needs:
+  `expo-notifications`, push-token registration + storage, and a send path wired into the
+  existing notifications service.
+
 ## Session — 2026-05-30 (Stripe webhook signature — CRITICAL #1 fixed)
 
 Shipped:

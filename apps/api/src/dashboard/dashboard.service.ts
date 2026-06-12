@@ -202,10 +202,19 @@ export class DashboardService {
     return stores.map((store) => {
       const tz = (store as any).timezone || "America/New_York";
       const closeTime = (store as any).closeTime || "23:30";
+      // A close shows as "today" if it was filed for the store's CURRENT local
+      // calendar date (how the date picker files it + how the "already closed"
+      // guard and History match it) OR it falls in the current business-day
+      // window (keeps overnight stores that close after midnight working).
+      // Matching ONLY the business window was the bug where a close made
+      // outside the close-time window was saved + blocked re-close + shown in
+      // History, yet never appeared on the dashboard summary.
+      const todayLocal = DashboardService.formatLocalDate(date, tz);
       const businessDay = DashboardService.storeBusinessDayRange(tz, closeTime, date);
       const close = store.dailyCloses.find(
         (c: any) =>
-          c.date >= businessDay.start && c.date <= businessDay.end
+          DashboardService.formatLocalDate(c.date, tz) === todayLocal ||
+          (c.date >= businessDay.start && c.date <= businessDay.end)
       );
       return {
         id: store.id,

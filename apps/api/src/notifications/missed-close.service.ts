@@ -4,6 +4,7 @@ import { NotificationsService } from "./notifications.service";
 import { DashboardService } from "../dashboard/dashboard.service";
 import { SmsService } from "./sms.service";
 import { WhatsAppService } from "./whatsapp.service";
+import { PushService } from "./push.service";
 
 @Injectable()
 export class MissedCloseService {
@@ -11,7 +12,8 @@ export class MissedCloseService {
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
     private readonly whatsapp: WhatsAppService,
-    private readonly sms: SmsService
+    private readonly sms: SmsService,
+    private readonly push: PushService
   ) {}
 
   async checkStores(date = new Date()) {
@@ -62,19 +64,56 @@ export class MissedCloseService {
     }));
   }
 
-  // Alert one store's owner that it hasn't closed: dashboard alert + best-effort
-  // WhatsApp/SMS ping + a deduped PENDING notification row. Extracted so
-  // checkStores can run it in bounded-concurrency batches (see above).
+  // Alert one store's owner that it hasn't closed. Extracted so checkStores can
+  // run it in bounded-concurrency batches (see above).
+  //
+  // ONCE-PER-DAY DEDUP: the cron runs every 15 minutes, so we must NOT re-send
+  // on every pass. The notification row is the dedup key — if one already
+  // exists for this store in the current business-day window, the owner has
+  // already been alerted today and we return early WITHOUT sending anything
+  // again (push, WhatsApp, or SMS). Only the FIRST detection of the window
+  // creates the row and fires the outbound alerts. (The live dashboard "store
+  // hasn't closed" banner is computed on read, so the owner still sees it
+  // every time they open the app regardless of this throttle.)
   private async notifyMissingStore(store: any, start: Date, end: Date) {
-    await this.notifications.sendMissingCloseAlert(store.storeName);
     const owner = await this.prisma.owner.findUnique({
       where: { id: store.ownerId },
       include: { user: true }
     });
     if (!owner) return;
 
-    // Best-effort WhatsApp ping to the owner. Prefer Meta templates when
-    // configured; otherwise use Twilio WhatsApp/SMS through SmsService.
+    const message = `${store.storeName} has not completed closing yet.`;
+    const existing = await this.prisma.notification.findFirst({
+      where: {
+        userId: owner.userId,
+        storeId: store.id,
+        message,
+        createdAt: { gte: start, lte: end }
+      }
+    });
+    if (existing) return; // already alerted this window — stay quiet
+
+    await this.prisma.notification.create({
+      data: {
+        userId: owner.userId,
+        storeId: store.id,
+        type: "PUSH",
+        message,
+        status: "PENDING"
+      }
+    });
+
+    // First detection this window → send the alerts ONCE.
+    // 1) Native push to the owner's devices (the app-installed channel).
+    await this.push
+      .sendToUser(owner.userId, {
+        title: "Store not closed",
+        body: `${store.storeName} hasn't completed closing yet.`,
+        data: { type: "missed_close", storeId: store.id }
+      })
+      .catch(() => undefined);
+
+    // 2) Best-effort WhatsApp/SMS ping (gated on the owner's alert prefs).
     const prefs = await this.notifications.getOwnerWhatsAppPreferences(owner.id);
     if (prefs.alertsEnabled && prefs.phone) {
       let sent = false;
@@ -82,32 +121,14 @@ export class MissedCloseService {
         sent = await this.whatsapp.sendMissedCloseTemplate(prefs.phone, store.storeName);
       }
       if (!sent) {
-        await this.sms.send(
-          prefs.phone,
-          `Daily Close: ${store.storeName} has not completed closing yet.`
-        );
+        // Use the APPROVED Twilio WhatsApp template. WhatsApp rejects freeform
+        // business-initiated text (error 63016), which is why the old
+        // `sms.send(...)` fallback never delivered the missed-close alert even
+        // though completed-close worked. daily_close_missed_v2 takes {{1}} =
+        // store name. Mirrors the working close-completed path.
+        const missedSid = process.env.TWILIO_TEMPLATE_MISSED_SID || "HX0476d1783a3fb41887af1b102bf7ebea";
+        await this.sms.sendWhatsAppTemplate(prefs.phone, missedSid, { "1": store.storeName });
       }
-    }
-
-    const existing = await this.prisma.notification.findFirst({
-      where: {
-        userId: owner.userId,
-        storeId: store.id,
-        message: `${store.storeName} has not completed closing yet.`,
-        createdAt: { gte: start, lte: end }
-      }
-    });
-
-    if (!existing) {
-      await this.prisma.notification.create({
-        data: {
-          userId: owner.userId,
-          storeId: store.id,
-          type: "EMAIL",
-          message: `${store.storeName} has not completed closing yet.`,
-          status: "PENDING"
-        }
-      });
     }
   }
 }

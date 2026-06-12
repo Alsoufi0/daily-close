@@ -49,7 +49,11 @@ describe("ReportsService", () => {
       const service = new ReportsService({} as any, prisma as any);
       const csv = await service.buildFilteredCsv(owner, { quick: "last-week", lang: "en" });
 
-      expect(csv.charCodeAt(0)).toBe(0xfeff);
+      // No UTF-8 BOM — it sat before the first quoted cell and rendered as
+      // garbage in spreadsheets (e.g. `î›¿"Store"` in Google Sheets). The file
+      // now starts cleanly with the quoted "Store" header.
+      expect(csv.charCodeAt(0)).not.toBe(0xfeff);
+      expect(csv.startsWith("\"Store\"")).toBe(true);
       expect(csv).toContain("\"Store\"");
       expect(csv).toContain("\"Main Street Smoke Shop\"");
       expect(csv).toContain("\"$5,000.00\"");

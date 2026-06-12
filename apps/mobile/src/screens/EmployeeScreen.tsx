@@ -17,8 +17,8 @@ import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
 import { formatMoney, formatMoneyExact, netProfit, toMoney } from "@smokeshop/shared/utils/money";
 import type { ParsedPOSReport } from "@smokeshop/shared/types";
-import { ApiError, finishClose, generateIdempotencyKey, uploadReport } from "../api";
-import { suggestBusinessDate, storeLocalDateToUtcNoon } from "@smokeshop/shared/timezones";
+import { ApiError, checkCloseExists, finishClose, generateIdempotencyKey, uploadReport } from "../api";
+import { isClosingEarly, suggestBusinessDate, storeLocalDateToUtcNoon } from "@smokeshop/shared/timezones";
 import { QueuedForRetryError } from "../outbox";
 import { clearDraft, loadDraft, loadSelectedStoreId, saveDraft, saveSelectedStoreId } from "../persistence";
 import { AccountFooter } from "../components/AccountFooter";
@@ -96,10 +96,14 @@ export function EmployeeScreen({ onSignOut }: { onSignOut: () => void }) {
   const [cashCounted, setCashCounted] = useState("");
   const [safeDrop, setSafeDrop] = useState("0");
   const [expenseItems, setExpenseItems] = useState<ExpenseRow[]>([]);
+  // Expense rows whose receipt photo has been attached this session (by row id).
+  const [attachedPhotoIds, setAttachedPhotoIds] = useState<Set<string>>(new Set());
   const [notes, setNotes] = useState("");
-  // The business date the close is filed under. Defaults to the smart-suggested
-  // store-local day, but the user confirms/changes it at the Finish step (#2).
+  // The business date the close is filed under. Chosen up front, next to the
+  // store; defaults to the smart-suggested store-local day.
   const [businessDate, setBusinessDate] = useState("");
+  const [dateClosed, setDateClosed] = useState(false);
+  const [checkingDate, setCheckingDate] = useState(false);
 
   function goBack() {
     setStep((sCur) =>
@@ -181,6 +185,45 @@ export function EmployeeScreen({ onSignOut }: { onSignOut: () => void }) {
       ? { id: session.profile.storeId, storeName: "My Store" }
       : { id: "store-1", storeName: "Store #1" });
 
+  // The close date is chosen up front (next to the store), not at the end.
+  // Default it to the store's suggested business day; the employee can adjust
+  // it before starting. Re-defaults when the store changes (reset clears it).
+  useEffect(() => {
+    if (!businessDate) {
+      setBusinessDate(
+        suggestBusinessDate({
+          timezone: (activeStore as { timezone?: string }).timezone,
+          closeTime: (activeStore as { closeTime?: string }).closeTime
+        })
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [businessDate, activeStore.id]);
+
+  // Up-front guard: once a store + date are chosen, check whether that store is
+  // already closed for the day — so the employee is stopped on the start screen,
+  // not after doing the whole close.
+  useEffect(() => {
+    if (step !== "start" || !businessDate) {
+      setDateClosed(false);
+      return;
+    }
+    let cancelled = false;
+    setCheckingDate(true);
+    const dateIso = storeLocalDateToUtcNoon(
+      businessDate,
+      (activeStore as { timezone?: string }).timezone
+    );
+    checkCloseExists(activeStore.id, dateIso)
+      .then((r) => !cancelled && setDateClosed(r.closed))
+      .catch(() => !cancelled && setDateClosed(false))
+      .finally(() => !cancelled && setCheckingDate(false));
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, businessDate, activeStore.id]);
+
   function pickStore(storeId: string) {
     setSelectedStoreId(storeId);
     saveSelectedStoreId(storeId);
@@ -239,47 +282,50 @@ export function EmployeeScreen({ onSignOut }: { onSignOut: () => void }) {
     });
   }, [step, activeStore.id, report, cashCounted, safeDrop, expenseItems, notes]);
 
+  // Shared capture+preprocess for both the sales receipt and expense documents:
+  // bake in EXIF orientation, resize the longest edge to ~1800px, re-encode to
+  // JPEG. This fixes iOS HEIC photos, rotated images, and huge/slow uploads. The
+  // base64 goes straight to the API, which stores it with the service key and
+  // runs OCR (no client-side Storage upload, so no RLS error). Returns null if
+  // the user cancels or denies permission.
+  async function captureProcessedImage(source: "camera" | "library"): Promise<string | null> {
+    let result: ImagePicker.ImagePickerResult;
+    if (source === "camera") {
+      const perm = await ImagePicker.requestCameraPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert(t("alerts.cameraNeeded"), t("alerts.cameraNeededBody"));
+        return null;
+      }
+      result = await ImagePicker.launchCameraAsync({ quality: 0.6 });
+    } else {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert(t("alerts.photoNeeded"), t("alerts.photoNeededBody"));
+        return null;
+      }
+      result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.6
+      });
+    }
+    if (result.canceled || !result.assets?.length) return null;
+    const asset = result.assets[0];
+    const resize =
+      (asset.width ?? 0) >= (asset.height ?? 0) ? { width: 1800 } : { height: 1800 };
+    const processed = await ImageManipulator.manipulateAsync(
+      asset.uri,
+      [{ resize }],
+      { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+    );
+    return processed.base64 ?? null;
+  }
+
   async function pickImage(source: "camera" | "library") {
     setLoading(true);
     try {
-      let result: ImagePicker.ImagePickerResult;
-      if (source === "camera") {
-        const perm = await ImagePicker.requestCameraPermissionsAsync();
-        if (!perm.granted) {
-          Alert.alert(t("alerts.cameraNeeded"), t("alerts.cameraNeededBody"));
-          return;
-        }
-        result = await ImagePicker.launchCameraAsync({ quality: 0.6 });
-      } else {
-        const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (!perm.granted) {
-          Alert.alert(t("alerts.photoNeeded"), t("alerts.photoNeededBody"));
-          return;
-        }
-        result = await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ImagePicker.MediaTypeOptions.Images,
-          quality: 0.6
-        });
-      }
-      if (result.canceled || !result.assets?.length) return;
-      const asset = result.assets[0];
-
-      // Preprocess to match the web upload: bake in EXIF orientation, resize the
-      // longest edge to ~1800px, and re-encode to JPEG. This fixes iOS HEIC
-      // photos, rotated images, and huge/slow uploads — the things that made
-      // native OCR return zeros or fail. The base64 output goes straight to the
-      // API, which stores it with the service key and runs OCR (no client-side
-      // Storage upload, so no RLS error).
-      const resize =
-        (asset.width ?? 0) >= (asset.height ?? 0) ? { width: 1800 } : { height: 1800 };
-      const processed = await ImageManipulator.manipulateAsync(
-        asset.uri,
-        [{ resize }],
-        { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG, base64: true }
-      );
-      if (!processed.base64) throw new Error(t("closing.uploadFailedBody"));
-
-      const parsed = await uploadReport(activeStore.id, processed.base64, "pos-report.jpg", "image/jpeg");
+      const base64 = await captureProcessedImage(source);
+      if (!base64) return;
+      const parsed = await uploadReport(activeStore.id, base64, "pos-report.jpg", "image/jpeg");
       setReport(parsed);
       setStep("sales");
     } catch (e: any) {
@@ -289,7 +335,48 @@ export function EmployeeScreen({ onSignOut }: { onSignOut: () => void }) {
     }
   }
 
+  // Attach a photo of the expense document for record-keeping. No OCR — the
+  // amount is entered manually. The photo is saved as an expense receipt and
+  // shows up on the Receipts page under Expenses.
+  function scanExpense(idx: number) {
+    Alert.alert(t("closing.attachPhoto"), t("closing.attachPhotoBody"), [
+      { text: t("closing.takePhoto"), onPress: () => runExpenseScan(idx, "camera") },
+      { text: t("closing.uploadReport"), onPress: () => runExpenseScan(idx, "library") },
+      { text: t("common.cancel"), style: "cancel" }
+    ]);
+  }
+
+  async function runExpenseScan(idx: number, source: "camera" | "library") {
+    setLoading(true);
+    try {
+      const base64 = await captureProcessedImage(source);
+      if (!base64) return;
+      await uploadReport(activeStore.id, base64, "expense.jpg", "image/jpeg", "expense");
+      const id = expenseItems[idx]?.id;
+      if (id) setAttachedPhotoIds((prev) => new Set(prev).add(id));
+    } catch (e: any) {
+      Alert.alert(t("closing.uploadFailed"), e?.message || t("closing.uploadFailedBody"));
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function submit() {
+    // Closing well before the store's close time is usually a mistake — confirm.
+    if (
+      isClosingEarly({
+        timezone: (activeStore as { timezone?: string }).timezone,
+        closeTime: (activeStore as { closeTime?: string }).closeTime
+      })
+    ) {
+      const proceed = await new Promise<boolean>((resolve) => {
+        Alert.alert(t("closing.confirmEarlyTitle"), t("closing.confirmEarlyBody"), [
+          { text: t("common.cancel"), style: "cancel", onPress: () => resolve(false) },
+          { text: t("closing.confirmEarlyYes"), style: "destructive", onPress: () => resolve(true) }
+        ]);
+      });
+      if (!proceed) return;
+    }
     setSubmitting(true);
     try {
       // Anchor the close to the STORE's business day (its timezone + close
@@ -356,6 +443,7 @@ export function EmployeeScreen({ onSignOut }: { onSignOut: () => void }) {
     setCashCounted("");
     setSafeDrop("0");
     setExpenseItems([]);
+    setAttachedPhotoIds(new Set());
     setNotes("");
     // Fresh key for the next close attempt — otherwise the server would
     // return the previous close on the first submit of the new one.
@@ -396,6 +484,23 @@ export function EmployeeScreen({ onSignOut }: { onSignOut: () => void }) {
             <Text style={s.storePickerChevron}>▾</Text>
           </Pressable>
         ) : null}
+        {/* Close date — chosen up front, next to the store. Required before the
+            close can begin. */}
+        <View style={s.dateTop}>
+          <DateField
+            label={t("closing.closingDate")}
+            value={businessDate}
+            onChange={setBusinessDate}
+            maximumDate={new Date()}
+          />
+        </View>
+        {dateClosed && step === "start" ? (
+          <Banner
+            tone="warn"
+            title={t("closing.alreadyClosedDate")}
+            body={t("closing.alreadyClosedDateBody")}
+          />
+        ) : null}
         {restored ? (
           <Banner tone="warn" title={t("closing.resumedTitle")} body={t("closing.resumedBody")} />
         ) : null}
@@ -415,7 +520,8 @@ export function EmployeeScreen({ onSignOut }: { onSignOut: () => void }) {
 
           {step === "start" ? (
             <>
-              <Button title={t("closing.start")} icon="🧾" onPress={() => setStep("upload")} />
+              <Button title={t("closing.start")} icon="🧾" onPress={() => setStep("upload")} disabled={!businessDate || dateClosed || checkingDate} />
+              {!businessDate ? <Text style={s.helper}>{t("closing.pickDateFirst")}</Text> : null}
               <Text style={s.helper}>{t("closing.about2Minutes")}</Text>
             </>
           ) : null}
@@ -546,6 +652,16 @@ export function EmployeeScreen({ onSignOut }: { onSignOut: () => void }) {
                       setExpenseItems(next);
                     }}
                   />
+                  <TouchableOpacity
+                    onPress={() => scanExpense(idx)}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("closing.attachPhoto")}
+                    style={[s.scanExpenseBtn, attachedPhotoIds.has(item.id) && s.scanExpenseBtnDone]}
+                  >
+                    <Text style={[s.scanExpenseText, attachedPhotoIds.has(item.id) && s.scanExpenseTextDone]}>
+                      {attachedPhotoIds.has(item.id) ? `✓  ${t("closing.photoAttached")}` : `📷  ${t("closing.attachPhoto")}`}
+                    </Text>
+                  </TouchableOpacity>
                   {item.category === "Other" ? (
                     <>
                       <Text style={s.inputLabel}>{t("closing.expenseDescription")}</Text>
@@ -600,18 +716,6 @@ export function EmployeeScreen({ onSignOut }: { onSignOut: () => void }) {
                 placeholder={t("common.optional")}
                 placeholderTextColor={colors.inkMuted}
                 multiline
-              />
-              <DateField
-                label={t("closing.businessDate")}
-                value={
-                  businessDate ||
-                  suggestBusinessDate({
-                    timezone: (activeStore as { timezone?: string }).timezone,
-                    closeTime: (activeStore as { closeTime?: string }).closeTime
-                  })
-                }
-                onChange={setBusinessDate}
-                maximumDate={new Date()}
               />
               <Button title={t("closing.finish")} variant="dark" loading={submitting} onPress={submit} />
             </>
@@ -741,10 +845,24 @@ const s = StyleSheet.create({
     paddingVertical: 6
   },
   removeBtnText: { color: colors.warning ?? "#b42318", fontWeight: font.black, fontSize: 13 },
+  scanExpenseBtn: {
+    alignSelf: "flex-start",
+    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.leaf,
+    backgroundColor: colors.leafSoft
+  },
+  scanExpenseBtnDone: { backgroundColor: colors.leaf, borderColor: colors.leaf },
+  scanExpenseText: { color: colors.leaf, fontWeight: font.black, fontSize: 13 },
+  scanExpenseTextDone: { color: colors.white },
   doneIcon: { fontSize: 56 },
   doneTitle: { color: colors.ink, fontWeight: font.black, fontSize: 22, textAlign: "center" },
 
   // Multi-store picker (Phase 3)
+  dateTop: { marginTop: spacing.xs },
   storePicker: {
     flexDirection: "row",
     alignItems: "center",

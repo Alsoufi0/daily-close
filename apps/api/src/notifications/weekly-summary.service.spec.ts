@@ -19,7 +19,8 @@ describe("WeeklySummaryService WhatsApp reports", () => {
         ])
       }
     };
-    const whatsapp = { sendSummaryTemplate: jest.fn().mockResolvedValue(true) };
+    const whatsapp = { isConfigured: jest.fn().mockReturnValue(true), sendSummaryTemplate: jest.fn().mockResolvedValue(true) };
+    const sms = { sendWhatsAppTemplate: jest.fn().mockResolvedValue({ sent: true }) };
     const notifications = {
       getOwnerWhatsAppPreferences: jest.fn().mockResolvedValue({
         phone: "+15551234567",
@@ -27,7 +28,7 @@ describe("WeeklySummaryService WhatsApp reports", () => {
         reportsEnabled: true
       })
     };
-    const service = new WeeklySummaryService(prisma as any, whatsapp as any, notifications as any);
+    const service = new WeeklySummaryService(prisma as any, whatsapp as any, notifications as any, sms as any);
 
     const result = await service.sendForAllOwners(new Date("2026-05-25T12:00:00.000Z"));
 
@@ -55,7 +56,8 @@ describe("WeeklySummaryService WhatsApp reports", () => {
         ])
       }
     };
-    const whatsapp = { sendSummaryTemplate: jest.fn().mockResolvedValue(true) };
+    const whatsapp = { isConfigured: jest.fn().mockReturnValue(true), sendSummaryTemplate: jest.fn().mockResolvedValue(true) };
+    const sms = { sendWhatsAppTemplate: jest.fn().mockResolvedValue({ sent: true }) };
     const notifications = {
       getOwnerWhatsAppPreferences: jest.fn().mockResolvedValue({
         phone: "+15551234567",
@@ -63,7 +65,7 @@ describe("WeeklySummaryService WhatsApp reports", () => {
         reportsEnabled: true
       })
     };
-    const service = new WeeklySummaryService(prisma as any, whatsapp as any, notifications as any);
+    const service = new WeeklySummaryService(prisma as any, whatsapp as any, notifications as any, sms as any);
 
     await service.sendMonthlyForAllOwners(new Date("2026-05-30T12:00:00.000Z"));
 

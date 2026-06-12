@@ -1,5 +1,21 @@
 import type { Metadata, Viewport } from "next";
+import { Fraunces, Hanken_Grotesk } from "next/font/google";
 import "./globals.css";
+
+// Editorial "ledger" type system: a warm optical serif for display, a clean
+// grotesque for body. Distinctive on purpose (not Inter/system).
+const display = Fraunces({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "900"],
+  variable: "--font-display",
+  display: "swap"
+});
+const sans = Hanken_Grotesk({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-sans",
+  display: "swap"
+});
 import { TopBar } from "../components/top-bar";
 import { Footer } from "../components/footer";
 import { SentryInit } from "../components/sentry-init";
@@ -13,7 +29,7 @@ const DESCRIPTION =
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Daily Close — Daily closing for retail",
+    default: "Daily Close: daily closing for retail",
     template: "%s · Daily Close"
   },
   description: DESCRIPTION,
@@ -56,7 +72,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${display.variable} ${sans.variable}`}>
       <body className="flex min-h-screen flex-col overflow-x-hidden">
         <LanguageProvider>
           <SentryInit />

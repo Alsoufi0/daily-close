@@ -1,5 +1,6 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { ActivityIndicator, Linking, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { Button, Pill } from "../ui";
 import { colors, font, radius, spacing } from "../theme";
 import { supabase } from "../supabase";
@@ -13,10 +14,10 @@ const WEB_BASE = (process.env.EXPO_PUBLIC_APP_URL || "https://dailyclose.us").re
 
 // FEATURES hold translation KEYS, not English strings. We resolve via t() at
 // render time so changing language re-renders without touching this array.
-const FEATURES: Array<{ icon: string; titleKey: string; bodyKey: string }> = [
-  { icon: "⏱", titleKey: "mobile.feature1Title", bodyKey: "mobile.feature1Body" },
-  { icon: "📊", titleKey: "mobile.feature2Title", bodyKey: "mobile.feature2Body" },
-  { icon: "🛡", titleKey: "mobile.feature3Title", bodyKey: "mobile.feature3Body" }
+const FEATURES: Array<{ icon: keyof typeof Feather.glyphMap; titleKey: string; bodyKey: string }> = [
+  { icon: "clock", titleKey: "mobile.feature1Title", bodyKey: "mobile.feature1Body" },
+  { icon: "bar-chart-2", titleKey: "mobile.feature2Title", bodyKey: "mobile.feature2Body" },
+  { icon: "shield", titleKey: "mobile.feature3Title", bodyKey: "mobile.feature3Body" }
 ];
 
 export function LoginScreen({ onOpen }: { onOpen: () => void }) {
@@ -242,7 +243,6 @@ export function LoginScreen({ onOpen }: { onOpen: () => void }) {
   return (
     <ScrollView contentContainerStyle={s.container} keyboardShouldPersistTaps="handled">
       <LanguageSelector />
-      <Pill label={t("mobile.pilotPill")} tone="good" />
       <Text style={s.hero}>
         {t("mobile.hero")} <Text style={{ color: colors.leaf }}>{t("mobile.heroAccent")}</Text>
       </Text>
@@ -251,7 +251,7 @@ export function LoginScreen({ onOpen }: { onOpen: () => void }) {
       <View style={s.features}>
         {FEATURES.map((f) => (
           <View key={f.titleKey} style={s.feature}>
-            <Text style={s.featureIcon}>{f.icon}</Text>
+            <Feather name={f.icon} size={22} color={colors.leaf} style={s.featureIcon} />
             <View style={{ flex: 1 }}>
               <Text style={s.featureTitle}>{t(f.titleKey)}</Text>
               <Text style={s.featureBody}>{t(f.bodyKey)}</Text>
@@ -304,7 +304,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border
   },
-  featureIcon: { fontSize: 22 },
+  featureIcon: { marginTop: 2 },
   featureTitle: { color: colors.ink, fontWeight: font.black, fontSize: 15 },
   featureBody: { color: colors.inkSoft, fontWeight: font.bold, fontSize: 13, marginTop: 2 },
   legal: { color: colors.inkMuted, fontWeight: font.bold, fontSize: 12 },

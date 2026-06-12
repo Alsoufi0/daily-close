@@ -18,6 +18,7 @@ import {
   inviteEmployee
 } from "../api";
 import { Banner, Button, Card } from "../ui";
+import { TimeField } from "../components/TimeField";
 import { t } from "../i18n";
 import { useSession } from "../use-session";
 import { colors, font, radius, spacing } from "../theme";
@@ -153,14 +154,7 @@ export function SetupScreen({ onComplete }: { onComplete: () => void }) {
                 />
               </Field>
               <Field label={t("admin.dailyCloseTime")}>
-                <TextInput
-                  value={closeTime} onChangeText={setCloseTime}
-                  placeholder="23:30"
-                  placeholderTextColor={colors.inkMuted}
-                  style={[s.input, { width: 120 }]}
-                  keyboardType="numbers-and-punctuation"
-                  maxLength={5}
-                />
+                <TimeField value={closeTime} onChange={setCloseTime} />
                 <Text style={s.help}>{t("setup.closeTimeHelp")}</Text>
               </Field>
               <Field label={t("admin.timezone")}>

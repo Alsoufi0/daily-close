@@ -1,0 +1,35 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700;800&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1080px;height:2400px;background:#0e3b34}
+.canvas{width:1080px;height:2400px;background:#0e3b34;position:relative;overflow:hidden;font-family:Inter,sans-serif}
+.canvas::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 60% at 50% 8%,rgba(255,255,255,.05),transparent 60%)}
+.caption{position:absolute;top:0;left:0;right:0;padding:104px 92px 0;z-index:2}
+.eyebrow{font-size:26px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:#c2872b}
+.headline{font-family:Fraunces,serif;font-weight:600;font-size:82px;line-height:1.04;color:#fff;margin-top:22px;letter-spacing:-.01em}
+.rule{width:132px;height:9px;background:#c2872b;border-radius:6px;margin-top:34px}
+.sub{font-size:31px;line-height:1.45;font-weight:500;color:rgba(255,255,255,.72);margin-top:30px;max-width:860px}
+.phone{position:absolute;left:50%;transform:translateX(-50%);bottom:90px;width:812px;height:1700px;border-radius:74px;background:#04201a;padding:20px;box-shadow:0 50px 130px rgba(0,0,0,.5),0 0 0 2px rgba(255,255,255,.04) inset;z-index:1}
+.screen{position:relative;width:100%;height:100%;border-radius:56px;overflow:hidden;background-color:#f8f7f3}
+.appimg{position:absolute;top:66px;left:0;width:100%;height:calc(100% - 66px);object-fit:cover;object-position:top center}
+/* modern status bar */
+.statusbar{position:absolute;top:0;left:0;right:0;height:66px;display:flex;align-items:center;justify-content:space-between;padding:0 46px;z-index:4;color:#18221d}
+.time{font-size:30px;font-weight:700;letter-spacing:.5px}
+.sysicons{display:flex;align-items:center;gap:13px}
+.sysicons svg{display:block}
+/* modern gesture home indicator */
+.navpill{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);width:240px;height:14px;border-radius:999px;background:rgba(24,34,29,0.9);z-index:5}
+</style></head><body><div class="canvas">
+<div class="caption"><div class="eyebrow">Owner tools</div><div class="headline">Export it all<br/>in a tap.</div><div class="rule"></div><div class="sub">Clean CSV and PDF for any date range. Closes and expenses, kept separate.</div></div>
+<div class="phone"><div class="screen">
+  <img class="appimg" src="src/cropped/s4.png">
+  <div class="statusbar">
+    <span class="time">9:41</span>
+    <span class="sysicons">
+      <svg width="30" height="22" viewBox="0 0 30 22"><rect x="0" y="13" width="5" height="9" rx="1" fill="#18221d"/><rect x="8" y="9" width="5" height="13" rx="1" fill="#18221d"/><rect x="16" y="5" width="5" height="17" rx="1" fill="#18221d"/><rect x="24" y="0" width="5" height="22" rx="1" fill="#18221d"/></svg>
+      <svg width="30" height="22" viewBox="0 0 24 18" fill="none" stroke="#18221d" stroke-width="2" stroke-linecap="round"><path d="M2 6 C8 1, 16 1, 22 6"/><path d="M5.5 9.5 C9 6.7, 15 6.7, 18.5 9.5"/><path d="M9 13 C10.6 11.8, 13.4 11.8, 15 13"/><circle cx="12" cy="16" r="1.5" fill="#18221d" stroke="none"/></svg>
+      <svg width="46" height="22" viewBox="0 0 46 22"><rect x="1" y="3" width="36" height="16" rx="4" fill="none" stroke="#18221d" stroke-width="2"/><rect x="39" y="8" width="4" height="6" rx="1.5" fill="#18221d"/><rect x="4" y="6" width="27" height="10" rx="2" fill="#18221d"/></svg>
+    </span>
+  </div>
+  <div class="navpill"></div>
+</div></div></div></body></html>

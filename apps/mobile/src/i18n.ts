@@ -1,56 +1,41 @@
 import { I18nManager } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as Updates from "expo-updates";
 import { normalizeLanguage, translate, type Language } from "@smokeshop/shared/i18n";
 
 const LANGUAGE_KEY = "dailyclose:language";
+
+// Keep the NATIVE layout LTR-based and mirror direction ourselves in JS (see
+// isRTL()). React Native's I18nManager.forceRTL only applies at a cold start,
+// so the old code had to reload the whole app when switching to/from Arabic —
+// which dumped the user out of whatever store/screen they were on. Driving the
+// menu side and alignment from isRTL() flips things live, in place, no restart.
+I18nManager.allowRTL(false);
 
 let currentLanguage: Language = normalizeLanguage(undefined);
 let listeners: Array<() => void> = [];
 
 export function setMobileLanguage(lang: Language) {
   currentLanguage = lang;
-  I18nManager.allowRTL(lang === "ar");
-  I18nManager.forceRTL(lang === "ar");
-  // Notify subscribers so the UI can re-render in the new language. t() reads a
-  // module variable (not React state), so without this nothing updates until an
-  // app restart — which is exactly the bug this fixes.
+  // Notify subscribers (the App root) so the whole tree re-renders in the new
+  // language. t() reads this module variable, not React state, so without this
+  // nothing updates until a restart.
   listeners.forEach((l) => l());
 }
 
 /**
- * Switch the app language and persist it. This is the function every language
- * picker should call.
- *
- * React Native applies right-to-left *layout* (mirrored menus, sliders) only at
- * launch, via I18nManager.forceRTL. Flipping it mid-session does nothing until
- * the next cold start — which is why switching Arabic→English used to leave the
- * drawer and store slider stuck RTL until the user fully closed the app.
- *
- * So: when a switch crosses the RTL boundary (into or out of Arabic) we persist
- * the choice, set the new direction, and reload the JS bundle so it relaunches
- * with the correct layout. Switches that stay LTR (en/es/hi) need no reload —
- * the live remount handles them instantly.
+ * Switch the app language and persist it. Applies instantly and live: the App
+ * root re-renders in place via onLanguageChange, so the user keeps their
+ * current screen. Arabic layout direction is handled in JS (isRTL()), so no
+ * app reload is ever needed.
  */
 export async function changeLanguage(lang: Language) {
   if (lang === currentLanguage) return;
-  await AsyncStorage.setItem(LANGUAGE_KEY, lang).catch(() => {});
-
-  const willBeRTL = lang === "ar";
-  if (willBeRTL !== I18nManager.isRTL) {
-    currentLanguage = lang;
-    I18nManager.allowRTL(willBeRTL);
-    I18nManager.forceRTL(willBeRTL);
-    try {
-      // Relaunch so the mirrored layout direction takes effect cleanly.
-      await Updates.reloadAsync();
-      return;
-    } catch {
-      // reloadAsync is unavailable (e.g. a dev client without updates) — fall
-      // back to the live remount. Layout direction will catch up on next launch.
-    }
-  }
+  // Apply FIRST, synchronously (before any await) so the UI flips on the first
+  // tap. The previous order awaited AsyncStorage before applying, which made
+  // the picker feel one tap behind (you'd tap Spanish and it stayed English
+  // until the next tap). Persisting can happen after; the language is live.
   setMobileLanguage(lang);
+  await AsyncStorage.setItem(LANGUAGE_KEY, lang).catch(() => {});
 }
 
 export function onLanguageChange(cb: () => void): () => void {
@@ -62,6 +47,11 @@ export function onLanguageChange(cb: () => void): () => void {
 
 export function getMobileLanguage() {
   return currentLanguage;
+}
+
+/** True for right-to-left languages (Arabic). Drives JS-level layout mirroring. */
+export function isRTL() {
+  return currentLanguage === "ar";
 }
 
 export function t(key: string) {

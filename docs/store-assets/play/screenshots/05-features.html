@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+Arabic:wght@600;800&family=Noto+Sans+Devanagari:wght@600;800&display=swap');
+:root{--green:#0e3b34;--gold:#c2872b;--ink:#18221d;--ink-soft:rgba(24,34,29,.62);--ink-muted:rgba(24,34,29,.42);--bg:#f8f7f3;--smoke:#f4f1eb;--border:#e5e0d6;--leaf:#1f7a4d;--leaf-soft:#ecfdf3;--leaf-border:#bbf7d0;--gold-soft:#fffbeb;--gold-border:#fde68a}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1080px;height:2400px}
+.canvas{width:1080px;height:2400px;background:var(--green);display:flex;flex-direction:column;align-items:center;overflow:hidden;position:relative;font-family:Inter,system-ui,sans-serif}
+.canvas::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 60% at 50% 8%,rgba(255,255,255,.05),transparent 60%);pointer-events:none}
+.caption{width:100%;padding:104px 92px 0;z-index:2}
+.eyebrow{font-size:26px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--gold)}
+.headline{font-family:Fraunces,Georgia,serif;font-weight:600;font-size:82px;line-height:1.04;color:#fff;margin-top:22px;letter-spacing:-.01em}
+.rule{width:132px;height:9px;background:var(--gold);border-radius:6px;margin-top:34px}
+.sub{font-size:31px;line-height:1.45;font-weight:500;color:rgba(255,255,255,.72);margin-top:30px;max-width:860px}
+.phone{position:absolute;left:50%;transform:translateX(-50%);bottom:-70px;width:812px;height:1720px;border-radius:74px;background:#04201a;padding:20px;box-shadow:0 50px 130px rgba(0,0,0,.5),0 0 0 2px rgba(255,255,255,.04) inset;z-index:1}
+.screen{width:100%;height:100%;border-radius:56px;background:var(--bg);overflow:hidden;position:relative}
+.statusbar{height:64px;display:flex;align-items:center;justify-content:space-between;padding:0 44px;color:var(--ink);font-weight:700;font-size:26px}
+.statusbar .dots{display:flex;gap:9px;align-items:center}
+.statusbar .dots span{width:13px;height:13px;border-radius:50%;background:var(--ink)}
+.statusbar .bat{width:34px;height:17px;border:2.5px solid var(--ink);border-radius:4px}
+.appbar{display:flex;align-items:center;gap:20px;padding:18px 40px 8px}
+.appbar .burger{display:flex;flex-direction:column;gap:6px}
+.appbar .burger i{width:34px;height:4px;background:var(--ink);border-radius:3px}
+.appbar .title{font-size:34px;font-weight:900;color:var(--ink)}
+.content{padding:14px 40px 40px}
+
+.langcard{background:var(--green);border-radius:30px;padding:38px 40px;color:#fff}
+.langcard .l{font-size:25px;font-weight:700;color:rgba(255,255,255,.66);letter-spacing:.02em}
+.langgrid{display:flex;flex-wrap:wrap;gap:16px;margin-top:24px}
+.lc{background:rgba(255,255,255,.1);border-radius:18px;padding:20px 26px;font-size:34px;font-weight:800}
+.lc.ar{font-family:'Noto Sans Arabic',Inter,sans-serif;direction:rtl}
+.lc.hi{font-family:'Noto Sans Devanagari',Inter,sans-serif}
+.lc.gold{background:rgba(194,135,43,.22);color:#ffdca0}
+
+.feat{display:flex;align-items:center;gap:26px;background:#fff;border:2px solid var(--border);border-radius:26px;padding:30px 34px;margin-top:22px}
+.feat .ic{width:82px;height:82px;border-radius:22px;display:flex;align-items:center;justify-content:center;font-size:40px;flex:none;background:var(--leaf-soft)}
+.feat .ic.gold{background:var(--gold-soft);border:2px solid var(--gold-border)}
+.feat .tt{font-size:33px;font-weight:900;color:var(--ink)}
+.feat .ds{font-size:25px;font-weight:600;color:var(--ink-soft);margin-top:6px;line-height:1.35}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="caption">
+    <div class="eyebrow">Built right</div>
+    <div class="headline">Made for<br/>real shops.</div>
+    <div class="rule"></div>
+    <div class="sub">Four languages, right-to-left, works offline, and an audit trail on every close.</div>
+  </div>
+
+  <div class="phone">
+    <div class="screen">
+      <div class="statusbar"><span>9:41</span><span class="dots"><span></span><span></span><span></span><span class="bat"></span></span></div>
+      <div class="appbar"><span class="burger"><i></i><i></i><i></i></span><span class="title">Daily Close</span></div>
+      <div class="content">
+        <div class="langcard">
+          <div class="l">Your team's language</div>
+          <div class="langgrid">
+            <span class="lc gold">English</span>
+            <span class="lc ar">العربية</span>
+            <span class="lc">Español</span>
+            <span class="lc hi">हिन्दी</span>
+          </div>
+        </div>
+
+        <div class="feat">
+          <div class="ic">📶</div>
+          <div><div class="tt">Works offline</div><div class="ds">Closes save on the phone and sync the moment you're back online.</div></div>
+        </div>
+        <div class="feat">
+          <div class="ic gold">🛡️</div>
+          <div><div class="tt">Audit trail</div><div class="ds">Every close is timestamped with who submitted it and when.</div></div>
+        </div>
+        <div class="feat">
+          <div class="ic">🏬</div>
+          <div><div class="tt">Multi-store</div><div class="ds">Add stores and per-store managers as you grow.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

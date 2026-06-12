@@ -451,9 +451,10 @@ export async function getOwnerDashboard(token: string | undefined): Promise<Owne
 export async function uploadReport(
   token: string | undefined,
   storeId: string,
-  upload?: { imageUrl?: string; base64Data?: string; fileName: string; contentType: string }
-): Promise<ParsedPOSReport & { imageUrl: string; rawText?: string }> {
-  return apiFetch<ParsedPOSReport & { imageUrl: string; rawText?: string }>(
+  upload?: { imageUrl?: string; base64Data?: string; fileName: string; contentType: string },
+  kind: "close" | "expense" = "close"
+): Promise<ParsedPOSReport & { imageUrl: string; rawText?: string; kind?: "close" | "expense"; amount?: number | null }> {
+  return apiFetch<ParsedPOSReport & { imageUrl: string; rawText?: string; kind?: "close" | "expense"; amount?: number | null }>(
     "/daily-close/upload-report",
     requireToken(token),
     {
@@ -463,7 +464,8 @@ export async function uploadReport(
         fileName: upload?.fileName || "pos-report.jpg",
         contentType: upload?.contentType || "image/jpeg",
         base64Data: upload?.base64Data,
-        imageUrl: upload?.imageUrl || "https://example.com/pos-report-demo.jpg"
+        imageUrl: upload?.imageUrl || "https://example.com/pos-report-demo.jpg",
+        kind
       })
     }
   );
@@ -486,6 +488,17 @@ export interface ExpenseItemInput {
   description?: string;
 }
 
+// Up-front check: is this store already closed for the chosen date? `date` is
+// the same UTC-noon ISO sent to /finish.
+export async function checkCloseExists(
+  token: string | undefined,
+  storeId: string,
+  date: string
+): Promise<{ closed: boolean }> {
+  const params = new URLSearchParams({ storeId, date });
+  return apiFetch(`/daily-close/exists?${params.toString()}`, requireToken(token));
+}
+
 export async function finishDailyClose(
   token: string | undefined,
   input: DailyCloseInput & { expenseItems?: ExpenseItemInput[] },
@@ -505,6 +518,7 @@ export interface ReceiptRow {
   storeName: string;
   closeDate: string;
   employeeName: string;
+  kind: "close" | "expense";
   parsedJson: any;
   dailyClose: {
     id: string;
@@ -512,6 +526,9 @@ export interface ReceiptRow {
     cashSales: number;
     cardSales: number;
     difference: number;
+    expenses: number;
+    refunds: number;
+    netProfit: number;
     status: "CLOSED" | "SHORT" | "OVER" | "PENDING";
   } | null;
   createdAt: string;

@@ -2,6 +2,7 @@ import { createDrawerNavigator } from "@react-navigation/drawer";
 import { DrawerContentScrollView, DrawerItemList, DrawerContentComponentProps } from "@react-navigation/drawer";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { OwnerScreen } from "../screens/OwnerScreen";
 import { EmployeeScreen } from "../screens/EmployeeScreen";
 import { AllStoresScreen } from "../screens/AllStoresScreen";
@@ -13,7 +14,7 @@ import { ChangePasswordScreen } from "../screens/settings/ChangePasswordScreen";
 import { WhatsAppSettingsScreen } from "../screens/settings/WhatsAppSettingsScreen";
 import { PhoneSignInScreen } from "../screens/settings/PhoneSignInScreen";
 import { LanguageScreen } from "../screens/settings/LanguageScreen";
-import { getMobileLanguage, t } from "../i18n";
+import { isRTL, t } from "../i18n";
 import { colors, font, radius, spacing } from "../theme";
 
 export type DrawerParamList = {
@@ -60,10 +61,12 @@ function SettingsStackScreen() {
 }
 
 export function AppDrawer({ onSignOut }: { onSignOut: () => Promise<void> | void }) {
-  // Re-key on language so React Navigation re-reads the screen options
-  // (which are evaluated at register time, not on each render). Without
-  // this, switching language doesn't update drawer labels until app restart.
-  const langKey = getMobileLanguage();
+  // Direction is driven in JS (no native forceRTL / no app restart). The menu
+  // sits on the right for Arabic, left otherwise. We key the navigator on
+  // direction ONLY: en/es/hi switches re-render in place (labels update via the
+  // function-form drawerLabel below, so the user keeps their screen), and only
+  // crossing the Arabic boundary remounts to flip the drawer side.
+  const rtl = isRTL();
 
   function confirmSignOut() {
     Alert.alert(
@@ -78,29 +81,38 @@ export function AppDrawer({ onSignOut }: { onSignOut: () => Promise<void> | void
 
   return (
     <Drawer.Navigator
-      key={langKey}
+      key={rtl ? "rtl" : "ltr"}
       initialRouteName="Dashboard"
       screenOptions={{
+        drawerPosition: rtl ? "right" : "left",
         headerStyle: { backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border },
         headerTintColor: colors.ink,
         headerTitleStyle: { fontWeight: font.black, fontSize: 18 },
         drawerActiveTintColor: colors.leaf,
         drawerInactiveTintColor: colors.ink,
         drawerActiveBackgroundColor: colors.leafSoft,
-        drawerLabelStyle: { fontWeight: font.black, fontSize: 14, marginLeft: -16 }
+        drawerLabelStyle: { fontWeight: font.black, fontSize: 14 }
       }}
       drawerContent={(props) => <CustomDrawerContent {...props} onSignOut={confirmSignOut} />}
     >
       <Drawer.Screen
         name="Dashboard"
-        options={{ title: t("dashboard.title"), drawerLabel: `🏠  ${t("nav.dashboard")}` }}
+        options={{
+          title: t("dashboard.title"),
+          drawerIcon: ({ color, size }) => <Feather name="home" size={size} color={color} />,
+          drawerLabel: ({ color }) => <Text style={[s.navLabel, { color }]}>{t("nav.dashboard")}</Text>
+        }}
       >
         {() => <OwnerScreen onSignOut={onSignOut} />}
       </Drawer.Screen>
 
       <Drawer.Screen
         name="CloseStore"
-        options={{ title: t("nav.closeStore"), drawerLabel: `🧾  ${t("nav.closeStore")}` }}
+        options={{
+          title: t("nav.closeStore"),
+          drawerIcon: ({ color, size }) => <Feather name="check-square" size={size} color={color} />,
+          drawerLabel: ({ color }) => <Text style={[s.navLabel, { color }]}>{t("nav.closeStore")}</Text>
+        }}
       >
         {() => <EmployeeScreen onSignOut={onSignOut} />}
       </Drawer.Screen>
@@ -108,31 +120,51 @@ export function AppDrawer({ onSignOut }: { onSignOut: () => Promise<void> | void
       <Drawer.Screen
         name="AllStores"
         component={AllStoresScreen}
-        options={{ title: t("nav.allStores"), drawerLabel: `🏪  ${t("nav.allStores")}` }}
+        options={{
+          title: t("nav.allStores"),
+          drawerIcon: ({ color, size }) => <Feather name="grid" size={size} color={color} />,
+          drawerLabel: ({ color }) => <Text style={[s.navLabel, { color }]}>{t("nav.allStores")}</Text>
+        }}
       />
 
       <Drawer.Screen
         name="AdminStores"
         component={AdminStoresScreen}
-        options={{ title: t("nav.adminStores"), drawerLabel: `🏬  ${t("nav.adminStores")}` }}
+        options={{
+          title: t("nav.adminStores"),
+          drawerIcon: ({ color, size }) => <Feather name="shopping-bag" size={size} color={color} />,
+          drawerLabel: ({ color }) => <Text style={[s.navLabel, { color }]}>{t("nav.adminStores")}</Text>
+        }}
       />
 
       <Drawer.Screen
         name="AdminEmployees"
         component={AdminEmployeesScreen}
-        options={{ title: t("nav.adminEmployees"), drawerLabel: `👥  ${t("nav.adminEmployees")}` }}
+        options={{
+          title: t("nav.adminEmployees"),
+          drawerIcon: ({ color, size }) => <Feather name="users" size={size} color={color} />,
+          drawerLabel: ({ color }) => <Text style={[s.navLabel, { color }]}>{t("nav.adminEmployees")}</Text>
+        }}
       />
 
       <Drawer.Screen
         name="Reports"
         component={ReportsScreen}
-        options={{ title: t("nav.reports"), drawerLabel: `📊  ${t("nav.reports")}` }}
+        options={{
+          title: t("nav.reports"),
+          drawerIcon: ({ color, size }) => <Feather name="download" size={size} color={color} />,
+          drawerLabel: ({ color }) => <Text style={[s.navLabel, { color }]}>{t("nav.reports")}</Text>
+        }}
       />
 
       <Drawer.Screen
         name="SettingsRoot"
         component={SettingsStackScreen}
-        options={{ title: t("nav.settings"), drawerLabel: `⚙️  ${t("nav.settings")}` }}
+        options={{
+          title: t("nav.settings"),
+          drawerIcon: ({ color, size }) => <Feather name="settings" size={size} color={color} />,
+          drawerLabel: ({ color }) => <Text style={[s.navLabel, { color }]}>{t("nav.settings")}</Text>
+        }}
       />
     </Drawer.Navigator>
   );
@@ -159,6 +191,7 @@ function CustomDrawerContent({
 }
 
 const s = StyleSheet.create({
+  navLabel: { fontWeight: font.black, fontSize: 14, marginLeft: 4 },
   header: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.lg,

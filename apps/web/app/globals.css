@@ -14,10 +14,14 @@
 
 body {
   margin: 0;
+  /* Editorial Ledger: a faint paper grain over the warm canvas + a soft leaf
+     wash at the top, for depth instead of a flat fill. */
   background:
-    linear-gradient(180deg, rgba(31, 122, 77, 0.08), transparent 300px),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E"),
+    linear-gradient(180deg, rgba(31, 122, 77, 0.08), transparent 320px),
     #f8f7f3;
   color: #18221d;
+  font-family: var(--font-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
   -webkit-text-size-adjust: 100%;
@@ -60,4 +64,24 @@ input,
 select,
 textarea {
   font-size: 16px;
+}
+
+/* ── Editorial Ledger motion: one orchestrated hero reveal (staggered) ── */
+@keyframes ledger-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.lr { opacity: 0; animation: ledger-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+.lr-1 { animation-delay: 0.05s; }
+.lr-2 { animation-delay: 0.16s; }
+.lr-3 { animation-delay: 0.27s; }
+.lr-4 { animation-delay: 0.4s; }
+
+/* Gold "ledger rule" that draws in under the headline. */
+@keyframes gold-draw { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.gold-rule { transform-origin: left center; animation: gold-draw 0.85s cubic-bezier(0.22, 1, 0.36, 1) 0.45s both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lr { opacity: 1; animation: none; }
+  .gold-rule { animation: none; }
 }

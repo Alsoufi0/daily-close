@@ -5,14 +5,14 @@ import { t } from "../i18n";
 import { colors, font, radius, spacing } from "../theme";
 
 /**
- * Footer for any authenticated screen — bundles the two store-readiness items
- * Apple gates on:
- *   - "Subscribe / Manage on web" link (iOS only, opens the system browser
- *     so we don't trigger Apple's IAP requirement — see the May 2025 Epic
- *     ruling: external purchase links are allowed in the US App Store).
+ * Footer for any authenticated screen.
  *   - "Delete account" button (Guideline 5.1.1(v) — in-app deletion required).
+ *   - "Manage subscription" link for owners on ANDROID only. On iOS we show no
+ *     billing/purchase entry point at all (Apple Guideline 3.1.1: no external
+ *     purchase links or pricing). iOS owners manage billing on the website; the
+ *     app is sign-in-only for them.
  *
- * Owners see both. Employees see just Delete account.
+ * Everyone sees Delete account; only Android owners see Manage subscription.
  */
 export function AccountFooter({
   role,
@@ -57,9 +57,9 @@ export function AccountFooter({
 
   return (
     <View style={s.wrap}>
-      {role === "owner" && Platform.OS === "ios" ? (
+      {role === "owner" && Platform.OS !== "ios" ? (
         <TouchableOpacity onPress={openBilling} style={s.linkRow}>
-          <Text style={s.linkLabel}>Subscribe / Manage on web ↗</Text>
+          <Text style={s.linkLabel}>{t("settings.manageSubscription")} ↗</Text>
         </TouchableOpacity>
       ) : null}
 

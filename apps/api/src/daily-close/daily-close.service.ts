@@ -21,6 +21,7 @@ import { DashboardService } from "../dashboard/dashboard.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { SmsService } from "../notifications/sms.service";
 import { WhatsAppService } from "../notifications/whatsapp.service";
+import { PushService } from "../notifications/push.service";
 
 @Injectable()
 export class DailyCloseService {
@@ -34,7 +35,8 @@ export class DailyCloseService {
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
     private readonly whatsapp: WhatsAppService,
-    private readonly sms: SmsService
+    private readonly sms: SmsService,
+    private readonly push: PushService
   ) {}
 
   async scanReport(input: ScanReportDto): Promise<ParsedPOSReport & { rawText?: string }> {
@@ -66,7 +68,12 @@ export class DailyCloseService {
     };
   }
 
-  async uploadReport(input: UploadReportDto, user: RequestUser): Promise<ParsedPOSReport & { imageUrl: string }> {
+  async uploadReport(
+    input: UploadReportDto,
+    user: RequestUser
+  ): Promise<
+    ParsedPOSReport & { imageUrl: string; kind?: "close" | "expense"; amount?: number | null; rawText?: string }
+  > {
     await this.assertCanCloseStore(user, input.storeId);
 
     let imageUrl = input.imageUrl;
@@ -97,30 +104,113 @@ export class DailyCloseService {
 
     const imageForOcr = input.base64Data || imageUrl;
     if (!imageForOcr) throw new BadRequestException("Report image is required.");
+    // From here imageUrl is the value we persist/return; default it so the type
+    // is a definite string (storage may have failed, or only imageUrl was sent).
+    imageUrl = imageUrl || "report-upload-not-stored";
+
+    // Expense documents (often handwritten) are kept as a PHOTO RECORD only — no
+    // OCR, since it can't reliably read scrawled totals. The amount is entered
+    // manually in the close flow. We still file the row under Expenses
+    // (parserType "EXPENSE" + a parsedJson.kind tag) so the Receipts page can
+    // separate it from close receipts and it shows up in the Expenses folder.
+    if (input.kind === "expense") {
+      await this.persistUploadedReport({
+        imageUrl,
+        storagePath,
+        parsedJson: { kind: "expense" },
+        parserType: "EXPENSE",
+        storeId: input.storeId,
+        userId: user.id
+      });
+      // Spread an empty parsed shape so the return type stays a single object
+      // (the close path + tests read ParsedPOSReport fields).
+      return { ...this.posParser.parse(""), kind: "expense", imageUrl };
+    }
 
     const parsed = await this.scanReport({ imageUrl: imageForOcr, storeId: input.storeId });
-
     // Persist the upload so the owner Receipts page can show it. The row is
     // intentionally created BEFORE finishClosing — daily_close_id stays null
     // until the close lands and finishClosing links the newest matching upload.
+    await this.persistUploadedReport({
+      imageUrl,
+      storagePath,
+      parsedJson: parsed as any,
+      parserType: parsed.parserType || "UNKNOWN",
+      storeId: input.storeId,
+      userId: user.id
+    });
+
+    return { ...parsed, imageUrl } as ParsedPOSReport & { imageUrl: string };
+  }
+
+  private async persistUploadedReport(data: {
+    imageUrl: string | undefined;
+    storagePath: string | null;
+    parsedJson: any;
+    parserType: string;
+    storeId: string;
+    userId: string;
+  }) {
     try {
       await this.prisma.uploadedReport.create({
         data: {
-          imageUrl: imageUrl || "report-upload-not-stored",
-          storagePath,
-          parsedJson: parsed as any,
-          parserType: parsed.parserType || "UNKNOWN",
-          storeId: input.storeId,
-          uploadedByUserId: user.id
+          imageUrl: data.imageUrl || "report-upload-not-stored",
+          storagePath: data.storagePath,
+          parsedJson: data.parsedJson,
+          parserType: data.parserType,
+          storeId: data.storeId,
+          uploadedByUserId: data.userId
         }
       });
     } catch (err: any) {
-      // The Receipts page is a read-only owner feature; failing to persist
-      // here must not block the employee's close. Log and move on.
+      // The Receipts page is a read-only owner feature; failing to persist here
+      // must never block the employee's close. Log and move on.
       this.logger.warn(`UploadedReport persist failed (non-fatal): ${err?.message || err}`);
     }
+  }
 
-    return { ...parsed, imageUrl } as ParsedPOSReport & { imageUrl: string };
+  // Receipt retention: purge uploads that were created but never attached to a
+  // completed close (dailyCloseId stays null) and are older than the window —
+  // i.e. abandoned step-1 photos. The privacy policy promises these go within
+  // 7 days. Receipts that DID back a close (linked) are kept for the owner's
+  // records. Deletes the storage object first, then the row.
+  async purgeAbandonedReceipts(olderThanDays = 7): Promise<{ purged: number }> {
+    const cutoff = new Date(Date.now() - olderThanDays * 24 * 60 * 60 * 1000);
+    const stale = await this.prisma.uploadedReport.findMany({
+      where: { dailyCloseId: null, createdAt: { lt: cutoff } },
+      select: { id: true, storagePath: true }
+    });
+    for (const row of stale) {
+      if (row.storagePath) {
+        const ok = await this.storage.remove(row.storagePath);
+        if (!ok) this.logger.warn(`Receipt cleanup: could not delete object ${row.storagePath}`);
+      }
+    }
+    if (stale.length) {
+      await this.prisma.uploadedReport.deleteMany({ where: { id: { in: stale.map((s) => s.id) } } });
+    }
+    this.logger.log(`Receipt retention: purged ${stale.length} abandoned upload(s) older than ${olderThanDays}d`);
+    return { purged: stale.length };
+  }
+
+  // Mirrors finishClosing's "already closed" guard (lines below) without writing
+  // anything, so the close flow can warn up front instead of at submit. `date`
+  // is the same UTC-noon ISO the client would send to /finish.
+  async closeExistsForDate(user: RequestUser, storeId: string, date: string): Promise<{ closed: boolean }> {
+    if (!storeId || !date) throw new BadRequestException("storeId and date are required.");
+    await this.assertCanCloseStore(user, storeId);
+    const eventDate = new Date(date);
+    if (Number.isNaN(eventDate.getTime())) throw new BadRequestException("Invalid date.");
+    const store = await this.prisma.store.findUnique({
+      where: { id: storeId },
+      select: { timezone: true }
+    });
+    const { start, end } = DashboardService.storeLocalDayRange(
+      store?.timezone || "America/New_York",
+      eventDate
+    );
+    const existing = await this.repository.findByStoreAndRange(storeId, start, end);
+    return { closed: Boolean(existing) };
   }
 
   async finishClosing(
@@ -240,27 +330,23 @@ export class DailyCloseService {
     }
 
     // A receipt is only "recorded" once the close actually concludes. The
-    // upload step stores the image and creates an UploadedReport row, but that
-    // row stays UNLINKED (dailyCloseId = null) until here. We now link the most
-    // recent unlinked upload for this store + user to the close. The Receipts
-    // page only lists LINKED rows, so step-1 images the employee abandoned or
-    // re-selected never show up — only the image that backed a completed close.
+    // upload step stores each image and creates an UploadedReport row, but those
+    // rows stay UNLINKED (dailyCloseId = null) until here. We now link ALL the
+    // unlinked uploads for this store + user from the current session — the
+    // sales receipt AND any expense-document photos — so they all attach to the
+    // close. A 12-hour window keeps images abandoned in a prior session from
+    // being swept in. The Receipts page only lists LINKED rows.
     try {
-      const latestUpload = await this.prisma.uploadedReport.findFirst({
+      const since = new Date(Date.now() - 12 * 60 * 60 * 1000);
+      await this.prisma.uploadedReport.updateMany({
         where: {
           storeId: input.storeId,
           uploadedByUserId: submittedByUserId,
-          dailyCloseId: null
+          dailyCloseId: null,
+          createdAt: { gte: since }
         },
-        orderBy: { createdAt: "desc" },
-        select: { id: true }
+        data: { dailyCloseId: created.id }
       });
-      if (latestUpload) {
-        await this.prisma.uploadedReport.update({
-          where: { id: latestUpload.id },
-          data: { dailyCloseId: created.id }
-        });
-      }
     } catch (err: any) {
       // Non-fatal: the close is already persisted. A missing receipt link just
       // means that close won't have a thumbnail on the Receipts page.
@@ -268,6 +354,7 @@ export class DailyCloseService {
     }
 
     await this.sendCloseCompletedWhatsApp(input.storeId);
+    await this.sendCloseCompletedPush(input.storeId, status, difference);
 
     return {
       id: created.id,
@@ -372,6 +459,45 @@ export class DailyCloseService {
     if (user.role !== "EMPLOYEE") throw new ForbiddenException("Only employees can submit daily closes.");
     if (user.storeId !== storeId) throw new ForbiddenException("Employee cannot close another store.");
     if (!user.employeeId) throw new ForbiddenException("Employee profile is incomplete.");
+  }
+
+  // Native push to the owner whenever a store finishes closing — whether an
+  // employee closed it OR the owner did it themselves (e.g. from the web on the
+  // computer, they still want the confirmation on their phone). Sends to all the
+  // owner's registered devices. The body summarises the cash result so the owner
+  // gets the gist without opening the app. Best-effort: a failure never affects
+  // the close.
+  private async sendCloseCompletedPush(
+    storeId: string,
+    status: "CLOSED" | "SHORT" | "OVER",
+    difference: number
+  ) {
+    try {
+      const store = await this.prisma.store.findUnique({
+        where: { id: storeId },
+        select: { storeName: true, owner: { select: { userId: true } } }
+      });
+      if (!store?.owner) return;
+      const ownerUserId = store.owner.userId;
+
+      const amount = Math.abs(difference).toLocaleString("en-US", {
+        style: "currency",
+        currency: "USD"
+      });
+      const summary =
+        status === "SHORT"
+          ? `short ${amount}`
+          : status === "OVER"
+          ? `over ${amount}`
+          : "cash balanced";
+      await this.push.sendToUser(ownerUserId, {
+        title: "Store closed",
+        body: `${store.storeName} finished closing — ${summary}.`,
+        data: { type: "close_completed", storeId }
+      });
+    } catch (err: any) {
+      this.logger.warn(`Close-completed push skipped: ${err?.message || err}`);
+    }
   }
 
   private async sendCloseCompletedWhatsApp(storeId: string) {

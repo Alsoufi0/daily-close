@@ -19,6 +19,7 @@ import * as Sharing from "expo-sharing";
 import { Alert } from "react-native";
 import { formatMoney, formatMoneyExact } from "@smokeshop/shared/utils/money";
 import {
+  deleteDailyClose,
   getReceiptsZipDownloadInfo,
   getReportExportDownloadInfo,
   listReceipts,
@@ -30,6 +31,7 @@ import { Banner, Button, Card } from "../ui";
 import { DateField } from "../components/DateField";
 import { saveDownloadedFile } from "../save-file";
 import { SkeletonRow } from "../ui/Skeleton";
+import { useSession } from "../use-session";
 import { t } from "../i18n";
 import { colors, font, radius, spacing } from "../theme";
 
@@ -50,9 +52,38 @@ export function ReportsScreen() {
   const [openReceipt, setOpenReceipt] = useState<ReceiptRow | null>(null);
   const [downloadingZip, setDownloadingZip] = useState(false);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [receiptFilter, setReceiptFilter] = useState<"all" | "close" | "expense">("all");
   const [exporting, setExporting] = useState<"csv" | "pdf" | null>(null);
   const [allStores, setAllStores] = useState(false);
   const [downloadingReceipt, setDownloadingReceipt] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const { profile } = useSession();
+  // Owners + per-store managers can delete a close report; employees cannot
+  // (the API 403s for them anyway, so we just hide the action).
+  const canDelete = !!profile && (profile.role !== "EMPLOYEE" || (profile.managedStoreIds?.length ?? 0) > 0);
+
+  function confirmDeleteClose(r: ReceiptRow) {
+    if (!r.dailyClose) return;
+    Alert.alert(t("history.deleteClose"), t("common.cannotBeUndone"), [
+      { text: t("common.cancel"), style: "cancel" },
+      {
+        text: t("common.delete"),
+        style: "destructive",
+        onPress: async () => {
+          setDeleting(true);
+          try {
+            await deleteDailyClose(r.dailyClose!.id);
+            setOpenReceipt(null);
+            await load();
+          } catch (err: any) {
+            Alert.alert(t("common.somethingBroke"), err?.message || t("common.tryAgain"));
+          } finally {
+            setDeleting(false);
+          }
+        }
+      }
+    ]);
+  }
 
   // Initial: load stores, pre-select first
   useEffect(() => {
@@ -174,8 +205,12 @@ export function ReportsScreen() {
   }
 
   const selectedStore = useMemo(() => stores.find((s) => s.id === storeId), [stores, storeId]);
-  const visibleReceipts = receipts.slice(0, visibleCount);
-  const hasMore = visibleCount < receipts.length;
+  const filteredReceipts = useMemo(
+    () => (receiptFilter === "all" ? receipts : receipts.filter((r) => r.kind === receiptFilter)),
+    [receipts, receiptFilter]
+  );
+  const visibleReceipts = filteredReceipts.slice(0, visibleCount);
+  const hasMore = visibleCount < filteredReceipts.length;
 
   if (storesLoading) {
     return (
@@ -278,11 +313,36 @@ export function ReportsScreen() {
         </View>
       ) : null}
 
+      {receipts.length > 0 ? (
+        <View style={s.kindFilter}>
+          {(["all", "close", "expense"] as const).map((k) => (
+            <TouchableOpacity
+              key={k}
+              onPress={() => {
+                setReceiptFilter(k);
+                setVisibleCount(PAGE_SIZE);
+              }}
+              style={[s.kindChip, receiptFilter === k && s.kindChipActive]}
+              accessibilityRole="button"
+              accessibilityState={{ selected: receiptFilter === k }}
+            >
+              <Text style={[s.kindChipText, receiptFilter === k && s.kindChipTextActive]}>
+                {k === "all"
+                  ? t("reports.filterAll")
+                  : k === "close"
+                    ? t("reports.filterCloses")
+                    : t("reports.filterExpenses")}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      ) : null}
+
       {loading ? (
         <View style={{ padding: spacing.lg, gap: spacing.sm }}>
           {[0, 1, 2, 3].map((i) => <SkeletonRow key={i} />)}
         </View>
-      ) : receipts.length === 0 ? (
+      ) : filteredReceipts.length === 0 ? (
         <View style={{ paddingHorizontal: spacing.lg }}>
           <Card style={{ alignItems: "center", paddingVertical: spacing.xl }}>
             <Text style={s.emptyTitle}>{t("reports.empty")}</Text>
@@ -298,7 +358,12 @@ export function ReportsScreen() {
           renderItem={({ item }) => (
             <Pressable onPress={() => setOpenReceipt(item)} style={s.row}>
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={s.rowTitle} numberOfLines={1}>{item.closeDate}</Text>
+                <View style={s.rowTitleRow}>
+                  <Text style={s.rowTitle} numberOfLines={1}>{item.closeDate}</Text>
+                  {item.kind === "expense" ? (
+                    <Text style={s.expenseTag}>{t("reports.filterExpenses")}</Text>
+                  ) : null}
+                </View>
                 <Text style={s.rowSubtitle} numberOfLines={1}>
                   {item.employeeName}
                 </Text>
@@ -322,7 +387,7 @@ export function ReportsScreen() {
             hasMore ? (
               <TouchableOpacity onPress={() => setVisibleCount((c) => c + PAGE_SIZE)} style={s.showMoreBtn}>
                 <Text style={s.showMoreText}>
-                  {t("common.showMore")}  ({receipts.length - visibleCount})
+                  {t("common.showMore")}  ({filteredReceipts.length - visibleCount})
                 </Text>
               </TouchableOpacity>
             ) : null
@@ -387,6 +452,19 @@ export function ReportsScreen() {
               <Card style={{ gap: spacing.sm }}>
                 <DetailRow label={t("reports.status")} value={openReceipt.dailyClose.status} />
                 <DetailRow label={t("dashboard.totalSales")} value={formatMoney(openReceipt.dailyClose.totalSales)} />
+                {openReceipt.dailyClose.refunds > 0 ? (
+                  <DetailRow label={t("closing.refunds")} value={formatMoney(openReceipt.dailyClose.refunds)} tone="bad" />
+                ) : null}
+                <DetailRow
+                  label={t("dashboard.expenses")}
+                  value={formatMoney(openReceipt.dailyClose.expenses)}
+                  tone={openReceipt.dailyClose.expenses > 0 ? "bad" : undefined}
+                />
+                <DetailRow
+                  label={t("dashboard.netProfit")}
+                  value={formatMoney(openReceipt.dailyClose.netProfit)}
+                  tone={openReceipt.dailyClose.netProfit < 0 ? "bad" : "good"}
+                />
                 <DetailRow label={t("common.cash")} value={formatMoney(openReceipt.dailyClose.cashSales)} />
                 <DetailRow label={t("common.card")} value={formatMoney(openReceipt.dailyClose.cardSales)} />
                 <DetailRow
@@ -395,6 +473,15 @@ export function ReportsScreen() {
                   tone={openReceipt.dailyClose.difference < 0 ? "bad" : "good"}
                 />
               </Card>
+            ) : null}
+            {canDelete && openReceipt?.dailyClose ? (
+              <TouchableOpacity
+                onPress={() => openReceipt && confirmDeleteClose(openReceipt)}
+                disabled={deleting}
+                style={[s.deleteRow, deleting && { opacity: 0.5 }]}
+              >
+                <Text style={s.deleteText}>{deleting ? `${t("history.deleteClose")}…` : t("history.deleteClose")}</Text>
+              </TouchableOpacity>
             ) : null}
             <Card style={{ gap: spacing.xs }}>
               <Text style={s.metaLabel}>{t("reports.submittedBy")}</Text>
@@ -455,7 +542,20 @@ const s = StyleSheet.create({
     borderRadius: radius.md, borderWidth: 1, borderColor: colors.border
   },
   rowTitle: { color: colors.ink, fontWeight: font.black, fontSize: 15 },
+  rowTitleRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   rowSubtitle: { color: colors.inkSoft, fontWeight: font.bold, fontSize: 12, marginTop: 2 },
+  expenseTag: {
+    color: colors.leaf, fontWeight: font.black, fontSize: 10,
+    backgroundColor: colors.leafSoft, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, overflow: "hidden"
+  },
+  kindFilter: { flexDirection: "row", gap: 8, paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
+  kindChip: {
+    paddingHorizontal: 14, paddingVertical: 7, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.border, backgroundColor: colors.white
+  },
+  kindChipActive: { backgroundColor: colors.leaf, borderColor: colors.leaf },
+  kindChipText: { color: colors.inkSoft, fontWeight: font.black, fontSize: 13 },
+  kindChipTextActive: { color: colors.white },
   rowAmount: { color: colors.ink, fontWeight: font.black, fontSize: 16 },
   rowDiff: { color: colors.inkSoft, fontWeight: font.bold, fontSize: 12, marginTop: 2 },
   rowMuted: { color: colors.inkMuted, fontWeight: font.bold, fontSize: 14 },
@@ -468,6 +568,8 @@ const s = StyleSheet.create({
   pickerRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
   pickerLabel: { flex: 1, color: colors.ink, fontWeight: font.bold, fontSize: 15 },
   pickerCheck: { color: colors.leaf, fontWeight: font.black, fontSize: 18 },
+  deleteRow: { paddingVertical: spacing.md, alignItems: "center", borderRadius: radius.md, borderWidth: 1, borderColor: colors.warning },
+  deleteText: { color: colors.warning, fontWeight: font.black, fontSize: 14 },
   metaLabel: { color: colors.inkMuted, fontWeight: font.black, fontSize: 11, textTransform: "uppercase", letterSpacing: 0.4 },
   metaValue: { color: colors.ink, fontWeight: font.black, fontSize: 15 },
   showMoreBtn: {

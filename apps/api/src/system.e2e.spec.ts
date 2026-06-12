@@ -206,6 +206,7 @@ function makeSystem() {
   };
   const whatsapp = { isConfigured: jest.fn().mockReturnValue(false), sendCloseCompletedTemplate: jest.fn() };
   const sms = { send: jest.fn().mockResolvedValue({ sent: true }) };
+  const push = { sendToUser: jest.fn().mockResolvedValue({ sent: 0 }) };
   const dailyClose = new DailyCloseService(
     repository,
     new PosParserService(),
@@ -214,7 +215,8 @@ function makeSystem() {
     prisma as any,
     notifications as any,
     whatsapp as any,
-    sms as any
+    sms as any,
+    push as any
   );
   return { prisma, stores, dashboard, reports, dailyClose, ocr, storage };
 }

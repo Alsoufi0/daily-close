@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700;800;900&display=swap');
+:root{--green:#0e3b34;--gold:#c2872b;--ink:#18221d;--ink-soft:rgba(24,34,29,.62);--ink-muted:rgba(24,34,29,.42);--bg:#f8f7f3;--smoke:#f4f1eb;--border:#e5e0d6;--leaf:#1f7a4d;--leaf-soft:#ecfdf3;--leaf-border:#bbf7d0}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1080px;height:2400px}
+.canvas{width:1080px;height:2400px;background:var(--green);display:flex;flex-direction:column;align-items:center;overflow:hidden;position:relative;font-family:Inter,system-ui,sans-serif}
+.canvas::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 60% at 50% 8%,rgba(255,255,255,.05),transparent 60%);pointer-events:none}
+.caption{width:100%;padding:104px 92px 0;z-index:2}
+.eyebrow{font-size:26px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--gold)}
+.headline{font-family:Fraunces,Georgia,serif;font-weight:600;font-size:82px;line-height:1.04;color:#fff;margin-top:22px;letter-spacing:-.01em}
+.rule{width:132px;height:9px;background:var(--gold);border-radius:6px;margin-top:34px}
+.sub{font-size:31px;line-height:1.45;font-weight:500;color:rgba(255,255,255,.72);margin-top:30px;max-width:860px}
+.phone{position:absolute;left:50%;transform:translateX(-50%);bottom:-70px;width:812px;height:1720px;border-radius:74px;background:#04201a;padding:20px;box-shadow:0 50px 130px rgba(0,0,0,.5),0 0 0 2px rgba(255,255,255,.04) inset;z-index:1}
+.screen{width:100%;height:100%;border-radius:56px;background:var(--bg);overflow:hidden;position:relative}
+.statusbar{height:64px;display:flex;align-items:center;justify-content:space-between;padding:0 44px;color:var(--ink);font-weight:700;font-size:26px}
+.statusbar .dots{display:flex;gap:9px;align-items:center}
+.statusbar .dots span{width:13px;height:13px;border-radius:50%;background:var(--ink)}
+.statusbar .bat{width:34px;height:17px;border:2.5px solid var(--ink);border-radius:4px}
+.appbar{display:flex;align-items:center;gap:20px;padding:18px 40px 8px}
+.appbar .burger{display:flex;flex-direction:column;gap:6px}
+.appbar .burger i{width:34px;height:4px;background:var(--ink);border-radius:3px}
+.appbar .title{font-size:34px;font-weight:900;color:var(--ink)}
+.content{padding:14px 40px 40px}
+
+.flabel{font-size:23px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-muted);margin:14px 4px 12px}
+.ffield{height:96px;border:2px solid var(--border);border-radius:20px;background:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 30px;font-size:32px;font-weight:800;color:var(--ink)}
+.ffield .cal{font-size:34px}
+.frow{display:flex;gap:20px}
+.frow>div{flex:1}
+.exports{display:flex;gap:22px;margin-top:34px}
+.btn{flex:1;height:130px;border-radius:26px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;font-weight:900}
+.btn .ic{font-size:42px}
+.btn .tx{font-size:32px}
+.btn.csv{background:var(--green);color:#fff}
+.btn.pdf{background:#fff;border:3px solid var(--green);color:var(--green)}
+.toggle{display:flex;align-items:center;justify-content:space-between;margin-top:30px;background:#fff;border:2px solid var(--border);border-radius:22px;padding:26px 32px}
+.toggle .t{font-size:29px;font-weight:800;color:var(--ink)}
+.toggle .sw{width:92px;height:50px;border-radius:999px;background:var(--leaf);position:relative}
+.toggle .sw::after{content:"";position:absolute;top:5px;right:5px;width:40px;height:40px;border-radius:50%;background:#fff}
+.recent{margin-top:30px}
+.rlabel{font-size:23px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-muted);margin:0 4px 14px}
+.rrow{display:flex;justify-content:space-between;align-items:center;background:#fff;border:2px solid var(--border);border-radius:20px;padding:24px 30px;margin-bottom:16px}
+.rrow .d{font-size:29px;font-weight:800;color:var(--ink)}
+.rrow .s{font-size:24px;font-weight:600;color:var(--ink-soft);margin-top:4px}
+.rrow .a{font-size:31px;font-weight:900;color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="caption">
+    <div class="eyebrow">Owner tools</div>
+    <div class="headline">Export it all<br/>in a tap.</div>
+    <div class="rule"></div>
+    <div class="sub">Clean CSV and PDF for any date range, one store or all of them. Ready for your books.</div>
+  </div>
+
+  <div class="phone">
+    <div class="screen">
+      <div class="statusbar"><span>9:41</span><span class="dots"><span></span><span></span><span></span><span class="bat"></span></span></div>
+      <div class="appbar"><span class="burger"><i></i><i></i><i></i></span><span class="title">Reports</span></div>
+      <div class="content">
+        <div class="frow">
+          <div>
+            <div class="flabel">From</div>
+            <div class="ffield">May 1 <span class="cal">📅</span></div>
+          </div>
+          <div>
+            <div class="flabel">To</div>
+            <div class="ffield">Jun 5 <span class="cal">📅</span></div>
+          </div>
+        </div>
+        <div class="toggle"><span class="t">Export all stores</span><span class="sw"></span></div>
+        <div class="exports">
+          <div class="btn csv"><span class="ic">📄</span><span class="tx">Export CSV</span></div>
+          <div class="btn pdf"><span class="ic">📑</span><span class="tx">Export PDF</span></div>
+        </div>
+        <div class="recent">
+          <div class="rlabel">Recent closes</div>
+          <div class="rrow"><div><div class="d">Jun 5 · Main Street</div><div class="s">Closed · matched</div></div><div class="a">$4,210</div></div>
+          <div class="rrow"><div><div class="d">Jun 5 · Westside</div><div class="s">Closed · $40 short</div></div><div class="a">$3,180</div></div>
+          <div class="rrow"><div><div class="d">Jun 4 · Downtown</div><div class="s">Closed · matched</div></div><div class="a">$3,905</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,5 +1,6 @@
-import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Linking, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import { Feather } from "@expo/vector-icons";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { AccountFooter } from "../components/AccountFooter";
 import type { SettingsStackParamList } from "../navigation/AppDrawer";
@@ -15,17 +16,30 @@ type SettingsNav = NativeStackNavigationProp<SettingsStackParamList, "SettingsHo
 interface Row {
   title: string;
   subtitle: string;
+  icon: keyof typeof Feather.glyphMap;
   navigate?: keyof SettingsStackParamList; // native nav within Settings stack
-  web?: string; // fallback: opens web in browser
+  web?: string; // opens the web page in the browser
 }
 
-function getRows(): Row[] {
+function accountRows(): Row[] {
+  const rows: Row[] = [
+    { title: t("account.changePassword"), subtitle: t("settings.changePasswordSubtitle"), icon: "lock", navigate: "ChangePassword" },
+    { title: t("phoneSignin.title"), subtitle: t("phoneSignin.listSubtitle"), icon: "smartphone", navigate: "PhoneSignIn" },
+    { title: t("settings.whatsappTitle"), subtitle: t("settings.whatsappListSubtitle"), icon: "message-circle", navigate: "WhatsAppSettings" },
+    { title: t("common.language"), subtitle: t("settings.languageSubtitle"), icon: "globe", navigate: "Language" }
+  ];
+  // Apple Guideline 3.1.1: no external billing/purchase entry point on iOS.
+  // iOS owners manage their subscription on the website; Android keeps the link.
+  if (Platform.OS !== "ios") {
+    rows.push({ title: t("settings.billingTitle"), subtitle: t("settings.billingSubtitle"), icon: "credit-card", web: "/billing" });
+  }
+  return rows;
+}
+
+function helpRows(): Row[] {
   return [
-    { title: t("account.changePassword"), subtitle: t("settings.changePasswordSubtitle"), navigate: "ChangePassword" },
-    { title: t("phoneSignin.title"), subtitle: t("phoneSignin.listSubtitle"), navigate: "PhoneSignIn" },
-    { title: t("settings.whatsappTitle"), subtitle: t("settings.whatsappListSubtitle"), navigate: "WhatsAppSettings" },
-    { title: t("common.language"), subtitle: t("settings.languageSubtitle"), navigate: "Language" },
-    { title: t("settings.billingTitle"), subtitle: t("settings.billingSubtitle"), web: "/billing" }
+    { title: t("marketing.navTutorials"), subtitle: t("settings.tutorialsSubtitle"), icon: "play-circle", web: "/tutorials" },
+    { title: t("marketing.navHowItWorks"), subtitle: t("settings.howSubtitle"), icon: "help-circle", web: "/how-it-works" }
   ];
 }
 
@@ -41,31 +55,39 @@ export function SettingsScreen() {
     }
   }
 
-  const rows = getRows();
+  function renderGroup(rows: Row[]) {
+    return (
+      <View style={s.rowGroup}>
+        {rows.map((row, i) => (
+          <TouchableOpacity
+            key={row.title}
+            onPress={() => {
+              if (row.navigate) navigation.navigate(row.navigate);
+              else if (row.web) Linking.openURL(`${WEB_BASE}${row.web}`).catch(() => {});
+            }}
+            style={[s.row, i === 0 && s.rowFirst]}
+          >
+            <View style={s.rowIcon}>
+              <Feather name={row.icon} size={18} color={colors.leaf} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.rowTitle}>{row.title}</Text>
+              <Text style={s.rowSubtitle}>{row.subtitle}</Text>
+            </View>
+            <Feather name={row.navigate ? "chevron-right" : "external-link"} size={18} color={colors.inkMuted} />
+          </TouchableOpacity>
+        ))}
+      </View>
+    );
+  }
+
   return (
     <ScrollView contentContainerStyle={s.content}>
       <Text style={s.sectionLabel}>{t("settings.accountSection").toUpperCase()}</Text>
-      <View style={s.rowGroup}>
-        {rows.map((row, i) => {
-          const isFirst = i === 0;
-          return (
-            <TouchableOpacity
-              key={row.title}
-              onPress={() => {
-                if (row.navigate) navigation.navigate(row.navigate);
-                else if (row.web) Linking.openURL(`${WEB_BASE}${row.web}`).catch(() => {});
-              }}
-              style={[s.row, isFirst && s.rowFirst]}
-            >
-              <View style={{ flex: 1 }}>
-                <Text style={s.rowTitle}>{row.title}</Text>
-                <Text style={s.rowSubtitle}>{row.subtitle}</Text>
-              </View>
-              <Text style={s.rowArrow}>{row.navigate ? "›" : "↗"}</Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+      {renderGroup(accountRows())}
+
+      <Text style={s.sectionLabel}>{t("settings.helpSection").toUpperCase()}</Text>
+      {renderGroup(helpRows())}
 
       <AccountFooter role="owner" onSignOut={handleSignOut} />
     </ScrollView>
@@ -86,7 +108,7 @@ const s = StyleSheet.create({
     gap: spacing.md
   },
   rowFirst: { borderTopWidth: 0 },
+  rowIcon: { width: 34, height: 34, borderRadius: radius.sm, backgroundColor: colors.leafSoft, alignItems: "center", justifyContent: "center" },
   rowTitle: { color: colors.ink, fontWeight: font.black, fontSize: 15 },
-  rowSubtitle: { color: colors.inkSoft, fontWeight: font.bold, fontSize: 12, marginTop: 2 },
-  rowArrow: { color: colors.leaf, fontWeight: font.black, fontSize: 22 }
+  rowSubtitle: { color: colors.inkSoft, fontWeight: font.bold, fontSize: 12, marginTop: 2 }
 });

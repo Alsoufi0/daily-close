@@ -23,6 +23,7 @@ interface ReportRow {
   cashCounted: number;
   difference: number;
   expenses: number;
+  refunds: number;
   netProfit: number;
   status: string;
   notes: string;
@@ -46,6 +47,7 @@ const labels: Record<ReportLang, Record<string, string>> = {
     cashCounted: "Cash Counted",
     difference: "Short/Over",
     expenses: "Expenses",
+    refunds: "Refunds",
     netProfit: "Net Profit",
     status: "Status",
     notes: "Notes",
@@ -73,6 +75,7 @@ const labels: Record<ReportLang, Record<string, string>> = {
     cashCounted: "النقد المعدود",
     difference: "نقص/زيادة",
     expenses: "المصاريف",
+    refunds: "المبالغ المستردة",
     netProfit: "صافي الربح",
     status: "الحالة",
     notes: "ملاحظات",
@@ -100,6 +103,7 @@ const labels: Record<ReportLang, Record<string, string>> = {
     cashCounted: "Efectivo contado",
     difference: "Falta/Sobra",
     expenses: "Gastos",
+    refunds: "Reembolsos",
     netProfit: "Ganancia neta",
     status: "Estado",
     notes: "Notas",
@@ -127,6 +131,7 @@ const labels: Record<ReportLang, Record<string, string>> = {
     cashCounted: "गिना हुआ नकद",
     difference: "कम/ज्यादा",
     expenses: "खर्च",
+    refunds: "रिफंड",
     netProfit: "शुद्ध लाभ",
     status: "स्थिति",
     notes: "नोट्स",
@@ -271,6 +276,7 @@ export class ReportsService {
           cashCounted: Number(close.countedCash),
           difference: Number(close.difference),
           expenses: Number(close.expenses),
+          refunds: Number(close.refunds),
           netProfit: netProfit({
             totalSales: Number(close.totalSales),
             tax: Number(close.tax),
@@ -287,12 +293,17 @@ export class ReportsService {
   }
 
   buildCsv(rows: ReportRow[], lang: ReportLang): string {
+    // Only surface a Refunds column when at least one close actually had a
+    // refund, so the numbers read cleanly (Sales - Refunds - Expenses = Net)
+    // without an always-zero column cluttering the export.
+    const hasRefunds = rows.some((r) => Number(r.refunds) > 0);
     const headers: Array<[keyof ReportRow, string]> = [
       ["storeName", this.t(lang, "store")],
       ["employeeName", this.t(lang, "employee")],
       ["closeDate", this.t(lang, "closeDate")],
       ["closeTime", this.t(lang, "closeTime")],
       ["totalSales", this.t(lang, "totalSales")],
+      ...(hasRefunds ? ([["refunds", this.t(lang, "refunds")]] as Array<[keyof ReportRow, string]>) : []),
       ["cashExpected", this.t(lang, "cashExpected")],
       ["cashCounted", this.t(lang, "cashCounted")],
       ["difference", this.t(lang, "difference")],
@@ -307,14 +318,19 @@ export class ReportsService {
         .map(([key]) => {
           const value = row[key];
           const formatted =
-            typeof value === "number" && ["totalSales", "cashExpected", "cashCounted", "difference", "expenses", "netProfit"].includes(key)
+            typeof value === "number" && ["totalSales", "refunds", "cashExpected", "cashCounted", "difference", "expenses", "netProfit"].includes(key)
               ? this.money(value, lang)
               : value;
           return this.csvEscape(formatted);
         })
         .join(",")
     );
-    return `\uFEFF${headers.map(([, label]) => this.csvEscape(label)).join(",")}\n${body.join("\n")}\n`;
+    // No UTF-8 BOM: prepending \uFEFF before the first (always-quoted) header
+    // cell made spreadsheets render it as garbage (e.g. Google Sheets showed
+    // `\u00EE\u203A\u00BF"Store"` in A1, since the BOM sits before the opening quote and can't
+    // be stripped). The response is already served as charset=utf-8, so modern
+    // Excel/Sheets/Numbers read it correctly without the BOM.
+    return `${headers.map(([, label]) => this.csvEscape(label)).join(",")}\n${body.join("\n")}\n`;
   }
 
   async buildFilteredCsv(user: RequestUser, query: ReportQueryDto): Promise<string> {
@@ -409,14 +425,28 @@ export class ReportsService {
 
     // The store name is now a section heading, so the per-store table drops the
     // Store column and gains Net Profit.
-    const colHeaders = [
-      this.t(lang, "closeDate"),
-      this.t(lang, "totalSales"),
-      this.t(lang, "difference"),
-      this.t(lang, "netProfit"),
-      this.t(lang, "status")
-    ];
-    const widths = [115, 100, 100, 100, 90];
+    // Only add a Refunds column when a refund actually occurred (keeps the
+    // table readable; refunds are rare). Widths rebalance to fit the page.
+    const hasRefunds = rows.some((r) => Number(r.refunds) > 0);
+    const colHeaders = hasRefunds
+      ? [
+          this.t(lang, "closeDate"),
+          this.t(lang, "totalSales"),
+          this.t(lang, "refunds"),
+          this.t(lang, "expenses"),
+          this.t(lang, "difference"),
+          this.t(lang, "netProfit"),
+          this.t(lang, "status")
+        ]
+      : [
+          this.t(lang, "closeDate"),
+          this.t(lang, "totalSales"),
+          this.t(lang, "expenses"),
+          this.t(lang, "difference"),
+          this.t(lang, "netProfit"),
+          this.t(lang, "status")
+        ];
+    const widths = hasRefunds ? [80, 78, 70, 75, 75, 80, 60] : [95, 90, 85, 85, 90, 67];
     const xPositions = widths.reduce<number[]>((acc, width, index) => {
       acc.push(index === 0 ? margin : acc[index - 1] + widths[index - 1]);
       return acc;
@@ -448,13 +478,24 @@ export class ReportsService {
         }
         storeSales += row.totalSales;
         storeShort += Math.min(row.difference, 0);
-        const values = [
-          row.closeDate,
-          pdfMoney(row.totalSales),
-          pdfMoney(row.difference),
-          pdfMoney(row.netProfit),
-          row.status
-        ];
+        const values = hasRefunds
+          ? [
+              row.closeDate,
+              pdfMoney(row.totalSales),
+              pdfMoney(row.refunds),
+              pdfMoney(row.expenses),
+              pdfMoney(row.difference),
+              pdfMoney(row.netProfit),
+              row.status
+            ]
+          : [
+              row.closeDate,
+              pdfMoney(row.totalSales),
+              pdfMoney(row.expenses),
+              pdfMoney(row.difference),
+              pdfMoney(row.netProfit),
+              row.status
+            ];
         values.forEach((value, i) => page.drawText(this.pdfText(value), { x: xPositions[i] + 4, y, size: 8, font: regular }));
         y -= 16;
         if (row.notes) {
@@ -634,8 +675,13 @@ export class ReportsService {
         ? this.localDate(tz, dailyClose.date)
         : this.localDate(tz, row.createdAt);
       const ext = this.guessExt(row.imageUrl, row.storagePath);
+      // Two folders in the zip — closes/ and expenses/ — so the owner can tell
+      // sales receipts from photographed expense documents at a glance.
+      const isExpense = receiptKind(row) === "expense";
+      const folder = isExpense ? "expenses" : "closes";
+      const prefix = isExpense ? "expense" : "receipt";
       return {
-        filename: `receipt-${this.sanitizeFilenameSegment(store.storeName)}-${dateStr}-${row.id}.${ext}`,
+        filename: `${folder}/${prefix}-${this.sanitizeFilenameSegment(store.storeName)}-${dateStr}-${row.id}.${ext}`,
         storagePath: row.storagePath,
         imageUrl: row.imageUrl
       };
@@ -722,6 +768,7 @@ export class ReportsService {
         storeName: store.storeName,
         closeDate,
         employeeName,
+        kind: receiptKind(row),
         parsedJson: row.parsedJson,
         dailyClose: dc
           ? {
@@ -730,6 +777,14 @@ export class ReportsService {
               cashSales: Number(dc.cashSales),
               cardSales: Number(dc.cardSales),
               difference: Number(dc.difference),
+              expenses: Number(dc.expenses),
+              refunds: Number(dc.refunds),
+              netProfit: netProfit({
+                totalSales: Number(dc.totalSales),
+                tax: Number(dc.tax),
+                refunds: Number(dc.refunds),
+                expenses: Number(dc.expenses)
+              }),
               status: dc.status
             }
           : null,
@@ -737,4 +792,14 @@ export class ReportsService {
       };
     });
   }
+}
+
+// Whether an UploadedReport is a close/sales receipt or a photographed expense
+// document. Expense uploads are tagged with parserType "EXPENSE" (and a
+// parsedJson.kind marker); everything else — including legacy rows — is a close.
+export function receiptKind(row: { parserType?: string | null; parsedJson?: unknown }): "close" | "expense" {
+  if (row.parserType === "EXPENSE") return "expense";
+  const pj = row.parsedJson;
+  if (pj && typeof pj === "object" && (pj as { kind?: string }).kind === "expense") return "expense";
+  return "close";
 }

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Headers, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, ForbiddenException, Get, Headers, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { EditDailyCloseDto } from "./dto/edit-daily-close.dto";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
@@ -39,6 +39,35 @@ export class DailyCloseController {
   @UseGuards(SupabaseAuthGuard, SubscriptionGuard)
   uploadReport(@Body() input: UploadReportDto, @CurrentUser() user: RequestUser) {
     return this.dailyCloseService.uploadReport(input, user);
+  }
+
+  // Up-front guard for the close flow: tells the client whether this store is
+  // already closed for the chosen date, BEFORE the employee does the whole
+  // close only to be rejected at submit. Read-only — no SubscriptionGuard.
+  @Get("exists")
+  @UseGuards(SupabaseAuthGuard)
+  closeExists(
+    @Query("storeId") storeId: string,
+    @Query("date") date: string,
+    @CurrentUser() user: RequestUser
+  ) {
+    return this.dailyCloseService.closeExistsForDate(user, storeId, date);
+  }
+
+  // Cron: purge abandoned receipt uploads (never attached to a completed close)
+  // older than the retention window. Guarded by x-cron-secret like the other
+  // crons; run daily from Render. Backs the privacy policy's 7-day promise.
+  @Post("cron/purge-receipts")
+  purgeReceipts(@Headers("x-cron-secret") provided: string | undefined) {
+    const expected = process.env.CRON_SECRET;
+    if (!expected) {
+      if (process.env.NODE_ENV === "production") {
+        throw new ForbiddenException("CRON_SECRET is not configured.");
+      }
+    } else if (provided !== expected) {
+      throw new ForbiddenException("Bad cron secret.");
+    }
+    return this.dailyCloseService.purgeAbandonedReceipts(7);
   }
 
   @Post("finish")
