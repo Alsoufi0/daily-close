@@ -26,7 +26,7 @@ const d = RUN ? describe : describe.skip;
 d("referrals + commissions E2E (real DB)", () => {
   const prisma = new PrismaService();
   const settings = new AppSettingsService(prisma);
-  const partners = new PartnersService(prisma);
+  const partners = new PartnersService(prisma, { notifyScan: async () => {} } as any);
   const commissions = new CommissionsService(prisma, settings);
   const webhook = new SubscriptionsController(
     { syncFromStripe: async () => ({}) } as any,

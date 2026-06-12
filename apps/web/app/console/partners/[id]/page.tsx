@@ -6,7 +6,26 @@ import Link from "next/link";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { RefQr } from "../../../../components/ref-qr";
 import { useSession } from "../../../../lib/use-session";
-import { ApiError, PartnerFunnel, getPartnerFunnel, updatePartner } from "../../../../lib/api-client";
+import {
+  ApiError,
+  PartnerFunnel,
+  ReferredAccount,
+  getPartnerFunnel,
+  getPartnerReferrals,
+  updatePartner
+} from "../../../../lib/api-client";
+
+function StatusPill({ status, inTrial }: { status: string; inTrial: boolean }) {
+  const label = inTrial ? "In trial" : status.charAt(0) + status.slice(1).toLowerCase();
+  const cls = inTrial
+    ? "bg-amber-100 text-amber-700"
+    : status === "ACTIVE"
+      ? "bg-leaf/10 text-leaf"
+      : status === "PAST_DUE"
+        ? "bg-orange-100 text-orange-700"
+        : "bg-ink/10 text-ink/55";
+  return <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${cls}`}>{label}</span>;
+}
 
 function refUrl(refCode: string): string {
   const origin = typeof window !== "undefined" ? window.location.origin : "";
@@ -27,6 +46,7 @@ function FunnelInner() {
   const id = String(params?.id || "");
   const session = useSession();
   const [data, setData] = useState<PartnerFunnel | null>(null);
+  const [accounts, setAccounts] = useState<ReferredAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [ratePct, setRatePct] = useState("");
   const [savingRate, setSavingRate] = useState(false);
@@ -35,8 +55,12 @@ function FunnelInner() {
   async function load() {
     if (!session.token) return;
     try {
-      const d = await getPartnerFunnel(session.token, id);
+      const [d, accts] = await Promise.all([
+        getPartnerFunnel(session.token, id),
+        getPartnerReferrals(session.token, id)
+      ]);
       setData(d);
+      setAccounts(accts);
       setRatePct(d.partner.commissionRate === null ? "" : String(d.partner.commissionRate * 100));
     } catch {
       setData(null);
@@ -137,6 +161,60 @@ function FunnelInner() {
           {msg && <span className="text-sm text-ink/60">{msg}</span>}
         </div>
       </form>
+
+      {/* Referred accounts roster — who actually subscribed & stayed */}
+      <div>
+        <h2 className="mb-2 text-sm font-black uppercase tracking-wide text-ink/55">
+          Referred accounts
+        </h2>
+        <div className="overflow-x-auto rounded-xl border border-ink/10 bg-white shadow-sm">
+          <table className="w-full text-left text-sm">
+            <thead className="border-b border-ink/10 text-xs uppercase tracking-wide text-ink/50">
+              <tr>
+                <th className="px-4 py-3">Account</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">Payments</th>
+                <th className="px-4 py-3">Commission</th>
+                <th className="px-4 py-3">Joined</th>
+              </tr>
+            </thead>
+            <tbody>
+              {accounts.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-8 text-center text-ink/50">
+                    No one has signed up through this partner yet.
+                  </td>
+                </tr>
+              )}
+              {accounts.map((a) => (
+                <tr key={a.ownerId} className="border-b border-ink/5 last:border-0">
+                  <td className="px-4 py-3">
+                    <div className="font-bold text-ink">
+                      {a.stores[0] || a.name}
+                    </div>
+                    {a.email && <div className="text-xs text-ink/50">{a.email}</div>}
+                  </td>
+                  <td className="px-4 py-3">
+                    <StatusPill status={a.status} inTrial={a.inTrial} />
+                  </td>
+                  <td className="px-4 py-3 text-ink/80">
+                    {a.payments}
+                    <span className="text-ink/40"> paid</span>
+                  </td>
+                  <td className="px-4 py-3 font-bold text-ink">${a.totalCommission.toFixed(2)}</td>
+                  <td className="px-4 py-3 text-ink/60">
+                    {a.joinedAt ? new Date(a.joinedAt).toLocaleDateString() : "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="mt-2 text-xs text-ink/45">
+          "Payments" = real monthly invoices paid (retention). "Active" means they're subscribed and
+          still paying right now; "In trial" = signed up, not yet billed.
+        </p>
+      </div>
     </div>
   );
 }

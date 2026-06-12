@@ -4,6 +4,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { CreatePartnerDto } from "./dto/create-partner.dto";
 import { UpdatePartnerDto } from "./dto/update-partner.dto";
 import { generateRefCode } from "./ref-code";
+import { ScanAlertService } from "./scan-alert.service";
 
 /** Current billing-period label in UTC, e.g. "2026-06". */
 export function currentPeriod(now: Date = new Date()): string {
@@ -14,7 +15,10 @@ export function currentPeriod(now: Date = new Date()): string {
 
 @Injectable()
 export class PartnersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly scanAlerts: ScanAlertService
+  ) {}
 
   /** All partners, newest first, each with rollup counts for the admin list. */
   async list() {
@@ -102,11 +106,70 @@ export class PartnersService {
   async recordScan(refCode: string): Promise<{ valid: boolean }> {
     const partnerId = await this.activePartnerIdByRefCode(refCode);
     if (!partnerId) return { valid: false };
-    await this.prisma.partner.update({
+    const updated = await this.prisma.partner.update({
       where: { id: partnerId },
-      data: { scanCount: { increment: 1 } }
+      data: { scanCount: { increment: 1 } },
+      select: { name: true, refCode: true, scanCount: true }
+    });
+    // Fire-and-forget the scan alert so it never delays the redirect. The
+    // service swallows its own errors.
+    void this.scanAlerts.notifyScan({
+      partnerName: updated.name,
+      refCode: updated.refCode,
+      scanCount: updated.scanCount
     });
     return { valid: true };
+  }
+
+  /**
+   * Roster of the actual accounts a partner referred — answers "who really
+   * subscribed and stayed", not just who scanned. Each row carries the live
+   * subscription status plus how many real payments they've made (retention)
+   * and the commission earned from them.
+   */
+  async referredAccounts(partnerId: string) {
+    await this.get(partnerId); // 404 if missing
+    const owners = await this.prisma.owner.findMany({
+      where: { referredByPartnerId: partnerId },
+      select: {
+        id: true,
+        subscriptionStatus: true,
+        trialEndsAt: true,
+        user: { select: { name: true, email: true, createdAt: true } },
+        stores: { where: { deletedAt: null }, select: { storeName: true } }
+      }
+    });
+
+    // Per-account real-payment rollup (COMMISSION rows = actual paid invoices).
+    const grouped = await this.prisma.commission.groupBy({
+      by: ["ownerId"],
+      where: { partnerId, kind: "COMMISSION", ownerId: { not: null } },
+      _count: { _all: true },
+      _sum: { amount: true },
+      _max: { period: true }
+    });
+    const byOwner = new Map(grouped.map((g) => [g.ownerId, g]));
+
+    const now = Date.now();
+    return owners
+      .map((o) => {
+        const g = byOwner.get(o.id);
+        const inTrial =
+          o.subscriptionStatus === "TRIALING" && (!o.trialEndsAt || o.trialEndsAt.getTime() > now);
+        return {
+          ownerId: o.id,
+          name: o.user?.name ?? "—",
+          email: o.user?.email ?? null,
+          joinedAt: o.user?.createdAt ?? null,
+          stores: o.stores.map((s) => s.storeName),
+          status: o.subscriptionStatus,
+          inTrial,
+          payments: g?._count._all ?? 0,
+          totalCommission: Number(g?._sum.amount ?? 0),
+          lastPaidPeriod: g?._max.period ?? null
+        };
+      })
+      .sort((a, b) => (b.joinedAt?.getTime() ?? 0) - (a.joinedAt?.getTime() ?? 0));
   }
 
   /**

@@ -719,6 +719,23 @@ export async function getPartnerFunnel(token: string, id: string): Promise<Partn
   return apiFetch<PartnerFunnel>(`/partners/${id}/funnel`, token);
 }
 
+export interface ReferredAccount {
+  ownerId: string;
+  name: string;
+  email: string | null;
+  joinedAt: string | null;
+  stores: string[];
+  status: "TRIALING" | "ACTIVE" | "PAST_DUE" | "CANCELED";
+  inTrial: boolean;
+  payments: number;
+  totalCommission: number;
+  lastPaidPeriod: string | null;
+}
+
+export async function getPartnerReferrals(token: string, id: string): Promise<ReferredAccount[]> {
+  return apiFetch<ReferredAccount[]>(`/partners/${id}/referrals`, token);
+}
+
 export async function listCommissions(
   token: string,
   filter: { status?: string; period?: string; partnerId?: string } = {}

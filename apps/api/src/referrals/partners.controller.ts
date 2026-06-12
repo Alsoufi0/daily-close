@@ -33,6 +33,11 @@ export class PartnersController {
     return this.partners.funnel(id);
   }
 
+  @Get(":id/referrals")
+  referrals(@Param("id") id: string) {
+    return this.partners.referredAccounts(id);
+  }
+
   @Patch(":id")
   update(@Param("id") id: string, @Body() dto: UpdatePartnerDto) {
     return this.partners.update(id, dto);
