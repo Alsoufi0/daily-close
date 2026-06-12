@@ -18,7 +18,13 @@ export async function GET(
   const existing = request.cookies.get(REF_COOKIE)?.value;
   const effectiveRef = existing || code;
 
-  const signupUrl = new URL("/signup", request.url);
+  // Build the redirect from the Host the client actually connected to, not
+  // request.url — behind a dev bind host (0.0.0.0) or a proxy, request.url's
+  // host can differ from what the visitor's browser can resolve.
+  const host = request.headers.get("host");
+  const proto = request.headers.get("x-forwarded-proto") || "http";
+  const base = host ? `${proto}://${host}` : request.url;
+  const signupUrl = new URL("/signup", base);
   if (effectiveRef) signupUrl.searchParams.set("ref", effectiveRef);
   const response = NextResponse.redirect(signupUrl);
 

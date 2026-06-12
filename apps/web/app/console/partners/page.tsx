@@ -2,8 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Loader2, Plus, Users } from "lucide-react";
-import { RequireAuth } from "../../../components/require-auth";
+import { Loader2, Plus, Users, X } from "lucide-react";
 import { RefQr } from "../../../components/ref-qr";
 import { useSession } from "../../../lib/use-session";
 import {
@@ -126,8 +125,16 @@ function PartnersInner() {
       </div>
 
       {justCreated && (
-        <div className="rounded-xl border border-leaf/30 bg-leaf/5 p-4">
-          <p className="mb-3 text-sm font-bold text-ink">
+        <div className="relative rounded-xl border border-leaf/30 bg-leaf/5 p-4">
+          <button
+            type="button"
+            onClick={() => setJustCreated(null)}
+            aria-label="Dismiss"
+            className="focus-ring absolute right-2 top-2 rounded-lg p-1.5 text-ink/40 hover:bg-white hover:text-ink"
+          >
+            <X size={16} aria-hidden />
+          </button>
+          <p className="mb-3 pr-8 text-sm font-bold text-ink">
             Partner <span className="text-leaf">{justCreated.name}</span> created — code{" "}
             <code className="rounded bg-white px-1.5 py-0.5 font-mono">{justCreated.refCode}</code>.
             Share this QR / link:
@@ -180,13 +187,29 @@ function PartnersInner() {
               />
             </label>
           </div>
-          <button
-            type="submit"
-            disabled={saving}
-            className="focus-ring inline-flex items-center gap-1.5 rounded-lg bg-leaf px-4 py-2 text-sm font-black text-white hover:bg-leaf/90 disabled:opacity-60"
-          >
-            {saving && <Loader2 className="animate-spin" size={15} aria-hidden />} Create partner
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="submit"
+              disabled={saving}
+              className="focus-ring inline-flex items-center gap-1.5 rounded-lg bg-leaf px-4 py-2 text-sm font-black text-white hover:bg-leaf/90 disabled:opacity-60"
+            >
+              {saving && <Loader2 className="animate-spin" size={15} aria-hidden />} Create partner
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowCreate(false);
+                setError(null);
+                setName("");
+                setContact("");
+                setPayout("");
+                setRatePct("");
+              }}
+              className="focus-ring rounded-lg border border-ink/15 px-4 py-2 text-sm font-bold text-ink/70 hover:bg-smoke"
+            >
+              Cancel
+            </button>
+          </div>
         </form>
       )}
 
@@ -214,7 +237,7 @@ function PartnersInner() {
             {rows.map((p) => (
               <tr key={p.id} className="border-b border-ink/5 last:border-0">
                 <td className="px-4 py-3 font-bold text-ink">
-                  <Link href={`/admin/partners/${p.id}`} className="hover:text-leaf">
+                  <Link href={`/console/partners/${p.id}`} className="hover:text-leaf">
                     {p.name}
                   </Link>
                   {p.contact && <div className="text-xs font-normal text-ink/50">{p.contact}</div>}
@@ -258,10 +281,5 @@ function PartnersInner() {
   );
 }
 
-export default function PartnersAdminPage() {
-  return (
-    <RequireAuth allowedRoles={["SUPER_ADMIN"]}>
-      <PartnersInner />
-    </RequireAuth>
-  );
-}
+// Auth + console chrome are provided by app/console/layout.tsx.
+export default PartnersInner;

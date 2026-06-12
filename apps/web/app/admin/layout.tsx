@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CreditCard, Handshake, Percent, Settings, Store, Users, Wallet } from "lucide-react";
+import { CreditCard, Settings, ShieldCheck, Store, Users } from "lucide-react";
 import { clsx } from "clsx";
 import { RequireAuth } from "../../components/require-auth";
 import { useSession } from "../../lib/use-session";
@@ -23,10 +23,9 @@ const items: NavItem[] = [
   { href: "/admin/employees", labelKey: "admin.employees", icon: Users },
   // Billing is account-owner-only — hidden from per-store managers.
   { href: "/billing", labelKey: "nav.billing", icon: CreditCard, accountOnly: true },
-  // Platform-staff (SUPER_ADMIN) only — partner referral program.
-  { href: "/admin/partners", label: "Partners", icon: Handshake, superAdminOnly: true },
-  { href: "/admin/payouts", label: "Payouts", icon: Wallet, superAdminOnly: true },
-  { href: "/admin/referral-settings", label: "Referral rate", icon: Percent, superAdminOnly: true }
+  // Platform-staff (SUPER_ADMIN) only — opens the separate management console
+  // (partners, payouts, referral settings) which has its own distinct chrome.
+  { href: "/console", label: "Admin Console", icon: ShieldCheck, superAdminOnly: true }
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

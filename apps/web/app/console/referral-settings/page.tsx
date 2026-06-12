@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { Loader2, Settings } from "lucide-react";
-import { RequireAuth } from "../../../components/require-auth";
 import { useSession } from "../../../lib/use-session";
 import { ApiError, getReferralSettings, updateReferralSettings } from "../../../lib/api-client";
 
@@ -88,10 +87,5 @@ function SettingsInner() {
   );
 }
 
-export default function ReferralSettingsPage() {
-  return (
-    <RequireAuth allowedRoles={["SUPER_ADMIN"]}>
-      <SettingsInner />
-    </RequireAuth>
-  );
-}
+// Auth + console chrome are provided by app/console/layout.tsx.
+export default SettingsInner;

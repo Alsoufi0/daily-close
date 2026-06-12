@@ -17,9 +17,18 @@ const NAV = [
   { href: "/owner/receipts", labelKey: "nav.receipts", adminOnly: true },
   { href: "/close", labelKey: "nav.close" },
   { href: "/admin", labelKey: "nav.admin", adminOnly: true },
+  // Platform staff only — the management console (referral program).
+  { href: "/console", label: "Console", superAdminOnly: true },
   // Settings hub groups phone sign-in, WhatsApp, billing, and password.
   { href: "/account", labelKey: "nav.settings" }
-] as Array<{ href: string; labelKey: string; adminOnly?: boolean; accountOnly?: boolean }>;
+] as Array<{
+  href: string;
+  labelKey?: string;
+  label?: string;
+  adminOnly?: boolean;
+  accountOnly?: boolean;
+  superAdminOnly?: boolean;
+}>;
 
 // Public marketing nav shown to signed-out visitors.
 const MARKETING_NAV = [
@@ -66,7 +75,9 @@ export function TopBar() {
     pathname.startsWith("/account");
   const adminLike = isAdminLike(session.profile);
   const accountOwner = isAccountOwner(session.profile);
+  const superAdmin = session.profile?.role === "SUPER_ADMIN";
   const navItems = NAV.filter((item) => {
+    if (item.superAdminOnly) return superAdmin;
     if (item.accountOnly) return accountOwner;
     if (item.adminOnly) return adminLike;
     return true;
@@ -98,7 +109,7 @@ export function TopBar() {
                       active ? "bg-leaf/10 text-leaf" : "text-ink/65 hover:bg-smoke hover:text-ink"
                     )}
                   >
-                    {t(item.labelKey)}
+                    {item.label ?? t(item.labelKey ?? "")}
                   </Link>
                 );
               })}
@@ -174,7 +185,7 @@ export function TopBar() {
                         active ? "bg-leaf/10 text-leaf" : "text-ink/75 hover:bg-smoke"
                       )}
                     >
-                      {t(item.labelKey)}
+                      {item.label ?? t(item.labelKey ?? "")}
                     </Link>
                   );
                 })}

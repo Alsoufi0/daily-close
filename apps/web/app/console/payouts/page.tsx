@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { CreditCard, Loader2, Plus } from "lucide-react";
-import { RequireAuth } from "../../../components/require-auth";
 import { useSession } from "../../../lib/use-session";
 import {
   ApiError,
@@ -199,12 +198,27 @@ function PayoutsInner() {
               />
             </label>
           </div>
-          <button
-            type="submit"
-            className="focus-ring rounded-lg bg-leaf px-4 py-2 text-sm font-black text-white hover:bg-leaf/90"
-          >
-            Add to ledger
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="submit"
+              className="focus-ring rounded-lg bg-leaf px-4 py-2 text-sm font-black text-white hover:bg-leaf/90"
+            >
+              Add to ledger
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowAdj(false);
+                setAdjMsg(null);
+                setAdjAmount("");
+                setAdjNote("");
+                setAdjPartner("");
+              }}
+              className="focus-ring rounded-lg border border-ink/15 px-4 py-2 text-sm font-bold text-ink/70 hover:bg-smoke"
+            >
+              Cancel
+            </button>
+          </div>
         </form>
       )}
 
@@ -301,10 +315,5 @@ function PayoutsInner() {
   );
 }
 
-export default function PayoutsAdminPage() {
-  return (
-    <RequireAuth allowedRoles={["SUPER_ADMIN"]}>
-      <PayoutsInner />
-    </RequireAuth>
-  );
-}
+// Auth + console chrome are provided by app/console/layout.tsx.
+export default PayoutsInner;

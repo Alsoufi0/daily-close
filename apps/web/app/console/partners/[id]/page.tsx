@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Loader2 } from "lucide-react";
-import { RequireAuth } from "../../../../components/require-auth";
 import { RefQr } from "../../../../components/ref-qr";
 import { useSession } from "../../../../lib/use-session";
 import { ApiError, PartnerFunnel, getPartnerFunnel, updatePartner } from "../../../../lib/api-client";
@@ -86,7 +85,7 @@ function FunnelInner() {
   const { partner, funnel } = data;
   return (
     <div className="space-y-6">
-      <Link href="/admin/partners" className="inline-flex items-center gap-1 text-sm font-bold text-ink/60 hover:text-leaf">
+      <Link href="/console/partners" className="inline-flex items-center gap-1 text-sm font-bold text-ink/60 hover:text-leaf">
         <ArrowLeft size={15} aria-hidden /> All partners
       </Link>
 
@@ -142,10 +141,5 @@ function FunnelInner() {
   );
 }
 
-export default function PartnerFunnelPage() {
-  return (
-    <RequireAuth allowedRoles={["SUPER_ADMIN"]}>
-      <FunnelInner />
-    </RequireAuth>
-  );
-}
+// Auth + console chrome are provided by app/console/layout.tsx.
+export default FunnelInner;
