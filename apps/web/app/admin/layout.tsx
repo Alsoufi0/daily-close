@@ -25,7 +25,7 @@ const items: NavItem[] = [
   { href: "/billing", labelKey: "nav.billing", icon: CreditCard, accountOnly: true },
   // Platform-staff (SUPER_ADMIN) only — opens the separate management console
   // (partners, payouts, referral settings) which has its own distinct chrome.
-  { href: "/console", label: "Admin Console", icon: ShieldCheck, superAdminOnly: true }
+  { href: "/console/partners", label: "Admin Console", icon: ShieldCheck, superAdminOnly: true }
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

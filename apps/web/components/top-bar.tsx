@@ -18,7 +18,7 @@ const NAV = [
   { href: "/close", labelKey: "nav.close" },
   { href: "/admin", labelKey: "nav.admin", adminOnly: true },
   // Platform staff only — the management console (referral program).
-  { href: "/console", label: "Console", superAdminOnly: true },
+  { href: "/console/partners", label: "Console", superAdminOnly: true },
   // Settings hub groups phone sign-in, WhatsApp, billing, and password.
   { href: "/account", labelKey: "nav.settings" }
 ] as Array<{
