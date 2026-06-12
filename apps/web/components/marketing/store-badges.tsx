@@ -20,9 +20,14 @@ export function StoreBadges({
   const live = Boolean(appStoreHref || playHref);
   return (
     <div className={align === "center" ? "flex flex-col items-center" : "flex flex-col items-start"}>
-      <p className="mb-2.5 text-xs font-black uppercase tracking-wide text-ink/45">
-        {t("marketing.appsComingSoon")}
-      </p>
+      {/* Only show the "coming soon" eyebrow before anything is live. Once a
+          store link is passed, the badges speak for themselves and any not-yet
+          store gets its own small "Soon" tag instead. */}
+      {!live && (
+        <p className="mb-2.5 text-xs font-black uppercase tracking-wide text-ink/45">
+          {t("marketing.appsComingSoon")}
+        </p>
+      )}
       <div className="flex flex-wrap gap-3">
         <Badge
           href={appStoreHref}
@@ -81,8 +86,13 @@ function Badge({
     );
   }
   return (
-    <span className="cursor-default opacity-90" aria-disabled>
+    <span className="relative cursor-default opacity-90" aria-disabled>
       {inner}
+      {live && (
+        <span className="absolute -right-2 -top-2 rounded-full bg-leaf px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-white shadow-sm">
+          Soon
+        </span>
+      )}
     </span>
   );
 }

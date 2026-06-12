@@ -170,7 +170,7 @@ export function ProductionLogin() {
             ))}
           </ul>
           <div className="mt-10">
-            <StoreBadges />
+            <StoreBadges appStoreHref="https://apps.apple.com/app/id6777175613" />
           </div>
         </div>
 
