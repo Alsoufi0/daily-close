@@ -2,18 +2,30 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CreditCard, Settings, Store, Users } from "lucide-react";
+import { CreditCard, Settings, ShieldCheck, Store, Users } from "lucide-react";
 import { clsx } from "clsx";
 import { RequireAuth } from "../../components/require-auth";
 import { useSession } from "../../lib/use-session";
 import { isAccountOwner } from "../../lib/session-roles";
 import { useLanguage } from "../../components/language-provider";
 
-const items = [
+interface NavItem {
+  href: string;
+  icon: typeof Store;
+  labelKey?: string;
+  label?: string;
+  accountOnly?: boolean;
+  superAdminOnly?: boolean;
+}
+
+const items: NavItem[] = [
   { href: "/admin/stores", labelKey: "admin.stores", icon: Store },
   { href: "/admin/employees", labelKey: "admin.employees", icon: Users },
   // Billing is account-owner-only — hidden from per-store managers.
-  { href: "/billing", labelKey: "nav.billing", icon: CreditCard, accountOnly: true }
+  { href: "/billing", labelKey: "nav.billing", icon: CreditCard, accountOnly: true },
+  // Platform-staff (SUPER_ADMIN) only — opens the separate management console
+  // (partners, payouts, referral settings) which has its own distinct chrome.
+  { href: "/console", label: "Admin Console", icon: ShieldCheck, superAdminOnly: true }
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -21,7 +33,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const session = useSession();
   const { t } = useLanguage();
   const accountOwner = isAccountOwner(session.profile);
-  const visibleItems = items.filter((item) => !item.accountOnly || accountOwner);
+  const superAdmin = session.profile?.role === "SUPER_ADMIN";
+  const visibleItems = items.filter(
+    (item) => (!item.accountOnly || accountOwner) && (!item.superAdminOnly || superAdmin)
+  );
   return (
     <RequireAuth allowedRoles={["STORE_OWNER", "SUPER_ADMIN"]} allowManagers>
     <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
@@ -31,7 +46,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
         <aside>
           <nav className="flex flex-row gap-1 overflow-x-auto rounded-xl border border-ink/10 bg-white p-2 shadow-sm lg:flex-col">
-            {visibleItems.map(({ href, labelKey, icon: Icon }) => {
+            {visibleItems.map(({ href, labelKey, label, icon: Icon }) => {
               const active = pathname.startsWith(href);
               return (
                 <Link
@@ -43,7 +58,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   )}
                 >
                   <Icon size={16} aria-hidden />
-                  {t(labelKey)}
+                  {label ?? t(labelKey ?? "")}
                 </Link>
               );
             })}

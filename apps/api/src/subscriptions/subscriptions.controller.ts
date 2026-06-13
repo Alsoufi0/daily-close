@@ -16,6 +16,7 @@ import type { Request } from "express";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { RequestUser } from "../auth/request-user";
 import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
+import { CommissionsService } from "../referrals/commissions.service";
 import { StripeSignatureError, verifyStripeSignature } from "./stripe-signature";
 import { SubscriptionsService } from "./subscriptions.service";
 
@@ -24,7 +25,10 @@ import { SubscriptionsService } from "./subscriptions.service";
 export class SubscriptionsController {
   private readonly logger = new Logger(SubscriptionsController.name);
 
-  constructor(private readonly subscriptions: SubscriptionsService) {}
+  constructor(
+    private readonly subscriptions: SubscriptionsService,
+    private readonly commissions: CommissionsService
+  ) {}
 
   @Get("me")
   @ApiBearerAuth()
@@ -123,6 +127,24 @@ export class SubscriptionsController {
 
     const type: string | undefined = payload?.type;
     const object = payload?.data?.object;
+    if (!type || !object) {
+      throw new BadRequestException("Unsupported webhook payload.");
+    }
+
+    // ── Commission events (driven by REAL money, not subscription status) ──
+    // A successful invoice payment earns the referring partner a commission; a
+    // refund or chargeback reverses the matching row. Handled and acknowledged
+    // independently of the subscription-status sync below.
+    if (type === "invoice.payment_succeeded" || type === "invoice.paid") {
+      await this.handleInvoicePaid(object);
+      return { received: true };
+    }
+    if (type === "charge.refunded" || type === "charge.dispute.created") {
+      await this.handleReversal(type, object);
+      return { received: true };
+    }
+
+    // ── Subscription / checkout status sync (existing behaviour) ──
     const checkoutCompleted = type === "checkout.session.completed";
     const customerId: string | undefined = object?.customer;
     const subscriptionId: string | undefined = checkoutCompleted ? object?.subscription : object?.id;
@@ -133,8 +155,10 @@ export class SubscriptionsController {
       ? "active"
       : object?.status;
 
-    if (!type || !customerId || !status) {
-      throw new BadRequestException("Unsupported webhook payload.");
+    // Not a status-bearing event we sync (and not a commission event handled
+    // above) — acknowledge so Stripe stops retrying rather than 400-looping.
+    if (!customerId || !status) {
+      return { received: true };
     }
 
     const mapped =
@@ -157,5 +181,73 @@ export class SubscriptionsController {
       // Owner not yet linked - swallow.
     }
     return { received: true };
+  }
+
+  // Mint a commission from a paid invoice. Idempotent + best-effort: a failure
+  // here must never 500 the webhook (Stripe would retry forever), so we log and
+  // move on. CommissionsService skips $0 (trial) invoices and unreferred owners.
+  private async handleInvoicePaid(invoice: any): Promise<void> {
+    const stripeInvoiceId: string | undefined = invoice?.id;
+    const stripeCustomerId: string | undefined = invoice?.customer;
+    if (!stripeInvoiceId || !stripeCustomerId) return;
+    const amountPaidCents = Number(invoice?.amount_paid ?? 0);
+    const periodStartUnix: number | null =
+      invoice?.period_start ?? invoice?.lines?.data?.[0]?.period?.start ?? null;
+    try {
+      const result = await this.commissions.recordInvoicePayment({
+        stripeInvoiceId,
+        stripeCustomerId,
+        amountPaidCents,
+        currency: invoice?.currency,
+        periodStartUnix
+      });
+      if (!result.created) {
+        this.logger.log(`Invoice ${stripeInvoiceId}: no commission (${result.reason}).`);
+      }
+    } catch (err) {
+      this.logger.warn(
+        `Commission record failed for invoice ${stripeInvoiceId}: ${(err as Error)?.message || err}`
+      );
+    }
+  }
+
+  // Reverse the commission tied to a refunded/disputed charge. A refund event
+  // carries the invoice id directly; a dispute carries only the charge, so we
+  // resolve the invoice from Stripe when needed.
+  private async handleReversal(type: string, object: any): Promise<void> {
+    let invoiceId: string | undefined =
+      typeof object?.invoice === "string" ? object.invoice : undefined;
+    if (!invoiceId && type === "charge.dispute.created") {
+      invoiceId = await this.fetchChargeInvoiceId(object?.charge);
+    }
+    if (!invoiceId) {
+      this.logger.log(`Reversal event ${type} had no resolvable invoice; ignoring.`);
+      return;
+    }
+    try {
+      const { reversed } = await this.commissions.reverseByInvoice(invoiceId);
+      this.logger.log(
+        `Reversal ${type} for invoice ${invoiceId}: ${reversed ? "reversed" : "no matching commission"}.`
+      );
+    } catch (err) {
+      this.logger.warn(
+        `Reversal failed for invoice ${invoiceId}: ${(err as Error)?.message || err}`
+      );
+    }
+  }
+
+  private async fetchChargeInvoiceId(chargeId?: string): Promise<string | undefined> {
+    const secret = process.env.STRIPE_SECRET_KEY;
+    if (!secret || !chargeId) return undefined;
+    try {
+      const res = await fetch(`https://api.stripe.com/v1/charges/${chargeId}`, {
+        headers: { Authorization: `Bearer ${secret}` }
+      });
+      if (!res.ok) return undefined;
+      const data = (await res.json()) as { invoice?: string | null };
+      return typeof data.invoice === "string" ? data.invoice : undefined;
+    } catch {
+      return undefined;
+    }
   }
 }

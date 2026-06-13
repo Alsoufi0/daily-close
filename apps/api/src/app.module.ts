@@ -15,6 +15,7 @@ import { StoresModule } from "./stores/stores.module";
 import { HealthModule } from "./health/health.module";
 import { SubscriptionsModule } from "./subscriptions/subscriptions.module";
 import { EmployeesModule } from "./employees/employees.module";
+import { ReferralsModule } from "./referrals/referrals.module";
 
 @Module({
   imports: [
@@ -35,7 +36,8 @@ import { EmployeesModule } from "./employees/employees.module";
     StoresModule,
     HealthModule,
     SubscriptionsModule,
-    EmployeesModule
+    EmployeesModule,
+    ReferralsModule
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }]
 })
