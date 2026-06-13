@@ -2,13 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Loader2, Plus, Users, X } from "lucide-react";
+import { Loader2, Plus, Trash2, Users, X } from "lucide-react";
 import { RefQr } from "../../../components/ref-qr";
 import { useSession } from "../../../lib/use-session";
 import {
   ApiError,
   PartnerRecord,
   createPartner,
+  deletePartner,
   listPartners,
   updatePartner
 } from "../../../lib/api-client";
@@ -93,6 +94,20 @@ function PartnersInner() {
       await refresh();
     } catch (err) {
       window.alert(err instanceof ApiError ? err.message : "Could not update partner.");
+    }
+  }
+
+  async function removePartner(p: PartnerRecord) {
+    if (!session.token) return;
+    const ok = window.confirm(
+      `Delete partner "${p.name}"? This permanently removes it and any unpaid commission rows, and unlinks its referred accounts. This can't be undone.`
+    );
+    if (!ok) return;
+    try {
+      await deletePartner(session.token, p.id);
+      await refresh();
+    } catch (err) {
+      window.alert(err instanceof ApiError ? err.message : "Could not delete partner.");
     }
   }
 
@@ -264,13 +279,24 @@ function PartnersInner() {
                   </span>
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <button
-                    type="button"
-                    onClick={() => toggleActive(p)}
-                    className="focus-ring rounded-lg border border-ink/15 px-3 py-1.5 text-xs font-bold text-ink/70 hover:bg-smoke"
-                  >
-                    {p.active ? "Deactivate" : "Activate"}
-                  </button>
+                  <div className="flex items-center justify-end gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => toggleActive(p)}
+                      className="focus-ring rounded-lg border border-ink/15 px-3 py-1.5 text-xs font-bold text-ink/70 hover:bg-smoke"
+                    >
+                      {p.active ? "Deactivate" : "Activate"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removePartner(p)}
+                      aria-label={`Delete ${p.name}`}
+                      title="Delete partner"
+                      className="focus-ring rounded-lg border border-rose-200 p-1.5 text-rose-600 hover:bg-rose-50"
+                    >
+                      <Trash2 size={15} aria-hidden />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

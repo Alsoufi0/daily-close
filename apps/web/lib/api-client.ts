@@ -736,6 +736,10 @@ export async function getPartnerFunnel(token: string, id: string): Promise<Partn
   return apiFetch<PartnerFunnel>(`/partners/${id}/funnel`, token);
 }
 
+export async function deletePartner(token: string, id: string): Promise<{ id: string; deleted: boolean }> {
+  return apiFetch(`/partners/${id}`, token, { method: "DELETE" });
+}
+
 export interface ReferredAccount {
   ownerId: string;
   name: string;
