@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -12,7 +12,7 @@ import {
   UserPlus
 } from "lucide-react";
 import { createBrowserSupabase } from "../../lib/supabase-browser";
-import { ApiError, bootstrapOwner, confirmSignup, readRefCookie, requestSignup } from "../../lib/api-client";
+import { ApiError, bootstrapOwner, confirmSignup, requestSignup } from "../../lib/api-client";
 import { useLanguage } from "../../components/language-provider";
 
 type Status = "idle" | "loading" | "needs_confirm" | "done" | "error";
@@ -29,13 +29,6 @@ export default function SignupPage() {
   const [status, setStatus] = useState<Status>("idle");
   const [verifyingPhone, setVerifyingPhone] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  // First-touch referral code dropped by /r/[code]. Shown for reassurance; it's
-  // attached to the signup request automatically by the API client.
-  const [refCode, setRefCode] = useState<string | null>(null);
-
-  useEffect(() => {
-    setRefCode(readRefCookie() ?? null);
-  }, []);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -191,12 +184,6 @@ export default function SignupPage() {
             <p className="text-sm font-semibold text-ink/60">{t("auth.trialNoCard")}</p>
           </div>
         </div>
-
-        {refCode && (
-          <div className="mt-4 rounded-lg border border-leaf/30 bg-leaf/5 px-3 py-2 text-sm font-bold text-leaf">
-            You were referred by a partner — welcome!
-          </div>
-        )}
 
         <ul className="mt-4 space-y-1.5 text-sm font-bold text-ink/70">
           <li className="flex items-center gap-2">
