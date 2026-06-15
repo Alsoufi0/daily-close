@@ -239,11 +239,11 @@ function BillingPageInner() {
         Adding a store asks for confirmation and updates your monthly bill automatically.
       </p>
 
-      {sub.stores.length > 0 ? (
+      {(sub.stores ?? []).length > 0 ? (
         <section className="mt-6 rounded-2xl border border-ink/10 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between gap-3">
             <h3 className="text-lg font-black">Your stores</h3>
-            {sub.pausedStoreCount > 0 ? (
+            {(sub.pausedStoreCount ?? 0) > 0 ? (
               <span className="text-xs font-black uppercase tracking-wide text-ink/55">
                 {sub.pausedStoreCount} paused · not billed
               </span>
@@ -254,7 +254,7 @@ function BillingPageInner() {
             can&apos;t record closes, but their history is kept — resume anytime.
           </p>
           <ul className="mt-4 divide-y divide-ink/10">
-            {sub.stores.map((store) => (
+            {(sub.stores ?? []).map((store) => (
               <li key={store.id} className="flex items-center justify-between gap-3 py-3">
                 <div className="min-w-0">
                   <p className="truncate text-base font-black text-ink">{store.storeName}</p>
