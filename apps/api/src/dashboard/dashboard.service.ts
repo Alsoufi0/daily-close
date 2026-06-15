@@ -186,6 +186,10 @@ export class DashboardService {
       where: {
         ownerId,
         deletedAt: null,
+        // Paused stores are excluded from billing and operations — keep them out
+        // of the dashboard so they never show as a "missed close". Resume them
+        // from the billing page to bring them back.
+        pausedAt: null,
         // A per-store manager only sees the stores they manage.
         ...(restrictStoreIds ? { id: { in: restrictStoreIds } } : {})
       },

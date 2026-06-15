@@ -91,6 +91,65 @@ export class StoresService {
     return { id: storeId, deleted: true };
   }
 
+  async pauseForOwner(user: RequestUser, storeId: string) {
+    return this.setStorePaused(user, storeId, true);
+  }
+
+  async resumeForOwner(user: RequestUser, storeId: string) {
+    return this.setStorePaused(user, storeId, false);
+  }
+
+  // Pause (exclude from billing + block closing) or resume a store. Owner-only.
+  // Re-syncs the Stripe quantity so the bill reflects the change right away
+  // (prorated). Intentionally NOT behind the subscription paywall so an owner
+  // can choose which stores to keep at/after trial end. Idempotent.
+  private async setStorePaused(user: RequestUser, storeId: string, pause: boolean) {
+    if (user.role !== "STORE_OWNER" || !user.ownerId) {
+      throw new ForbiddenException("Only owners can pause or resume stores.");
+    }
+    const existing = await this.prisma.store.findFirst({
+      where: { id: storeId, ownerId: user.ownerId, deletedAt: null }
+    });
+    if (!existing) throw new NotFoundException("Store not found.");
+
+    // Loose null-check so both null and undefined count as "active".
+    const alreadyInState = pause ? existing.pausedAt != null : existing.pausedAt == null;
+    if (alreadyInState) return existing; // no-op
+
+    const updated = await this.prisma.store.update({
+      where: { id: storeId },
+      data: { pausedAt: pause ? new Date() : null }
+    });
+    await this.prisma.auditLog.create({
+      data: { userId: user.id, storeId, action: pause ? "store.paused" : "store.resumed", metadata: {} }
+    });
+    try {
+      await this.subscriptions.syncStoreQuantityForOwner(user.ownerId);
+    } catch (err) {
+      if (!pause) {
+        // Resume failed to add the store to the invoice — roll back so we never
+        // have an active (closeable) store that isn't being billed.
+        await this.prisma.store.update({ where: { id: storeId }, data: { pausedAt: existing.pausedAt } });
+        await this.prisma.auditLog.create({
+          data: {
+            userId: user.id, storeId, action: "billing.store_resume_sync_failed",
+            metadata: { message: err instanceof Error ? err.message : String(err) }
+          }
+        });
+        throw new BadRequestException("Could not resume the store because billing could not be updated. Please check billing and try again.");
+      }
+      // Pause: best-effort. Worst case the owner is briefly over-billed until the
+      // next sync/reconcile — never a revenue loss — so don't fail the request.
+      await this.prisma.auditLog.create({
+        data: {
+          userId: user.id, storeId, action: "billing.store_quantity_sync_needed",
+          metadata: { message: err instanceof Error ? err.message : String(err) }
+        }
+      });
+    }
+    return updated;
+  }
+
   async createForOwner(user: RequestUser, input: CreateStoreDto) {
     if (user.role !== "STORE_OWNER" || !user.ownerId) {
       throw new ForbiddenException("Only owners can create stores.");

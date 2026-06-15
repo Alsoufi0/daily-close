@@ -11,7 +11,10 @@ export interface SubscriptionView {
   active: boolean;
   stripeCustomerId: string | null;
   activeStoreCount: number;
+  pausedStoreCount: number;
   billedStoreQuantity: number;
+  /** The owner's stores (not deleted) so the billing page can pause/resume each. */
+  stores: { id: string; storeName: string; paused: boolean }[];
   unitAmountCents: number;
   priceId: string | null;
   checkoutUrl: string | null;
@@ -94,7 +97,18 @@ export class SubscriptionsService implements OnModuleInit {
       if (reconciled) owner = reconciled;
     }
     const status = (owner.subscriptionStatus || "TRIALING") as SubscriptionStatus;
-    const activeStoreCount = await this.activeStoreCount(ownerId);
+    const storeRows = await this.prisma.store.findMany({
+      where: { ownerId, deletedAt: null },
+      select: { id: true, storeName: true, pausedAt: true },
+      orderBy: { storeName: "asc" }
+    });
+    const stores = storeRows.map((s) => ({
+      id: s.id,
+      storeName: s.storeName,
+      paused: s.pausedAt !== null
+    }));
+    const activeStoreCount = stores.filter((s) => !s.paused).length;
+    const pausedStoreCount = stores.length - activeStoreCount;
     const billedStoreQuantity = this.billableQuantity(activeStoreCount);
     return {
       status,
@@ -104,7 +118,9 @@ export class SubscriptionsService implements OnModuleInit {
       active: SubscriptionsService.isActive(status, owner.trialEndsAt),
       stripeCustomerId: owner.stripeCustomerId,
       activeStoreCount,
+      pausedStoreCount,
       billedStoreQuantity,
+      stores,
       unitAmountCents: Number(process.env.STRIPE_UNIT_AMOUNT_CENTS || 4999),
       priceId: process.env.STRIPE_PRICE_ID || null,
       checkoutUrl: process.env.STRIPE_CHECKOUT_URL || null,
@@ -251,8 +267,10 @@ export class SubscriptionsService implements OnModuleInit {
     return data?.items?.data?.[0]?.id ?? null;
   }
 
+  // Billed stores: not deleted AND not paused. Paused stores are excluded from
+  // the Stripe quantity so owners only pay for the stores they keep active.
   private activeStoreCount(ownerId: string): Promise<number> {
-    return this.prisma.store.count({ where: { ownerId, deletedAt: null } });
+    return this.prisma.store.count({ where: { ownerId, deletedAt: null, pausedAt: null } });
   }
 
   private billableQuantity(activeStoreCount: number): number {
