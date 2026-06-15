@@ -117,4 +117,67 @@ describe("StoresService", () => {
       data: expect.objectContaining({ action: "store.updated", storeId: "s-1", userId: "u1" })
     });
   });
+
+  it("pauseForOwner forbids non-owners", async () => {
+    const service = new StoresService(makePrisma(), makeSubscriptions() as any);
+    await expect(service.pauseForOwner(employee, "s-1")).rejects.toThrow(ForbiddenException);
+  });
+
+  it("pauseForOwner sets paused_at, audits, and re-syncs the Stripe quantity", async () => {
+    const prisma = makePrisma(); // default findFirst → active store (no pausedAt)
+    const subscriptions = makeSubscriptions();
+    const service = new StoresService(prisma, subscriptions as any);
+    await service.pauseForOwner(owner, "s-1");
+    expect(prisma.store.update).toHaveBeenCalledWith({
+      where: { id: "s-1" },
+      data: { pausedAt: expect.any(Date) }
+    });
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ action: "store.paused", storeId: "s-1", userId: "u1" })
+    });
+    expect(subscriptions.syncStoreQuantityForOwner).toHaveBeenCalledWith("owner-1");
+  });
+
+  it("pauseForOwner is a no-op when the store is already paused", async () => {
+    const prisma = makePrisma({
+      findFirst: jest.fn().mockResolvedValue({ id: "s-1", ownerId: "owner-1", pausedAt: new Date() })
+    });
+    const subscriptions = makeSubscriptions();
+    const service = new StoresService(prisma, subscriptions as any);
+    await service.pauseForOwner(owner, "s-1");
+    expect(prisma.store.update).not.toHaveBeenCalled();
+    expect(subscriptions.syncStoreQuantityForOwner).not.toHaveBeenCalled();
+  });
+
+  it("resumeForOwner clears paused_at, audits, and re-syncs", async () => {
+    const prisma = makePrisma({
+      findFirst: jest.fn().mockResolvedValue({ id: "s-1", ownerId: "owner-1", pausedAt: new Date() })
+    });
+    const subscriptions = makeSubscriptions();
+    const service = new StoresService(prisma, subscriptions as any);
+    await service.resumeForOwner(owner, "s-1");
+    expect(prisma.store.update).toHaveBeenCalledWith({ where: { id: "s-1" }, data: { pausedAt: null } });
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ action: "store.resumed", storeId: "s-1", userId: "u1" })
+    });
+    expect(subscriptions.syncStoreQuantityForOwner).toHaveBeenCalledWith("owner-1");
+  });
+
+  it("resumeForOwner rolls back to paused when billing cannot be updated", async () => {
+    const wasPaused = new Date();
+    const prisma = makePrisma({
+      findFirst: jest.fn().mockResolvedValue({ id: "s-1", ownerId: "owner-1", pausedAt: wasPaused })
+    });
+    const service = new StoresService(
+      prisma,
+      makeSubscriptions({ syncStoreQuantityForOwner: jest.fn().mockRejectedValue(new Error("stripe down")) }) as any
+    );
+    await expect(service.resumeForOwner(owner, "s-1")).rejects.toThrow("billing could not be updated");
+    // never leaves an active (closeable) store that isn't billed — the last
+    // write re-pauses it with its original timestamp.
+    expect(prisma.store.update).toHaveBeenLastCalledWith({
+      where: { id: "s-1" },
+      data: { pausedAt: wasPaused }
+    });
+  });
 });

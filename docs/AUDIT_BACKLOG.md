@@ -1,15 +1,20 @@
 # Audit Backlog
 
-## 📱 Next mobile update (post-launch) — added 2026-06-07
-Captured during the Android Play submission work (v1.0.0 / versionCode 3 is what ships first).
-- [ ] **Loading spinner in the "Uploading & reading report…" box.** During the POS upload/parse
-  step (close flow → step 1 Upload), the yellow status box is static text. Add an animated
-  loading circle so it reads as in-progress. File: `apps/mobile/src/screens/EmployeeScreen.tsx`
-  (the upload/parse status block).
-- [ ] **Push notification system for mobile.** Native push (Expo notifications) for missed-close
-  alerts and daily summaries — currently those only go out via email/SMS/WhatsApp. Needs:
-  `expo-notifications`, push-token registration + storage, and a send path wired into the
-  existing notifications service.
+## 📱 Next mobile update (post-launch) — added 2026-06-07, updated 2026-06-15
+Queued for the first update AFTER Android approval. Do NOT touch the in-review build.
+- [ ] **Loading circle in the "Uploading & reading report…" box.** In the close flow (step 1,
+  Upload), the status text ("reading the receipt…") sits on the LEFT of the box and is static.
+  Add an animated **filling/progress circle on the RIGHT side of the same box** so users see it's
+  working and don't assume it's stuck and re-upload. Applies to both Take Photo (camera) and
+  Upload. File: `apps/mobile/src/screens/EmployeeScreen.tsx` (upload/parse status block).
+- [ ] **Push notification CLIENT for mobile (Android + iOS).** The API already SENDS push (partner
+  added close-completed + missed-close push + `/push-token` routes, Jun 11) — but the mobile app
+  has NO client (`expo-notifications` not installed), so those sends go nowhere. Add:
+  `expo-notifications`, request permission + register an Expo push token on login, POST it to the
+  API's push-token route, and a notification handler. Rebuild both apps.
+- [x] ~~Support section in Settings (Email/Text/Website + Tutorials/How-it-works).~~ ALREADY shipped
+  in shared mobile code (commit `c3eb8bb`, Jun 4); present in both the iOS and Android (vc9) builds.
+  No work needed.
 
 ## Session — 2026-05-30 (Stripe webhook signature — CRITICAL #1 fixed)
 

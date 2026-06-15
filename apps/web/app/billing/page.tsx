@@ -4,7 +4,14 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, CreditCard, Loader2, Sparkles, TimerReset } from "lucide-react";
 import { useSession } from "../../lib/use-session";
-import { getSubscription, openBillingPortal, startSubscriptionCheckout, SubscriptionView } from "../../lib/api-client";
+import {
+  getSubscription,
+  openBillingPortal,
+  pauseStore,
+  resumeStore,
+  startSubscriptionCheckout,
+  SubscriptionView
+} from "../../lib/api-client";
 import { RequireAuth } from "../../components/require-auth";
 import { isAccountOwner } from "../../lib/session-roles";
 
@@ -15,7 +22,9 @@ const demoSub: SubscriptionView = {
   daysLeftInTrial: 12,
   active: true,
   activeStoreCount: 1,
+  pausedStoreCount: 0,
   billedStoreQuantity: 1,
+  stores: [{ id: "demo-1", storeName: "Your store", paused: false }],
   unitAmountCents: 4999,
   priceId: null,
   checkoutUrl: null,
@@ -44,6 +53,25 @@ function BillingPageInner() {
   const [startError, setStartError] = useState<string | null>(null);
 
   const [portalLoading, setPortalLoading] = useState(false);
+  const [busyStoreId, setBusyStoreId] = useState<string | null>(null);
+
+  // Pause/resume a store from the billing page. After the toggle we re-fetch the
+  // subscription so the counts (and the Stripe quantity) reflect the change.
+  async function toggleStorePause(store: { id: string; paused: boolean }) {
+    if (!session.token) return;
+    setBusyStoreId(store.id);
+    setStartError(null);
+    try {
+      if (store.paused) await resumeStore(session.token, store.id);
+      else await pauseStore(session.token, store.id);
+      const fresh = await getSubscription(session.token);
+      setSub(fresh);
+    } catch (err: any) {
+      setStartError(err?.message || "Could not update the store.");
+    } finally {
+      setBusyStoreId(null);
+    }
+  }
 
   async function startCheckout() {
     if (!session.token) return;
@@ -210,6 +238,53 @@ function BillingPageInner() {
       <p className="mt-3 rounded-xl border border-leaf/20 bg-leaf/5 p-3 text-sm font-bold text-ink/70">
         Adding a store asks for confirmation and updates your monthly bill automatically.
       </p>
+
+      {sub.stores.length > 0 ? (
+        <section className="mt-6 rounded-2xl border border-ink/10 bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-lg font-black">Your stores</h3>
+            {sub.pausedStoreCount > 0 ? (
+              <span className="text-xs font-black uppercase tracking-wide text-ink/55">
+                {sub.pausedStoreCount} paused · not billed
+              </span>
+            ) : null}
+          </div>
+          <p className="mt-1 text-sm font-bold text-ink/60">
+            Pause any store you&apos;re not paying for right now. Paused stores aren&apos;t billed and
+            can&apos;t record closes, but their history is kept — resume anytime.
+          </p>
+          <ul className="mt-4 divide-y divide-ink/10">
+            {sub.stores.map((store) => (
+              <li key={store.id} className="flex items-center justify-between gap-3 py-3">
+                <div className="min-w-0">
+                  <p className="truncate text-base font-black text-ink">{store.storeName}</p>
+                  <p
+                    className={
+                      store.paused
+                        ? "text-xs font-black uppercase tracking-wide text-ink/45"
+                        : "text-xs font-black uppercase tracking-wide text-leaf"
+                    }
+                  >
+                    {store.paused ? "Paused · not billed" : "Active · billed"}
+                  </p>
+                </div>
+                <button
+                  onClick={() => toggleStorePause(store)}
+                  disabled={busyStoreId === store.id || !session.token}
+                  className={
+                    store.paused
+                      ? "focus-ring inline-flex h-10 items-center gap-2 rounded-lg bg-leaf px-4 text-sm font-black text-white disabled:opacity-60"
+                      : "focus-ring inline-flex h-10 items-center gap-2 rounded-lg border border-ink/15 px-4 text-sm font-black text-ink disabled:opacity-60"
+                  }
+                >
+                  {busyStoreId === store.id ? <Loader2 className="animate-spin" size={16} /> : null}
+                  {store.paused ? "Resume" : "Pause"}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <section className="mt-8 grid gap-3 sm:grid-cols-3">
         <FeatureCard icon={<TimerReset size={20} />} title="Daily close in 2 min" body="Employees finish closing from their phone." />

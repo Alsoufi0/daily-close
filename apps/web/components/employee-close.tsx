@@ -456,9 +456,9 @@ export function EmployeeClose() {
             ) : null}
 
             {isReading ? (
-              <div className="flex items-center gap-3 rounded-xl bg-yellow-50 p-4 text-gold">
-                <Loader2 className="animate-spin" size={24} aria-hidden />
+              <div className="flex items-center justify-between gap-3 rounded-xl bg-yellow-50 p-4 text-gold">
                 <p className="text-lg font-black">{t("closing.reading")}</p>
+                <Loader2 className="shrink-0 animate-spin" size={28} aria-label={t("closing.reading")} />
               </div>
             ) : null}
 

@@ -124,6 +124,10 @@ model Store {
   timezone      String         @default("America/New_York")
   closeTime     String         @default("23:30") @map("close_time")
   deletedAt     DateTime?      @map("deleted_at")
+  // When set, the store is PAUSED: excluded from billing (not counted toward the
+  // Stripe quantity) and not closeable, but its data/history is retained and it
+  // can be resumed any time. Null = active (billed). Existing stores stay null.
+  pausedAt      DateTime?      @map("paused_at")
   owner         Owner          @relation(fields: [ownerId], references: [id])
   employees     Employee[]
   dailyCloses   DailyClose[]
@@ -135,6 +139,7 @@ model Store {
 
   @@index([ownerId])
   @@index([deletedAt])
+  @@index([pausedAt])
   @@map("stores")
 }
 

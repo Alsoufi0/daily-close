@@ -553,6 +553,17 @@ export class DailyCloseService {
       throw new ForbiddenException("Not allowed to close this store.");
     }
 
+    // A paused store is excluded from billing and can't record new closes (its
+    // history stays viewable in Reports). Checked after the access check so only
+    // an authorised user sees this — and a paused store can be resumed any time.
+    const storeRow = await this.prisma.store.findFirst({
+      where: { id: storeId, deletedAt: null },
+      select: { pausedAt: true }
+    });
+    if (storeRow?.pausedAt) {
+      throw new ForbiddenException("This store is paused. Resume it from billing to record closes.");
+    }
+
     // Find-or-create the assignment row that will be referenced by
     // daily_close.employee_id. Owners get a role=OWNER row; employees
     // already had a role=EMPLOYEE row from the auth check above.

@@ -367,7 +367,9 @@ export interface SubscriptionView {
   daysLeftInTrial: number | null;
   active: boolean;
   activeStoreCount: number;
+  pausedStoreCount: number;
   billedStoreQuantity: number;
+  stores: { id: string; storeName: string; paused: boolean }[];
   unitAmountCents: number;
   priceId: string | null;
   checkoutUrl: string | null;
@@ -376,6 +378,17 @@ export interface SubscriptionView {
 
 export async function getSubscription(token: string): Promise<SubscriptionView> {
   return apiFetch<SubscriptionView>("/subscriptions/me", token);
+}
+
+// Pause a store (stop billing for it + block closing) or resume it. Not behind
+// the subscription paywall, so an owner can choose which stores to keep paying
+// for even after the trial lapses.
+export async function pauseStore(token: string, storeId: string): Promise<void> {
+  await apiFetch(`/stores/${storeId}/pause`, token, { method: "PATCH" });
+}
+
+export async function resumeStore(token: string, storeId: string): Promise<void> {
+  await apiFetch(`/stores/${storeId}/resume`, token, { method: "PATCH" });
 }
 
 export async function startSubscriptionCheckout(token: string): Promise<{ url: string }> {
