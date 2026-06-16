@@ -1,0 +1,11 @@
+-- 012_push_tokens_rls.sql
+-- Enable Row-Level Security on push_tokens. It was created with the push-
+-- notifications work WITHOUT RLS, leaving it readable/writable via the public
+-- anon key (Supabase Security Advisor: rls_disabled_in_public +
+-- sensitive_columns_exposed — it holds device tokens + user ids).
+--
+-- The API accesses this table via a BYPASSRLS Postgres role and the apps never
+-- query Supabase tables directly (they POST tokens through the API), so enabling
+-- RLS with NO policies denies all anon access without breaking anything. This
+-- matches every other public table's posture.
+alter table public.push_tokens enable row level security;
