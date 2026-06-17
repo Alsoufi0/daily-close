@@ -24,5 +24,9 @@ export function isAdminLike(profile?: SessionProfile | null): boolean {
 
 /** Where to send a user after sign-in based on what they can access. */
 export function landingPath(profile?: SessionProfile | null): string {
+  // Platform staff land on the console, not the store-owner dashboard. The
+  // owner dashboard is subscription-gated, so sending a SUPER_ADMIN (who isn't
+  // a billable store account) there would bounce them to /billing.
+  if (profile?.role === "SUPER_ADMIN") return "/console";
   return isAdminLike(profile) ? "/owner" : "/close";
 }
