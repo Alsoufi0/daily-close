@@ -63,4 +63,16 @@ describe("SubscriptionGuard", () => {
     ).resolves.toBe(true);
     expect(subscriptions.ensureActiveForOwner).not.toHaveBeenCalled();
   });
+
+  it("never gates a super admin, even if they carry an ownerId from signup", async () => {
+    const subscriptions = {
+      ensureActiveForOwner: jest.fn().mockRejectedValue({ statusCode: 402 })
+    };
+    const guard = new SubscriptionGuard(subscriptions as any);
+
+    await expect(
+      guard.canActivate(contextFor({ role: "SUPER_ADMIN", ownerId: "owner-1" }))
+    ).resolves.toBe(true);
+    expect(subscriptions.ensureActiveForOwner).not.toHaveBeenCalled();
+  });
 });

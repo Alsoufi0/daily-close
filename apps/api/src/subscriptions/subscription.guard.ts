@@ -17,6 +17,12 @@ export class SubscriptionGuard implements CanActivate {
     const req = context.switchToHttp().getRequest<{ user?: RequestUser }>();
     const user = req.user;
     if (!user) throw new ForbiddenException("Sign in required.");
+    if (user.role === "SUPER_ADMIN") {
+      // Platform staff are not a billable store account. They may still carry an
+      // ownerId from how their login was first created, so exempt them by role
+      // (not just by missing ownerId) — an admin must never be 402-bounced.
+      return true;
+    }
     if (!user.ownerId) {
       // No owning account in context (e.g. a SUPER_ADMIN, or a brand-new user
       // with no store assignment yet) — there's no subscription to gate against.
