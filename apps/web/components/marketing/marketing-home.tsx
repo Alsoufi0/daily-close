@@ -182,9 +182,9 @@ export function MarketingHome() {
             <Link href="/signup" className="focus-ring inline-flex items-center gap-2 rounded-xl bg-leaf px-6 py-3 text-base font-black text-white hover:bg-leaf/90">
               {t("marketing.pricingCta")} <ArrowRight size={18} aria-hidden />
             </Link>
-            <Link href="/pricing" className="focus-ring inline-flex items-center gap-2 rounded-xl border-2 border-white/25 px-6 py-3 text-base font-black text-white hover:bg-white/10">
-              {t("marketing.navPricing")}
-            </Link>
+            {/* "View pricing" button hidden until tiered pricing goes live in Stripe
+                (the /pricing page shows tiers checkout doesn't charge yet). Restore
+                this Link to re-expose it. */}
           </div>
         </div>
       </section>
