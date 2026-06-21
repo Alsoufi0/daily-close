@@ -1,0 +1,92 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--green:#0e3b34;--gold:#c2872b;--leaf:#1f7a4d;--ink:#18221d;--bg:#f8f7f3;--border:#e5e0d6;--mut:rgba(24,34,29,.58)}
+html,body{width:1440px;height:900px}
+.page{width:1440px;height:900px;background:#fff;font-family:Inter,sans-serif;color:var(--ink);padding:64px 72px 48px;display:flex;flex-direction:column}
+.hd{margin-bottom:48px}
+.hd .k{font-size:15px;font-weight:800;letter-spacing:.22em;color:var(--gold);text-transform:uppercase}
+.hd h1{font-family:Fraunces,serif;font-weight:600;font-size:54px;margin-top:12px;letter-spacing:-.015em;max-width:780px;line-height:1.04}
+.hd p{font-size:19px;font-weight:600;color:var(--mut);margin-top:14px;max-width:720px;line-height:1.45}
+.hd p b{color:var(--green)}
+.grid{flex:1;display:grid;grid-template-columns:repeat(4,1fr)}
+.col{padding:0 36px;display:flex;flex-direction:column;border-left:1px solid var(--border)}
+.col:first-child{padding-left:0;border-left:0}
+.col.feat{position:relative}
+.tagline{font-size:12px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);height:18px}
+.nm{font-family:Fraunces,serif;font-weight:600;font-size:34px;margin-top:14px}
+.who{font-size:15px;font-weight:600;color:var(--mut);margin-top:6px;min-height:46px;line-height:1.4}
+.amt{margin-top:22px;display:flex;align-items:baseline;gap:6px}
+.amt .from{font-size:14px;font-weight:700;color:var(--mut)}
+.amt .big{font-family:Fraunces,serif;font-weight:600;font-size:52px;line-height:1;color:var(--green)}
+.amt .per{font-size:15px;font-weight:700;color:var(--mut)}
+.scale{font-size:14px;font-weight:700;color:var(--leaf);margin-top:12px;line-height:1.45}
+.range{font-size:13px;font-weight:700;color:var(--mut);margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
+.cta{margin-top:auto;font-size:15px;font-weight:900;color:var(--green);display:flex;align-items:center;gap:8px}
+.cta svg{width:17px;height:17px;stroke:var(--gold);fill:none;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.foot{margin-top:44px;padding-top:24px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:15px;font-weight:700;color:var(--mut)}
+.foot b{color:var(--green)}
+.foot .code{background:var(--gold);color:#fff;border-radius:8px;padding:2px 10px;font-weight:900;letter-spacing:.03em}
+.foot .inc{display:flex;gap:18px}
+.foot .inc span{display:flex;align-items:center;gap:6px}
+.foot .inc svg{width:16px;height:16px;stroke:var(--leaf);fill:none;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+</style></head><body>
+<div class="page">
+  <div class="hd">
+    <div class="k">Pricing</div>
+    <h1>Simple pricing that grows with you.</h1>
+    <p>Every plan includes <b>everything</b> — pick the one for your number of shops. Your price scales with the stores you run, and the rate per store drops as you grow.</p>
+  </div>
+
+  <div class="grid">
+    <div class="col">
+      <div class="tagline"></div>
+      <div class="nm">Solo</div>
+      <div class="who">Everything you need for a single shop.</div>
+      <div class="amt"><span class="big">$29</span><span class="per">/mo</span></div>
+      <div class="scale">Just $1 a day.</div>
+      <div class="range">1 store</div>
+      <div class="cta">Start free <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></div>
+    </div>
+
+    <div class="col feat">
+      <div class="tagline">Most popular</div>
+      <div class="nm">Multi</div>
+      <div class="who">For owners running a handful of shops.</div>
+      <div class="amt"><span class="from">from</span><span class="big">$53</span><span class="per">/mo</span></div>
+      <div class="scale">Scales with your stores — up to $125 at five.</div>
+      <div class="range">2–5 stores</div>
+      <div class="cta">Start free <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></div>
+    </div>
+
+    <div class="col">
+      <div class="tagline"></div>
+      <div class="nm">Growth</div>
+      <div class="who">For a growing group of locations.</div>
+      <div class="amt"><span class="from">from</span><span class="big">$144</span><span class="per">/mo</span></div>
+      <div class="scale">A lower per-store rate the more you add.</div>
+      <div class="range">6–15 stores</div>
+      <div class="cta">Start free <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></div>
+    </div>
+
+    <div class="col">
+      <div class="tagline"></div>
+      <div class="nm">Chain</div>
+      <div class="who">For large operators &amp; franchises.</div>
+      <div class="amt"><span class="big">Custom</span></div>
+      <div class="scale">Best per-store rate &amp; priority support.</div>
+      <div class="range">16+ stores</div>
+      <div class="cta">Let&rsquo;s talk <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div class="inc">
+      <span><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>14-day free trial, no card</span>
+      <span><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Pause any store anytime</span>
+      <span><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Cancel whenever</span>
+    </div>
+    <div>50% off 3 months with <span class="code">STORE50</span> &nbsp;·&nbsp; annual = <b>2 months free</b></div>
+  </div>
+</div>
+</body></html>

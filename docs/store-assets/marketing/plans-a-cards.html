@@ -1,0 +1,104 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--green:#0e3b34;--gold:#c2872b;--ink:#18221d;--bg:#f8f7f3;--border:#e5e0d6;--mut:rgba(24,34,29,.6)}
+html,body{width:1440px;height:940px}
+.page{width:1440px;height:940px;background:var(--bg);font-family:Inter,sans-serif;color:var(--ink);padding:48px 56px;display:flex;flex-direction:column}
+.hd{text-align:center;margin-bottom:30px}
+.hd .k{font-size:15px;font-weight:800;letter-spacing:.22em;color:var(--gold);text-transform:uppercase}
+.hd h1{font-family:Fraunces,serif;font-weight:600;font-size:46px;margin-top:8px;letter-spacing:-.01em}
+.hd p{font-size:19px;font-weight:600;color:var(--mut);margin-top:8px}
+.row{flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:22px;align-items:stretch}
+.card{background:#fff;border:1px solid var(--border);border-radius:22px;padding:26px 24px;display:flex;flex-direction:column;box-shadow:0 10px 26px rgba(14,59,52,.05)}
+.card.feat{background:var(--green);color:#fff;border-color:var(--green);box-shadow:0 20px 44px rgba(14,59,52,.28)}
+.badge{align-self:flex-start;background:var(--gold);color:#fff;font-size:12px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;border-radius:99px;padding:5px 12px;margin-bottom:12px}
+.pname{font-family:Fraunces,serif;font-weight:600;font-size:30px}
+.range{font-size:15px;font-weight:700;color:var(--mut);margin-top:2px}
+.card.feat .range{color:rgba(255,255,255,.7)}
+.price{margin-top:16px;display:flex;align-items:baseline;gap:6px}
+.price .from{font-size:14px;font-weight:700;color:var(--mut)}
+.card.feat .price .from{color:rgba(255,255,255,.7)}
+.price .big{font-family:Fraunces,serif;font-weight:600;font-size:44px;line-height:1}
+.price .per{font-size:15px;font-weight:700;color:var(--mut)}
+.card.feat .price .per{color:rgba(255,255,255,.7)}
+.note{font-size:13.5px;font-weight:600;color:var(--mut);margin-top:6px}
+.card.feat .note{color:rgba(255,255,255,.72)}
+.chips{margin-top:18px;display:flex;flex-wrap:wrap;gap:8px}
+.chip{width:86px;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:9px 4px;text-align:center}
+.card.feat .chip{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.18)}
+.chip .n{font-size:12px;font-weight:800;color:var(--mut);text-transform:uppercase;letter-spacing:.04em}
+.card.feat .chip .n{color:rgba(255,255,255,.7)}
+.chip .v{font-size:19px;font-weight:900;color:var(--green);margin-top:1px;font-variant-numeric:tabular-nums}
+.card.feat .chip .v{color:#fff}
+.save{margin-top:auto;padding-top:16px;font-size:14px;font-weight:800;color:var(--gold)}
+.card.feat .save{color:#f1c98a}
+.savebig{font-size:15px}
+.foot{text-align:center;margin-top:26px;font-size:16px;font-weight:700;color:var(--mut)}
+.foot b{color:var(--green)}
+.foot .code{background:var(--gold);color:#fff;border-radius:8px;padding:2px 10px;font-weight:900;letter-spacing:.03em}
+</style></head><body>
+<div class="page">
+  <div class="hd">
+    <div class="k">Simple pricing</div>
+    <h1>Pay less for every store you add.</h1>
+    <p>$1 a day for your first store. Every store after is cheaper — find your number below.</p>
+  </div>
+  <div class="row">
+
+    <div class="card">
+      <div class="pname">Solo</div><div class="range">1 store</div>
+      <div class="price"><span class="big">$29</span><span class="per">/mo</span></div>
+      <div class="note">Just $1 a day.</div>
+      <div class="chips"><div class="chip"><div class="n">1 store</div><div class="v">$29</div></div></div>
+      <div class="save savebig">Perfect to start</div>
+    </div>
+
+    <div class="card feat">
+      <div class="badge">Most popular</div>
+      <div class="pname">Multi</div><div class="range">2–5 stores</div>
+      <div class="price"><span class="from">from</span><span class="big">$53</span><span class="per">/mo</span></div>
+      <div class="note">$24 per extra store.</div>
+      <div class="chips">
+        <div class="chip"><div class="n">2 stores</div><div class="v">$53</div></div>
+        <div class="chip"><div class="n">3 stores</div><div class="v">$77</div></div>
+        <div class="chip"><div class="n">4 stores</div><div class="v">$101</div></div>
+        <div class="chip"><div class="n">5 stores</div><div class="v">$125</div></div>
+      </div>
+      <div class="save">Save up to 14% per store</div>
+    </div>
+
+    <div class="card">
+      <div class="pname">Growth</div><div class="range">6–15 stores</div>
+      <div class="price"><span class="from">from</span><span class="big">$144</span><span class="per">/mo</span></div>
+      <div class="note">$19 per extra store.</div>
+      <div class="chips">
+        <div class="chip"><div class="n">6</div><div class="v">$144</div></div>
+        <div class="chip"><div class="n">7</div><div class="v">$163</div></div>
+        <div class="chip"><div class="n">8</div><div class="v">$182</div></div>
+        <div class="chip"><div class="n">9</div><div class="v">$201</div></div>
+        <div class="chip"><div class="n">10</div><div class="v">$220</div></div>
+        <div class="chip"><div class="n">11</div><div class="v">$239</div></div>
+        <div class="chip"><div class="n">12</div><div class="v">$258</div></div>
+        <div class="chip"><div class="n">13</div><div class="v">$277</div></div>
+        <div class="chip"><div class="n">14</div><div class="v">$296</div></div>
+        <div class="chip"><div class="n">15</div><div class="v">$315</div></div>
+      </div>
+      <div class="save">Save up to 28% per store</div>
+    </div>
+
+    <div class="card">
+      <div class="pname">Chain</div><div class="range">16+ stores</div>
+      <div class="price"><span class="from">from</span><span class="big">$329</span><span class="per">/mo</span></div>
+      <div class="note">$14 per extra store.</div>
+      <div class="chips">
+        <div class="chip"><div class="n">16</div><div class="v">$329</div></div>
+        <div class="chip"><div class="n">20</div><div class="v">$385</div></div>
+        <div class="chip" style="width:182px"><div class="n">25+ stores</div><div class="v" style="font-size:17px">Let's talk</div></div>
+      </div>
+      <div class="save">Save up to 50% · custom deals</div>
+    </div>
+
+  </div>
+  <div class="foot">Start <b>free</b> — no card. Then 50% off your first 3 months with <span class="code">STORE50</span> &nbsp;·&nbsp; or go annual and get <b>2 months free</b>.</div>
+</div>
+</body></html>

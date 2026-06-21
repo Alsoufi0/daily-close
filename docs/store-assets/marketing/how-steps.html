@@ -1,0 +1,80 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--green:#0e3b34;--gold:#c2872b;--ink:#18221d;--bg:#f8f7f3;--border:#e5e0d6}
+html,body{width:850px;height:1100px}
+.page{width:850px;height:1100px;background:var(--bg);font-family:Inter,sans-serif;color:var(--ink);display:flex;flex-direction:column;overflow:hidden}
+.head{background:var(--green);padding:40px 56px 34px;color:#fff;position:relative;text-align:center}
+.head::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 0%,rgba(255,255,255,.07),transparent 55%)}
+.brand{display:flex;align-items:center;justify-content:center;gap:13px;position:relative;z-index:1}
+.brand img{width:48px;height:48px;border-radius:13px;box-shadow:0 10px 26px rgba(0,0,0,.35)}
+.brand .n{font-family:Fraunces,serif;font-weight:600;font-size:28px}
+.head h1{font-family:Fraunces,serif;font-weight:600;font-size:48px;line-height:1.03;margin-top:16px;position:relative;z-index:1}
+.head h1 .g{color:var(--gold)}
+.head p{font-size:17px;font-weight:600;color:rgba(255,255,255,.75);margin-top:8px;position:relative;z-index:1}
+.map{position:relative;flex:1}
+.map svg.conn{position:absolute;inset:0;width:100%;height:100%}
+.node{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:12px;z-index:2}
+.ring{width:148px;height:148px;border-radius:50%;background:#fff;border:3px solid var(--border);display:flex;align-items:center;justify-content:center;box-shadow:0 16px 34px rgba(14,59,52,.14);position:relative}
+.ring .ic{width:80px;height:80px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center}
+.ring .ic svg{width:42px;height:42px;stroke:#fff;fill:none;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round}
+.ring .n{position:absolute;top:-8px;right:-8px;width:38px;height:38px;border-radius:50%;background:var(--gold);color:#fff;font-weight:900;font-size:18px;display:flex;align-items:center;justify-content:center;border:3px solid var(--bg)}
+.word{font-family:Fraunces,serif;font-weight:600;font-size:30px;color:var(--ink)}
+.sub{font-size:15px;font-weight:600;color:rgba(24,34,29,.55);margin-top:-6px;text-align:center}
+.node.end .ring{border-color:var(--gold)}
+.node.end .ic{background:var(--gold)}
+.node.end .word{color:var(--gold)}
+.foot{padding:0 56px 36px}
+.offer{background:var(--green);border-radius:20px;padding:18px 28px;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:18px}
+.offer .b{font-family:Fraunces,serif;font-weight:600;font-size:23px;line-height:1.1}
+.offer .s{font-size:14px;font-weight:600;color:rgba(255,255,255,.82);margin-top:3px}
+.offer .code{background:var(--gold);color:#fff;border-radius:11px;padding:9px 16px;font-weight:900;font-size:24px;letter-spacing:.04em}
+.web{margin-top:16px;display:flex;align-items:center;justify-content:center;gap:12px;font-size:20px;font-weight:900;color:var(--green)}
+.web img{width:54px;height:54px;border:2px solid var(--border);border-radius:9px;padding:4px;background:#fff}
+</style></head><body>
+<div class="page">
+  <div class="head">
+    <div class="brand"><img src="../play/icon-512.png" alt=""><span class="n">Daily Close</span></div>
+    <h1>From drawer to <span class="g">dashboard.</span></h1>
+    <p>Four steps. Two minutes. Any phone.</p>
+  </div>
+
+  <div class="map">
+    <svg class="conn" viewBox="0 0 850 640" preserveAspectRatio="none">
+      <defs><marker id="ah" markerWidth="9" markerHeight="9" refX="5" refY="4.5" orient="auto">
+        <path d="M1,1 L8,4.5 L1,8" fill="none" stroke="#c2872b" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </marker></defs>
+      <g fill="none" stroke="#c2872b" stroke-width="4" stroke-dasharray="3 14" stroke-linecap="round" marker-end="url(#ah)">
+        <path d="M275,95 C460,120 470,150 560,182"/>
+        <path d="M560,250 C470,300 410,300 300,338"/>
+        <path d="M285,415 C470,440 470,470 560,502"/>
+      </g>
+    </svg>
+
+    <div class="node" style="left:215px;top:95px">
+      <div class="ring"><div class="ic"><svg viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3.2"/></svg></div><span class="n">1</span></div>
+      <div class="word">Snap</div><div class="sub">the POS report</div>
+    </div>
+
+    <div class="node" style="left:620px;top:218px">
+      <div class="ring"><div class="ic"><svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.4"/><path d="M6 12h.01M18 12h.01"/></svg></div><span class="n">2</span></div>
+      <div class="word">Count</div><div class="sub">the cash drawer</div>
+    </div>
+
+    <div class="node" style="left:230px;top:372px">
+      <div class="ring"><div class="ic"><svg viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></div><span class="n">3</span></div>
+      <div class="word">Submit</div><div class="sub">done in seconds</div>
+    </div>
+
+    <div class="node end" style="left:620px;top:530px">
+      <div class="ring"><div class="ic"><svg viewBox="0 0 24 24"><line x1="6" y1="20" x2="6" y2="14"/><line x1="12" y1="20" x2="12" y2="7"/><line x1="18" y1="20" x2="18" y2="11"/><line x1="3" y1="20" x2="21" y2="20"/></svg></div><span class="n">4</span></div>
+      <div class="word">Owner sees</div><div class="sub">sales · short · profit</div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div class="offer"><div><div class="b">Start free — no card.</div><div class="s">Then 50% off your first 3 months.</div></div><div class="code">STORE50</div></div>
+    <div class="web"><img src="https://api.qrserver.com/v1/create-qr-code/?data=https%3A%2F%2Fdailyclose.us&size=300x300&margin=0&color=0e3b34&bgcolor=ffffff" alt="">dailyclose.us &middot; App Store &amp; Google Play</div>
+  </div>
+</div>
+</body></html>

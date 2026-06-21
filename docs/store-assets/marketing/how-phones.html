@@ -1,0 +1,105 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--green:#0e3b34;--gold:#c2872b;--ink:#18221d;--bg:#f8f7f3;--border:#e5e0d6;--mut:rgba(24,34,29,.55)}
+html,body{width:850px;height:1100px}
+.page{width:850px;height:1100px;background:var(--bg);font-family:Inter,sans-serif;color:var(--ink);display:flex;flex-direction:column;overflow:hidden}
+.head{background:var(--green);padding:40px 56px 36px;color:#fff;position:relative}
+.head::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 80% at 85% 8%,rgba(255,255,255,.07),transparent 55%)}
+.brand{display:flex;align-items:center;gap:14px;position:relative;z-index:1}
+.brand img{width:54px;height:54px;border-radius:14px;box-shadow:0 10px 26px rgba(0,0,0,.35)}
+.brand .n{font-family:Fraunces,serif;font-weight:600;font-size:30px}
+.brand .k{margin-left:auto;font-size:13px;font-weight:800;letter-spacing:.2em;color:rgba(255,255,255,.65)}
+.head h1{font-family:Fraunces,serif;font-weight:600;font-size:52px;line-height:1.0;margin-top:18px;position:relative;z-index:1;letter-spacing:-.01em}
+.head h1 .g{color:var(--gold)}
+.flow{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:0 30px}
+.col{display:flex;flex-direction:column;align-items:center;gap:14px}
+.step{font-size:15px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;color:var(--green)}
+.step b{display:inline-flex;width:24px;height:24px;border-radius:50%;background:var(--gold);color:#fff;align-items:center;justify-content:center;font-size:13px;margin-right:7px;vertical-align:middle}
+.arrow{flex:none;color:var(--gold)}
+.arrow svg{width:38px;height:38px;stroke:var(--gold);fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+/* phone */
+.phone{width:210px;height:432px;background:var(--green);border-radius:32px;padding:9px;box-shadow:0 20px 44px rgba(14,59,52,.28)}
+.screen{width:100%;height:100%;background:#fff;border-radius:24px;overflow:hidden;position:relative;display:flex;flex-direction:column;padding:18px 15px}
+.screen .notch{position:absolute;top:9px;left:50%;transform:translateX(-50%);width:62px;height:7px;border-radius:99px;background:rgba(0,0,0,.12)}
+.scap{font-size:13px;font-weight:800;color:var(--mut);text-transform:uppercase;letter-spacing:.08em;margin-top:14px}
+/* screen 1: camera + receipt */
+.view{margin-top:12px;flex:1;background:#10241f;border-radius:16px;display:flex;align-items:center;justify-content:center;position:relative}
+.rcpt{width:104px;background:#fff;border-radius:6px;padding:11px 10px;box-shadow:0 8px 18px rgba(0,0,0,.3)}
+.rcpt i{display:block;height:5px;border-radius:3px;background:#d9d4c7;margin:5px 0}
+.rcpt i.s{width:60%}.rcpt i.t{height:9px;background:var(--green);width:80%;margin-top:9px}
+.shutter{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);width:42px;height:42px;border-radius:50%;background:#fff;border:4px solid rgba(255,255,255,.5)}
+.corner{position:absolute;width:18px;height:18px;border:3px solid rgba(255,255,255,.7)}
+.c1{top:12px;left:12px;border-right:0;border-bottom:0;border-radius:6px 0 0 0}
+.c2{top:12px;right:12px;border-left:0;border-bottom:0;border-radius:0 6px 0 0}
+.c3{bottom:12px;left:12px;border-right:0;border-top:0;border-radius:0 0 0 6px}
+.c4{bottom:12px;right:12px;border-left:0;border-top:0;border-radius:0 0 6px 0}
+/* screen 2: cash entry */
+.bigamt{font-family:Fraunces,serif;font-weight:600;font-size:40px;color:var(--green);margin-top:12px}
+.field{font-size:12px;font-weight:700;color:var(--mut);margin-top:2px}
+.pad{margin-top:auto;display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.pad span{height:42px;border-radius:11px;background:var(--bg);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:var(--ink)}
+/* screen 3: dashboard */
+.stat{margin-top:10px;background:var(--bg);border:1px solid var(--border);border-radius:13px;padding:11px 13px;display:flex;align-items:center;justify-content:space-between}
+.stat .l{font-size:12px;font-weight:700;color:var(--mut)}
+.stat .v{font-size:19px;font-weight:900;color:var(--green);font-variant-numeric:tabular-nums}
+.stat .v.bad{color:#b4231f}.stat .v.good{color:#1f7a4d}
+.foot{padding:0 56px 36px}
+.offer{background:var(--gold);border-radius:20px;padding:18px 28px;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:18px}
+.offer .b{font-family:Fraunces,serif;font-weight:600;font-size:23px;line-height:1.1}
+.offer .s{font-size:14px;font-weight:600;color:rgba(255,255,255,.9);margin-top:3px}
+.offer .code{background:#fff;color:var(--green);border-radius:11px;padding:9px 16px;font-weight:900;font-size:24px;letter-spacing:.04em}
+.web{margin-top:16px;display:flex;align-items:center;justify-content:center;gap:12px;font-size:20px;font-weight:900;color:var(--green)}
+.web img{width:54px;height:54px;border:2px solid var(--border);border-radius:9px;padding:4px;background:#fff}
+</style></head><body>
+<div class="page">
+  <div class="head">
+    <div class="brand"><img src="../play/icon-512.png" alt=""><span class="n">Daily Close</span><span class="k">HOW IT WORKS</span></div>
+    <h1>Three taps.<br/><span class="g">Store closed.</span></h1>
+  </div>
+
+  <div class="flow">
+    <div class="col">
+      <div class="step"><b>1</b>Snap</div>
+      <div class="phone"><div class="screen"><div class="notch"></div>
+        <div class="scap">Scan POS report</div>
+        <div class="view">
+          <span class="corner c1"></span><span class="corner c2"></span><span class="corner c3"></span><span class="corner c4"></span>
+          <div class="rcpt"><i></i><i class="s"></i><i></i><i class="s"></i><i class="t"></i></div>
+          <div class="shutter"></div>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="arrow"><svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></div>
+
+    <div class="col">
+      <div class="step"><b>2</b>Count</div>
+      <div class="phone"><div class="screen"><div class="notch"></div>
+        <div class="scap">Cash counted</div>
+        <div class="bigamt">$1,240</div>
+        <div class="field">Drawer total</div>
+        <div class="pad"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span></div>
+      </div></div>
+    </div>
+
+    <div class="arrow"><svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></div>
+
+    <div class="col">
+      <div class="step"><b>3</b>See it all</div>
+      <div class="phone"><div class="screen"><div class="notch"></div>
+        <div class="scap">Tonight</div>
+        <div class="stat"><span class="l">Sales</span><span class="v">$4,820</span></div>
+        <div class="stat"><span class="l">Cash short</span><span class="v bad">&minus;$60</span></div>
+        <div class="stat"><span class="l">Profit</span><span class="v good">$1,310</span></div>
+        <div class="stat" style="margin-top:auto;background:var(--green);border-color:var(--green)"><span class="l" style="color:rgba(255,255,255,.7)">Owner notified</span><span class="v" style="color:#fff">✓</span></div>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div class="offer"><div><div class="b">Start free — no card.</div><div class="s">Then 50% off your first 3 months.</div></div><div class="code">STORE50</div></div>
+    <div class="web"><img src="https://api.qrserver.com/v1/create-qr-code/?data=https%3A%2F%2Fdailyclose.us&size=300x300&margin=0&color=0e3b34&bgcolor=ffffff" alt="">dailyclose.us &middot; App Store &amp; Google Play</div>
+  </div>
+</div>
+</body></html>

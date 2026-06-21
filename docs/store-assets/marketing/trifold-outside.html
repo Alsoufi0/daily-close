@@ -1,0 +1,82 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+Arabic:wght@600;700&family=Noto+Sans+Devanagari:wght@600;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--green:#0e3b34;--gold:#c2872b;--ink:#18221d;--bg:#f8f7f3;--border:#e5e0d6}
+html,body{width:1100px;height:850px}
+.sheet{width:1100px;height:850px;display:flex;font-family:Inter,sans-serif;background:var(--bg);color:var(--ink)}
+.panel{width:366.67px;height:850px;padding:46px 40px;position:relative;overflow:hidden}
+.panel.fold{border-right:1px dashed rgba(0,0,0,.12)}
+/* Panel 1 (left, outside) = inside flap: the offer */
+.p-offer{background:var(--bg);display:flex;flex-direction:column}
+.p-offer .kick{font-size:15px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--gold)}
+.p-offer h2{font-family:Fraunces,serif;font-weight:600;font-size:40px;line-height:1.05;margin-top:16px;color:var(--green)}
+.p-offer .lead{font-size:17px;font-weight:500;line-height:1.5;color:rgba(24,34,29,.66);margin-top:16px}
+.offerbox{margin-top:26px;background:var(--gold);color:#fff;border-radius:20px;padding:26px 24px;box-shadow:0 16px 36px rgba(194,135,43,.28)}
+.offerbox .big{font-family:Fraunces,serif;font-weight:600;font-size:25px;line-height:1.12}
+.offerbox .small{font-size:15px;font-weight:600;margin-top:8px;color:rgba(255,255,255,.92)}
+.offerbox .code{margin-top:16px;background:#fff;color:var(--green);border-radius:12px;padding:12px;text-align:center;font-weight:900;font-size:28px;letter-spacing:.05em}
+.offerbox .code small{display:block;font-size:10px;font-weight:800;letter-spacing:.18em;color:rgba(14,59,52,.5);margin-bottom:3px}
+.steps{margin-top:26px;display:flex;flex-direction:column;gap:14px}
+.step{display:flex;gap:14px;align-items:flex-start}
+.step .num{width:34px;height:34px;border-radius:50%;background:var(--green);color:#fff;font-weight:900;font-size:16px;display:flex;align-items:center;justify-content:center;flex:none}
+.step .tx{font-size:16px;font-weight:600;line-height:1.32;padding-top:4px}
+/* Panel 2 (middle, outside) = back: contact + QR */
+.p-back{background:#fff;display:flex;flex-direction:column;align-items:center;text-align:center}
+.p-back .logo{width:78px;height:78px;border-radius:20px;box-shadow:0 10px 26px rgba(0,0,0,.18);margin-top:30px}
+.p-back .nm{font-family:Fraunces,serif;font-weight:600;font-size:30px;color:var(--green);margin-top:16px}
+.p-back .tg{font-size:15px;font-weight:600;color:rgba(24,34,29,.55);margin-top:6px;line-height:1.4}
+.p-back .qr{width:178px;height:178px;border-radius:16px;background:#fff;border:2px solid var(--border);padding:10px;margin-top:36px}
+.p-back .qr img{width:100%;height:100%;display:block}
+.p-back .scan{font-size:18px;font-weight:900;color:var(--green);margin-top:18px}
+.p-back .web{font-size:20px;font-weight:900;color:var(--gold);margin-top:auto}
+.p-back .find{font-size:13px;font-weight:600;color:rgba(24,34,29,.5);margin-top:8px;line-height:1.4;padding-bottom:6px}
+/* Panel 3 (right, outside) = front cover */
+.p-cover{background:var(--green);color:#fff;display:flex;flex-direction:column;position:relative}
+.p-cover::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 60% at 80% 6%,rgba(255,255,255,.08),transparent 55%)}
+.p-cover .logo{width:80px;height:80px;border-radius:20px;box-shadow:0 12px 30px rgba(0,0,0,.4);position:relative;z-index:1}
+.p-cover .lower{margin-top:auto;position:relative;z-index:1}
+.p-cover h1{font-family:Fraunces,serif;font-weight:600;font-size:46px;line-height:1.03;letter-spacing:-.01em}
+.p-cover h1 .gold{color:var(--gold)}
+.p-cover .sub{font-size:17px;font-weight:500;line-height:1.45;color:rgba(255,255,255,.82);margin-top:16px}
+.p-cover .badge{margin-top:22px;display:inline-flex;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:9px 15px;font-size:13.5px;font-weight:700;line-height:1}
+.p-cover .badge .lar{font-family:'Noto Sans Arabic',sans-serif}
+.p-cover .badge .lhi{font-family:'Noto Sans Devanagari',sans-serif}
+</style></head><body>
+<div class="sheet">
+  <!-- Panel 1: inside flap (offer) -->
+  <div class="panel fold p-offer">
+    <div class="kick">Get started tonight</div>
+    <h2>From box to first close in minutes.</h2>
+    <div class="lead">No hardware. No setup fees. Works on the phone already in your pocket.</div>
+    <div class="steps">
+      <div class="step"><div class="num">1</div><div class="tx">Add your stores &amp; staff</div></div>
+      <div class="step"><div class="num">2</div><div class="tx">Staff snap the POS report &amp; count the drawer</div></div>
+      <div class="step"><div class="num">3</div><div class="tx">You see cash, sales &amp; profit instantly</div></div>
+    </div>
+    <div class="offerbox">
+      <div class="big">Start free &mdash; no card.</div>
+      <div class="small">Then 50% off your first 3 months.</div>
+      <div class="code"><small>USE CODE</small>STORE50</div>
+    </div>
+  </div>
+  <!-- Panel 2: back (contact + QR) -->
+  <div class="panel fold p-back">
+    <img class="logo" src="../play/icon-512.png" alt="">
+    <div class="nm">Daily Close</div>
+    <div class="tg">Nightly cash-up &amp; sales for<br/>multi-store owners</div>
+    <div class="qr"><img src="https://api.qrserver.com/v1/create-qr-code/?data=https%3A%2F%2Fdailyclose.us&size=400x400&margin=0&color=0e3b34&bgcolor=ffffff" alt="QR"></div>
+    <div class="scan">Scan to start free</div>
+    <div class="web">dailyclose.us</div>
+    <div class="find">or search &ldquo;Daily Close&rdquo; on the<br/>App Store &amp; Google Play</div>
+  </div>
+  <!-- Panel 3: front cover -->
+  <div class="panel p-cover">
+    <img class="logo" src="../play/icon-512.png" alt="">
+    <div class="lower">
+      <h1>Close your store in <span class="gold">2 minutes.</span></h1>
+      <div class="sub">Every store's cash, sales and profit &mdash; on your phone, the moment they close out.</div>
+      <span class="badge">English &middot; Espa&ntilde;ol &middot; <span class="lar">&#1575;&#1604;&#1593;&#1585;&#1576;&#1610;&#1577;</span> &middot; <span class="lhi">&#2361;&#2367;&#2344;&#2381;&#2342;&#2368;</span></span>
+    </div>
+  </div>
+</div>
+</body></html>

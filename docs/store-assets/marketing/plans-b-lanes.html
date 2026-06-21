@@ -1,0 +1,89 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--green:#0e3b34;--gold:#c2872b;--ink:#18221d;--bg:#f8f7f3;--border:#e5e0d6;--mut:rgba(24,34,29,.6)}
+html,body{width:1440px;height:940px}
+.page{width:1440px;height:940px;background:var(--bg);font-family:Inter,sans-serif;color:var(--ink);padding:46px 56px 40px;display:flex;flex-direction:column}
+.hd{text-align:center;margin-bottom:26px}
+.hd .k{font-size:15px;font-weight:800;letter-spacing:.22em;color:var(--gold);text-transform:uppercase}
+.hd h1{font-family:Fraunces,serif;font-weight:600;font-size:44px;margin-top:8px;letter-spacing:-.01em}
+.hd p{font-size:18px;font-weight:600;color:var(--mut);margin-top:7px}
+.lanes{flex:1;display:flex;flex-direction:column;gap:16px;justify-content:center}
+.lane{display:flex;align-items:center;gap:24px;background:#fff;border:1px solid var(--border);border-left:7px solid var(--green);border-radius:18px;padding:18px 24px;box-shadow:0 8px 20px rgba(14,59,52,.05)}
+.lane.gold{border-left-color:var(--gold)}
+.lane.feat{background:var(--green);border-color:var(--green);border-left-color:var(--gold)}
+.lane.feat *{color:#fff}
+.linfo{width:280px;flex:none}
+.linfo .nm{font-family:Fraunces,serif;font-weight:600;font-size:30px;display:flex;align-items:center;gap:10px}
+.tag{font-size:11px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;background:var(--gold);color:#fff;border-radius:99px;padding:3px 9px}
+.linfo .rg{font-size:15px;font-weight:700;color:var(--mut);margin-top:3px}
+.lane.feat .linfo .rg{color:rgba(255,255,255,.72)}
+.linfo .fr{font-size:15px;font-weight:800;color:var(--green);margin-top:6px}
+.lane.feat .linfo .fr{color:#f1c98a}
+.cells{flex:1;display:flex;gap:8px}
+.cell{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:11px;padding:10px 4px;text-align:center}
+.lane.feat .cell{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.18)}
+.cell .n{font-size:12px;font-weight:800;color:var(--mut)}
+.lane.feat .cell .n{color:rgba(255,255,255,.7)}
+.cell .v{font-size:20px;font-weight:900;color:var(--green);margin-top:2px;font-variant-numeric:tabular-nums}
+.lane.feat .cell .v{color:#fff}
+.cell.talk{flex:1.4;display:flex;flex-direction:column;justify-content:center;background:#fff;border:2px dashed var(--gold)}
+.cell.talk .n{color:var(--gold)}
+.cell.talk .v{font-size:16px;color:var(--gold)}
+.foot{text-align:center;margin-top:22px;font-size:16px;font-weight:700;color:var(--mut)}
+.foot b{color:var(--green)}
+.foot .code{background:var(--gold);color:#fff;border-radius:8px;padding:2px 10px;font-weight:900;letter-spacing:.03em}
+</style></head><body>
+<div class="page">
+  <div class="hd">
+    <div class="k">Simple pricing</div>
+    <h1>Find your store count. See your price.</h1>
+    <p>$1 a day for one store — and the rate drops the more you run.</p>
+  </div>
+  <div class="lanes">
+
+    <div class="lane">
+      <div class="linfo"><div class="nm">Solo</div><div class="rg">1 store</div><div class="fr">$29 / month</div></div>
+      <div class="cells"><div class="cell"><div class="n">1 store</div><div class="v">$29</div></div></div>
+    </div>
+
+    <div class="lane feat">
+      <div class="linfo"><div class="nm">Multi <span class="tag">Popular</span></div><div class="rg">2–5 stores · $24 each extra</div><div class="fr">from $53 / month</div></div>
+      <div class="cells">
+        <div class="cell"><div class="n">2</div><div class="v">$53</div></div>
+        <div class="cell"><div class="n">3</div><div class="v">$77</div></div>
+        <div class="cell"><div class="n">4</div><div class="v">$101</div></div>
+        <div class="cell"><div class="n">5</div><div class="v">$125</div></div>
+      </div>
+    </div>
+
+    <div class="lane gold">
+      <div class="linfo"><div class="nm">Growth</div><div class="rg">6–15 stores · $19 each extra</div><div class="fr">from $144 / month</div></div>
+      <div class="cells">
+        <div class="cell"><div class="n">6</div><div class="v">$144</div></div>
+        <div class="cell"><div class="n">7</div><div class="v">$163</div></div>
+        <div class="cell"><div class="n">8</div><div class="v">$182</div></div>
+        <div class="cell"><div class="n">9</div><div class="v">$201</div></div>
+        <div class="cell"><div class="n">10</div><div class="v">$220</div></div>
+        <div class="cell"><div class="n">11</div><div class="v">$239</div></div>
+        <div class="cell"><div class="n">12</div><div class="v">$258</div></div>
+        <div class="cell"><div class="n">13</div><div class="v">$277</div></div>
+        <div class="cell"><div class="n">14</div><div class="v">$296</div></div>
+        <div class="cell"><div class="n">15</div><div class="v">$315</div></div>
+      </div>
+    </div>
+
+    <div class="lane gold">
+      <div class="linfo"><div class="nm">Chain</div><div class="rg">16+ stores · $14 each extra</div><div class="fr">from $329 / month</div></div>
+      <div class="cells">
+        <div class="cell"><div class="n">16</div><div class="v">$329</div></div>
+        <div class="cell"><div class="n">18</div><div class="v">$357</div></div>
+        <div class="cell"><div class="n">20</div><div class="v">$385</div></div>
+        <div class="cell talk"><div class="n">25+ stores</div><div class="v">Let's talk — custom deal</div></div>
+      </div>
+    </div>
+
+  </div>
+  <div class="foot">Start <b>free</b> — no card. Then 50% off 3 months with <span class="code">STORE50</span> &nbsp;·&nbsp; pause any store anytime &nbsp;·&nbsp; go annual for <b>2 months free</b>.</div>
+</div>
+</body></html>

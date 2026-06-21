@@ -1,0 +1,98 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--green:#0e3b34;--gold:#c2872b;--leaf:#1f7a4d;--ink:#18221d;--bg:#f8f7f3;--border:#e5e0d6;--mut:rgba(24,34,29,.6)}
+html,body{width:1440px;height:920px}
+.page{width:1440px;height:920px;background:var(--bg);font-family:Inter,sans-serif;color:var(--ink);padding:52px 60px 40px;display:flex;flex-direction:column}
+.hd{text-align:center;margin-bottom:34px}
+.hd .k{font-size:15px;font-weight:800;letter-spacing:.22em;color:var(--gold);text-transform:uppercase}
+.hd h1{font-family:Fraunces,serif;font-weight:600;font-size:48px;margin-top:10px;letter-spacing:-.01em}
+.hd p{font-size:19px;font-weight:600;color:var(--mut);margin-top:10px}
+.hd p b{color:var(--green)}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:22px;align-items:stretch}
+.card{background:#fff;border:1px solid var(--border);border-radius:24px;padding:30px 28px;display:flex;flex-direction:column;box-shadow:0 10px 26px rgba(14,59,52,.05);position:relative}
+.card.feat{background:var(--green);color:#fff;border-color:var(--green);box-shadow:0 22px 48px rgba(14,59,52,.3);transform:translateY(-8px)}
+.badge{position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:var(--gold);color:#fff;font-size:12px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;border-radius:99px;padding:6px 16px;white-space:nowrap}
+.pname{font-family:Fraunces,serif;font-weight:600;font-size:32px}
+.who{font-size:15px;font-weight:600;color:var(--mut);margin-top:4px;min-height:42px}
+.card.feat .who{color:rgba(255,255,255,.74)}
+.price{margin-top:14px;display:flex;align-items:baseline;gap:7px}
+.price .from{font-size:15px;font-weight:700;color:var(--mut)}
+.card.feat .price .from{color:rgba(255,255,255,.7)}
+.price .big{font-family:Fraunces,serif;font-weight:600;font-size:50px;line-height:1}
+.price .per{font-size:16px;font-weight:700;color:var(--mut)}
+.card.feat .price .per{color:rgba(255,255,255,.7)}
+.scale{font-size:14.5px;font-weight:700;color:var(--leaf);margin-top:10px;line-height:1.4}
+.card.feat .scale{color:#f1c98a}
+.range{font-size:13px;font-weight:600;color:var(--mut);margin-top:4px}
+.card.feat .range{color:rgba(255,255,255,.6)}
+.cta{margin-top:auto;margin-top:26px;height:50px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px;border:2px solid var(--green);color:var(--green)}
+.card.feat .cta{background:var(--gold);border-color:var(--gold);color:#fff}
+.card .cta.fill{background:var(--green);color:#fff}
+.includes{margin-top:30px;background:#fff;border:1px solid var(--border);border-radius:18px;padding:20px 28px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:center}
+.includes .lead{font-size:15px;font-weight:900;color:var(--green);margin-right:6px}
+.inc{display:flex;align-items:center;gap:7px;font-size:14.5px;font-weight:700;color:var(--ink)}
+.inc svg{width:18px;height:18px;stroke:var(--leaf);fill:none;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.foot{text-align:center;margin-top:auto;padding-top:22px;font-size:16px;font-weight:700;color:var(--mut)}
+.foot b{color:var(--green)}
+.foot .code{background:var(--gold);color:#fff;border-radius:8px;padding:2px 10px;font-weight:900;letter-spacing:.03em}
+</style></head><body>
+<div class="page">
+  <div class="hd">
+    <div class="k">Pricing</div>
+    <h1>One price. Per store.</h1>
+    <p>Every plan does <b>everything</b> — you only pay for the shops you run. Your price scales with your store count.</p>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <div class="pname">Solo</div>
+      <div class="who">For a single shop.</div>
+      <div class="price"><span class="big">$29</span><span class="per">/mo</span></div>
+      <div class="scale">Just $1 a day.</div>
+      <div class="range">1 store</div>
+      <div class="cta">Start free</div>
+    </div>
+
+    <div class="card feat">
+      <div class="badge">Most popular</div>
+      <div class="pname">Multi</div>
+      <div class="who">For owners with a few shops.</div>
+      <div class="price"><span class="from">from</span><span class="big">$53</span><span class="per">/mo</span></div>
+      <div class="scale">Scales with your stores — up to $125 at 5.</div>
+      <div class="range">2–5 stores</div>
+      <div class="cta">Start free</div>
+    </div>
+
+    <div class="card">
+      <div class="pname">Growth</div>
+      <div class="who">For a growing group of stores.</div>
+      <div class="price"><span class="from">from</span><span class="big">$144</span><span class="per">/mo</span></div>
+      <div class="scale">A lower rate per store as you add more.</div>
+      <div class="range">6–15 stores</div>
+      <div class="cta">Start free</div>
+    </div>
+
+    <div class="card">
+      <div class="pname">Chain</div>
+      <div class="who">For large &amp; franchise operators.</div>
+      <div class="price"><span class="big">Custom</span></div>
+      <div class="scale">Best per-store rate &amp; priority support.</div>
+      <div class="range">16+ stores</div>
+      <div class="cta">Let&rsquo;s talk</div>
+    </div>
+  </div>
+
+  <div class="includes">
+    <span class="lead">Every plan includes</span>
+    <span class="inc"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Unlimited closes</span>
+    <span class="inc"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Multi-store dashboard</span>
+    <span class="inc"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Cash over/short alerts</span>
+    <span class="inc"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>CSV &amp; PDF export</span>
+    <span class="inc"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Pause a store anytime</span>
+    <span class="inc"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>4 languages</span>
+  </div>
+
+  <div class="foot">14-day free trial — no card. Then 50% off your first 3 months with <span class="code">STORE50</span> &nbsp;·&nbsp; go annual for <b>2 months free</b>.</div>
+</div>
+</body></html>

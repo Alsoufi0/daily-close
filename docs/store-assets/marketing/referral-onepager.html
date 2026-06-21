@@ -1,0 +1,72 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800;900&display=swap');
+@page{size:Letter;margin:0}
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--green:#0e3b34;--gold:#c2872b;--ink:#18221d;--bg:#f8f7f3;--border:#e7e2d8;--mut:rgba(24,34,29,.6)}
+html,body{width:816px}
+body{font-family:Inter,sans-serif;color:var(--ink);background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.head{background:var(--green);color:#fff;padding:28px 46px 24px;position:relative;overflow:hidden}
+.head::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 80% at 88% 6%,rgba(255,255,255,.07),transparent 55%)}
+.brand{display:flex;align-items:center;gap:13px;position:relative;z-index:1}
+.brand img{width:46px;height:46px;border-radius:12px;box-shadow:0 8px 20px rgba(0,0,0,.35)}
+.brand .n{font-family:Fraunces,serif;font-weight:600;font-size:23px}
+.brand .k{margin-left:auto;font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--gold)}
+.head h1{font-family:Fraunces,serif;font-weight:600;font-size:31px;line-height:1.05;margin-top:13px;position:relative;z-index:1}
+.head p{font-size:14px;font-weight:500;color:rgba(255,255,255,.82);margin-top:8px;max-width:620px;position:relative;z-index:1;line-height:1.42}
+.body{padding:20px 46px 18px}
+.rulebox{display:flex;gap:16px;background:var(--bg);border:1px solid var(--border);border-left:5px solid var(--gold);border-radius:14px;padding:13px 18px;align-items:center}
+.rulebox .ic{font-size:30px;flex:none}
+.rulebox .t{font-size:14px;font-weight:600;color:var(--ink);line-height:1.45}
+.rulebox .t b{color:var(--green);font-weight:900}
+.sec{font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);margin:12px 0 7px}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+thead th{background:var(--green);color:#fff;font-weight:700;text-align:left;padding:8px 14px;font-size:12.5px}
+thead th:first-child{border-radius:10px 0 0 0}thead th:last-child{border-radius:0 10px 0 0;text-align:right}
+tbody td{padding:7px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+tbody td:last-child{text-align:right;font-weight:900;color:var(--green);white-space:nowrap}
+tbody tr:nth-child(even){background:var(--bg)}
+tbody .who{font-weight:800}
+tbody .sub{font-size:11.5px;color:var(--mut);font-weight:500;margin-top:1px}
+.newrow td{background:#fbf3e4 !important;border-bottom:none}
+.newrow .who{color:var(--gold)}
+.pill{display:inline-block;background:var(--green);color:#fff;font-weight:800;font-size:11px;border-radius:6px;padding:2px 8px;letter-spacing:.02em}
+.q{display:flex;gap:13px;padding:8px 0;border-bottom:1px solid var(--border)}
+.q:last-child{border-bottom:none}
+.q .num{width:30px;height:30px;border-radius:50%;background:var(--green);color:#fff;font-weight:900;font-size:14px;display:flex;align-items:center;justify-content:center;flex:none}
+.q .qt{font-size:14px;font-weight:800;line-height:1.35}
+.q .qd{font-size:12.5px;color:var(--mut);font-weight:500;margin-top:2px;line-height:1.35}
+.q .rec{display:inline-block;margin-top:5px;background:#eaf3ee;color:#1f7a4d;font-size:11.5px;font-weight:800;border-radius:7px;padding:3px 10px}
+.foot{margin-top:11px;font-size:11.5px;color:var(--mut);font-weight:500;text-align:center;line-height:1.5}
+.foot b{color:var(--green)}
+</style></head><body>
+  <div class="head">
+    <div class="brand"><img src="../play/icon-512.png" alt=""><span class="n">Daily Close</span><span class="k">Refer-a-Friend</span></div>
+    <h1>Owners earn free store-months for bringing in other owners.</h1>
+    <p>A simple two-sided program: an existing owner shares a link, a new owner signs up and pays, and <b style="color:#fff">both</b> win &mdash; the newcomer gets a welcome deal, the referrer gets free store-months that match how big a customer they brought in.</p>
+  </div>
+  <div class="body">
+    <div class="rulebox">
+      <div class="ic">&#127881;</div>
+      <div class="t">When <b>Owner B</b> makes their <b>first payment</b>, <b>Owner A</b> earns <b>one free store-month for every store B paid for</b> (about <b>$50</b> each) &mdash; applied as credit on A&rsquo;s next bill. Only that first payment counts.</div>
+    </div>
+
+    <div class="sec">Examples</div>
+    <table>
+      <thead><tr><th>Who refers</th><th>What the new owner pays for</th><th>The referrer earns</th></tr></thead>
+      <tbody>
+        <tr><td><div class="who">A 10-store owner</div></td><td>1 store <div class="sub">a small shop signs up</div></td><td>1 free store-month<br>&asymp; $50</td></tr>
+        <tr><td><div class="who">A 1-store owner</div></td><td>5 stores <div class="sub">brought in a bigger chain</div></td><td>5 free store-months<br>&asymp; $250</td></tr>
+        <tr><td><div class="who">A 3-store owner</div></td><td>3 stores</td><td>3 free store-months<br>&asymp; $150</td></tr>
+        <tr class="newrow"><td><div class="who">Every new owner (B)</div></td><td colspan="1">Their welcome deal <div class="sub">always, just for joining via a link</div></td><td><span class="pill">First month free / 50% off</span></td></tr>
+      </tbody>
+    </table>
+    <p style="font-size:12px;color:var(--mut);font-weight:500;margin-top:7px;line-height:1.4">The reward follows <b style="color:var(--green)">what the newcomer brings</b>, not how big the referrer already is &mdash; so a 10-store owner who refers a 1-store shop earns ~$50, not ~$499. And because it only pays out on stores B <i>actually paid for</i>, it can&rsquo;t be gamed with fake sign-ups.</p>
+
+    <div class="sec">Three quick decisions</div>
+    <div class="q"><div class="num">1</div><div><div class="qt">&ldquo;Pick which stores&rdquo; &mdash; build it, or skip it?</div><div class="qd">All stores cost the same and bill as one lump, so &ldquo;5 free store-months&rdquo; is just a $250 credit no matter which stores it&rsquo;s pointed at. A store-picker screen is purely cosmetic.</div><span class="rec">Recommendation: skip the picker &mdash; just apply the credit</span></div></div>
+    <div class="q"><div class="num">2</div><div><div class="qt">If the reward is bigger than the referrer&rsquo;s bill, what happens?</div><div class="qd">e.g. a 2-store owner ($100/mo) earns $250. The extra $150 can carry over and reduce the following months automatically.</div><span class="rec">Recommendation: let it roll over to future months</span></div></div>
+    <div class="q"><div class="num">3</div><div><div class="qt">Cap how much one owner can earn?</div><div class="qd">Since every reward is backed by real money the newcomer paid, there&rsquo;s little fraud risk. A hard cap isn&rsquo;t really needed.</div><span class="rec">Recommendation: no hard cap &mdash; just a quiet alert on large payouts</span></div></div>
+
+    <div class="foot">This is separate from the existing <b>partner/distributor program</b> (outside salespeople who earn cash commissions). It also rides on the same discount &amp; credit system &mdash; so it&rsquo;s <b>one build</b>, not two.<br>Daily Close &middot; dailyclose.us &middot; draft for review &mdash; 2026</div>
+  </div>
+</body></html>

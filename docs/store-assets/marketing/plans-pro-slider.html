@@ -1,0 +1,63 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--green:#0e3b34;--gold:#c2872b;--leaf:#1f7a4d;--ink:#18221d;--bg:#f8f7f3;--border:#e5e0d6;--mut:rgba(24,34,29,.6)}
+html,body{width:1440px;height:900px}
+.page{width:1440px;height:900px;background:var(--bg);font-family:Inter,sans-serif;color:var(--ink);padding:54px 60px 44px;display:flex;flex-direction:column;align-items:center}
+.k{font-size:15px;font-weight:800;letter-spacing:.22em;color:var(--gold);text-transform:uppercase}
+h1{font-family:Fraunces,serif;font-weight:600;font-size:48px;margin-top:10px;letter-spacing:-.01em;text-align:center}
+.sub{font-size:19px;font-weight:600;color:var(--mut);margin-top:10px;text-align:center}
+.card{margin-top:34px;width:1080px;background:#fff;border:1px solid var(--border);border-radius:28px;padding:44px 60px 40px;box-shadow:0 18px 44px rgba(14,59,52,.08);text-align:center}
+.q{font-family:Fraunces,serif;font-weight:600;font-size:30px;color:var(--green)}
+.track{position:relative;margin:54px 10px 0;height:20px}
+.segs{display:flex;height:20px;border-radius:99px;overflow:hidden;gap:3px}
+.seg{height:100%}
+.seg.s{background:var(--green)}.seg.m{background:var(--gold)}.seg.g{background:var(--leaf)}.seg.c{background:#3a2a12}
+.knob{position:absolute;top:50%;left:24%;width:40px;height:40px;border-radius:50%;background:#fff;border:5px solid var(--gold);transform:translate(-50%,-50%);box-shadow:0 8px 20px rgba(0,0,0,.18);z-index:3}
+.bubble{position:absolute;left:24%;top:-46px;transform:translateX(-50%);background:var(--green);color:#fff;font-weight:900;font-size:15px;padding:7px 14px;border-radius:10px;white-space:nowrap}
+.bubble::after{content:"";position:absolute;bottom:-6px;left:50%;transform:translateX(-50%) rotate(45deg);width:12px;height:12px;background:var(--green)}
+.ticks{display:flex;justify-content:space-between;margin-top:16px;font-size:14px;font-weight:800;color:var(--mut)}
+.bandlbls{display:flex;margin-top:6px;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+.bandlbls span{text-align:center}
+.readout{margin-top:38px;display:flex;align-items:baseline;justify-content:center;gap:10px}
+.readout .big{font-family:Fraunces,serif;font-weight:600;font-size:72px;line-height:1;color:var(--green)}
+.readout .per{font-size:22px;font-weight:800;color:var(--mut)}
+.rsub{font-size:17px;font-weight:700;color:var(--leaf);margin-top:10px}
+.tiers{margin-top:30px;width:1080px;display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.tier{background:#fff;border:1px solid var(--border);border-radius:16px;padding:18px 20px;display:flex;align-items:center;justify-content:space-between}
+.tier .nm{font-family:Fraunces,serif;font-weight:600;font-size:21px}
+.tier .rg{font-size:12.5px;font-weight:700;color:var(--mut);margin-top:1px}
+.tier .pr{font-size:19px;font-weight:900;color:var(--green);text-align:right}
+.tier.feat{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold) inset}
+.foot{margin-top:auto;padding-top:26px;font-size:16px;font-weight:700;color:var(--mut);text-align:center}
+.foot b{color:var(--green)}
+.foot .code{background:var(--gold);color:#fff;border-radius:8px;padding:2px 10px;font-weight:900;letter-spacing:.03em}
+</style></head><body>
+<div class="page">
+  <div class="k">Pricing</div>
+  <h1>Pay only for the stores you run.</h1>
+  <div class="sub">One simple rate per store — and it drops the more you add.</div>
+
+  <div class="card">
+    <div class="q">How many stores do you run?</div>
+    <div class="track">
+      <div class="segs"><div class="seg s" style="flex:1"></div><div class="seg m" style="flex:4"></div><div class="seg g" style="flex:10"></div><div class="seg c" style="flex:3"></div></div>
+      <div class="bubble">4 stores</div>
+      <div class="knob"></div>
+    </div>
+    <div class="ticks"><span>1</span><span>5</span><span>10</span><span>15</span><span>16+</span></div>
+    <div class="bandlbls"><span style="flex:1;color:var(--green)">Solo</span><span style="flex:4;color:var(--gold)">Multi</span><span style="flex:10;color:var(--leaf)">Growth</span><span style="flex:3;color:#3a2a12">Chain</span></div>
+    <div class="readout"><span class="big">$101</span><span class="per">/ month</span></div>
+    <div class="rsub">4 stores · about $25 each &mdash; cheaper than four single plans</div>
+  </div>
+
+  <div class="tiers">
+    <div class="tier"><div><div class="nm">Solo</div><div class="rg">1 store</div></div><div class="pr">$29</div></div>
+    <div class="tier feat"><div><div class="nm">Multi</div><div class="rg">2–5 stores</div></div><div class="pr">from $53</div></div>
+    <div class="tier"><div><div class="nm">Growth</div><div class="rg">6–15 stores</div></div><div class="pr">from $144</div></div>
+    <div class="tier"><div><div class="nm">Chain</div><div class="rg">16+ stores</div></div><div class="pr">Custom</div></div>
+  </div>
+
+  <div class="foot">14-day free trial — no card. Then 50% off 3 months with <span class="code">STORE50</span> &nbsp;·&nbsp; annual = <b>2 months free</b>.</div>
+</div>
+</body></html>
