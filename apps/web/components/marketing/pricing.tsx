@@ -80,8 +80,15 @@ export function Pricing() {
             className="dc-range"
             style={{ background: TRACK_BG }}
           />
-          <div className="mt-3 flex justify-between text-xs font-black text-ink/55">
-            <span>1</span><span>5</span><span>10</span><span>15</span><span>16+</span>
+          {/* Ticks positioned at each value's TRUE slider position. The thumb
+              centre for value v is at calc(frac·(100% − thumbW) + thumbW/2),
+              frac = (v−1)/15, thumbW = 30px — so labels line up with the knob. */}
+          <div className="relative mt-3 h-4 text-xs font-black text-ink/55">
+            <span className="absolute -translate-x-1/2" style={{ left: "15px" }}>1</span>
+            <span className="absolute -translate-x-1/2" style={{ left: "calc(0.2667 * (100% - 30px) + 15px)" }}>5</span>
+            <span className="absolute -translate-x-1/2" style={{ left: "calc(0.6 * (100% - 30px) + 15px)" }}>10</span>
+            <span className="absolute -translate-x-1/2" style={{ left: "calc(0.9333 * (100% - 30px) + 15px)" }}>15</span>
+            <span className="absolute -translate-x-1/2" style={{ left: "calc(100% - 15px)" }}>16+</span>
           </div>
         </div>
 
