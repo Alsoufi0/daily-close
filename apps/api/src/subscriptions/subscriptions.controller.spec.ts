@@ -17,8 +17,17 @@ describe("SubscriptionsController webhook", () => {
       recordInvoicePayment: jest.fn().mockResolvedValue({ created: true, commissionId: "c1" }),
       reverseByInvoice: jest.fn().mockResolvedValue({ reversed: true })
     };
-    const controller = new SubscriptionsController(subscriptions as any, commissions as any);
-    return { controller, subscriptions, commissions };
+    const referralRewards = {
+      recordFirstPaymentReward: jest.fn().mockResolvedValue({ created: false, reason: "not_referred" }),
+      reverseByInvoice: jest.fn().mockResolvedValue({ reversed: false }),
+      flushPendingForReferrer: jest.fn().mockResolvedValue({ applied: 0 })
+    };
+    const controller = new SubscriptionsController(
+      subscriptions as any,
+      commissions as any,
+      referralRewards as any
+    );
+    return { controller, subscriptions, commissions, referralRewards };
   }
 
   it("activates a first checkout session by owner id", async () => {
@@ -100,5 +109,68 @@ describe("SubscriptionsController webhook", () => {
     ).resolves.toEqual({ received: true });
 
     expect(commissions.reverseByInvoice).toHaveBeenCalledWith("in_123");
+  });
+
+  it("mints an owner→owner referral reward from the invoice quantity + unit price", async () => {
+    process.env = { ...originalEnv, NODE_ENV: "test", STRIPE_PRICE_ID: "price_store" };
+    delete process.env.STRIPE_WEBHOOK_SECRET;
+    const { controller, referralRewards } = makeController();
+
+    await controller.webhook(
+      {} as any,
+      {
+        type: "invoice.payment_succeeded",
+        data: {
+          object: {
+            id: "in_777",
+            customer: "cus_B",
+            amount_paid: 9998,
+            currency: "usd",
+            lines: { data: [{ quantity: 2, price: { id: "price_store", unit_amount: 4999 } }] }
+          }
+        }
+      },
+      undefined
+    );
+
+    expect(referralRewards.recordFirstPaymentReward).toHaveBeenCalledWith({
+      referredStripeCustomerId: "cus_B",
+      stripeInvoiceId: "in_777",
+      amountPaidCents: 9998,
+      storeCount: 2,
+      unitAmountCents: 4999,
+      currency: "usd"
+    });
+  });
+
+  it("reverses a referral reward on charge.refunded", async () => {
+    process.env = { ...originalEnv, NODE_ENV: "test" };
+    delete process.env.STRIPE_WEBHOOK_SECRET;
+    const { controller, referralRewards } = makeController();
+
+    await controller.webhook(
+      {} as any,
+      { type: "charge.refunded", data: { object: { invoice: "in_777" } } },
+      undefined
+    );
+
+    expect(referralRewards.reverseByInvoice).toHaveBeenCalledWith("in_777");
+  });
+
+  it("flushes pending referral credit when a checkout links the owner", async () => {
+    process.env = { ...originalEnv, NODE_ENV: "test" };
+    delete process.env.STRIPE_WEBHOOK_SECRET;
+    const { controller, referralRewards } = makeController();
+
+    await controller.webhook(
+      {} as any,
+      {
+        type: "checkout.session.completed",
+        data: { object: { customer: "cus_A", subscription: "sub_A", client_reference_id: "owner-A" } }
+      },
+      undefined
+    );
+
+    expect(referralRewards.flushPendingForReferrer).toHaveBeenCalledWith("owner-A");
   });
 });

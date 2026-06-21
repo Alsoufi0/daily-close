@@ -18,6 +18,7 @@ import { SubscriptionsController } from "../subscriptions/subscriptions.controll
 import { AppSettingsService } from "./app-settings.service";
 import { CommissionsService } from "./commissions.service";
 import { PartnersService, currentPeriod } from "./partners.service";
+import { ReferralRewardsService } from "./referral-rewards.service";
 import { isValidRefCode } from "./ref-code";
 
 const RUN = process.env.REFERRALS_E2E === "1";
@@ -28,9 +29,11 @@ d("referrals + commissions E2E (real DB)", () => {
   const settings = new AppSettingsService(prisma);
   const partners = new PartnersService(prisma, { notifyScan: async () => {} } as any);
   const commissions = new CommissionsService(prisma, settings);
+  const referralRewards = new ReferralRewardsService(prisma, { notifyLargeReward: async () => {} } as any);
   const webhook = new SubscriptionsController(
     { syncFromStripe: async () => ({}) } as any,
-    commissions
+    commissions,
+    referralRewards
   );
 
   const customerId = `cus_e2e_${Date.now()}`;

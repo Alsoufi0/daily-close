@@ -1,5 +1,65 @@
 # Audit Backlog
 
+## 💸 Discount + referral system — added 2026-06-20
+Business decision pending with partner; logged so it isn't lost.
+- [ ] **Fully implement the discount system.** Today the checkout already passes
+  `allow_promotion_codes: "true"` ([subscriptions.service.ts:201](../apps/api/src/subscriptions/subscriptions.service.ts#L201)),
+  so Stripe-Dashboard promo codes (e.g. `STORE50` = 50% off 3 months) work the moment they're
+  created — no code needed for a basic launch coupon. "Fully implement" means going beyond
+  manual dashboard codes: own the coupon/credit lifecycle in-app (apply a code at signup or in
+  billing, show the active discount + remaining months on the billing page, surface it on
+  invoices, and let credits/free-months stack cleanly with the per-store quantity billing and the
+  pause feature). The marketing flyers already advertise `STORE50`, so create that coupon in
+  Stripe before the flyers go out regardless of the larger build.
+- [~] **Customer (owner→owner) referral program — BUILT 2026-06-20 (code merged-ready; DB migration
+  013 NOT yet applied).** Going with all three recommendations: apply credit directly (no
+  store-picker), surplus rolls over via native Stripe customer balance, no hard cap (ops alert above
+  $200 / `REFERRAL_ALERT_CENTS`). Shipped: migration `013_owner_referrals.sql` (owners.referral_code
+  + referred_by_owner_id, `referral_rewards` ledger + enum, RLS on), Prisma `ReferralReward` model,
+  `ReferralRewardsService` (mint on referee's FIRST real payment, apply/flush/reverse Stripe credit,
+  lazy code gen), `GET /referrals/me`, webhook wiring (mint on invoice.paid, reverse on
+  refund/dispute, flush pending on checkout), owner-code resolution at signup, and a billing-page
+  "Refer a friend" card. 56 referral/subscription tests + full API suite (188) green, web+api
+  typecheck clean. **Remaining: (1) apply migration 013 to the DB (needs auth), (2) deploy API+web.
+  Apply the migration BEFORE the code deploys** or `/referrals/me` 500s on the missing column.
+  Original notes — distinct
+  from the existing *partner/distributor commission* system in `apps/api/src/referrals/` (external
+  partners earn 25% recurring **cash** on owners they bring in, via `/r/{ref_code}` first-touch
+  attribution — migration `011_referrals_commissions.sql`). New program: an existing **owner** (A)
+  refers another owner (B); both benefit (two-sided "give-get").
+  **Agreed reward model:** A's reward **mirrors B's FIRST payment** — if B's first cleared payment
+  covers N stores, A earns **N store-months of credit** (N × per-store price, ~$50/store). Bounded
+  by B's first payment only (later store adds by B do NOT add reward). Scales with *value B brings*,
+  not with A's size (so a 10-store A who refers a 1-store B gets ~$50, not ~$499). B gets the
+  welcome deal (first store-month free / 50%-off-3-months `STORE50`).
+  **Implementation note:** under the hood A has ONE Stripe subscription (quantity = store count,
+  one lump invoice), so the reward is simply an **account credit = N × per-store price** applied to
+  A's next invoice. "Pick which N stores to apply it to" is **cosmetic** (all stores cost the same,
+  so the dollar amount is identical regardless of which) — only build a store-picker if we want the
+  warm-fuzzy UX, not because it changes billing.
+  **Open decisions:** (1) if A's reward exceeds A's current bill (A has fewer stores than N), let
+  the surplus **roll over** as Stripe customer-balance credit (recommended, native) vs cap at A's
+  store count; (2) per-period reward cap (likely unneeded — reward is tied to B's REAL paid stores,
+  so self-referral fraud costs the fraudster the same money they'd get back; but a sanity ceiling is
+  cheap). **Must reverse** A's credit if B's first payment is refunded/charged back (reuse the
+  partner-commission reversal path). Reuse: ref-code gen, first-touch attribution, "reward on real
+  payment / reverse on refund". Same Stripe coupon/credit layer as the discount system above — one
+  project, not two.
+
+## 💲 Tiered per-store pricing — BUILT 2026-06-21 (code ready; Stripe swap gated)
+Replaces flat $49.99/store with **graduated tiers** (Solo $29 · Multi 2–5 @ $24 · Growth 6–15 @ $19 ·
+Chain 16+ @ $14). Single source of truth: [`shared/pricing.ts`](../shared/pricing.ts). Shipped:
+- Interactive **slider `/pricing`** page (`apps/web/components/marketing/pricing.tsx`) — drag to store
+  count, live price, tier cards. Mirrors the approved "slider" mockup. Verified rendering via prod build.
+- Billing page computes monthly total + effective per-store + plan from the shared tiers.
+- All `$49.99` copy → `from $29` across **every locale** in `shared/i18n/index.ts` + terms + pricing
+  metadata (number correct everywhere; "from"/"desde" wording is a minor i18n-polish gap).
+- Web typecheck + **production build green**. Pricing math node-verified against exact figures.
+**Checkout needs NO code change** — it already sends `quantity`; a graduated Stripe price does the math.
+**Remaining (go-live, user/partner): create the graduated Stripe Price, point `STRIPE_PRICE_ID` at it,
+migrate existing subs (decision: move everyone over).** Full runbook: `docs/PRICING_TIERED_GOLIVE.md`.
+This also resets the referral-credit math (now ≈ "refer a friend, both get a free store-month" at $29).
+
 ## 📱 Next mobile update (post-launch) — added 2026-06-07, updated 2026-06-15
 Queued for the first update AFTER Android approval. Do NOT touch the in-review build.
 - [ ] **Loading circle in the "Uploading & reading report…" box.** In the close flow (step 1,

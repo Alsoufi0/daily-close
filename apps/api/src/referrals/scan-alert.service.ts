@@ -7,6 +7,12 @@ export interface ScanAlertInput {
   scanCount: number;
 }
 
+export interface LargeRewardAlertInput {
+  amountText: string;
+  storeCount: number;
+  status: string;
+}
+
 /**
  * Sends a notification when a partner's referral QR/link is scanned. Best-effort
  * and self-contained — it must NEVER throw into the scan request path.
@@ -25,18 +31,39 @@ export class ScanAlertService {
   private readonly logger = new Logger(ScanAlertService.name);
 
   async notifyScan(input: ScanAlertInput): Promise<void> {
+    const subject = `QR scanned — ${input.partnerName} (${input.refCode})`;
+    const text =
+      `A referral link was just opened.\n\n` +
+      `Partner: ${input.partnerName}\n` +
+      `Code: ${input.refCode}\n` +
+      `Total scans now: ${input.scanCount}\n` +
+      `Time: ${new Date().toISOString()}\n`;
+    await this.deliver(subject, text);
+  }
+
+  /**
+   * Heads-up when a single owner→owner referral credit is large (recommendation
+   * #3: no hard cap, just a notification). Best-effort, never throws.
+   */
+  async notifyLargeReward(input: LargeRewardAlertInput): Promise<void> {
+    const subject = `Large referral credit — ${input.amountText} (${input.storeCount} stores)`;
+    const text =
+      `A large owner→owner referral credit was just earned.\n\n` +
+      `Amount: ${input.amountText}\n` +
+      `Store-months: ${input.storeCount}\n` +
+      `Status: ${input.status}\n` +
+      `Time: ${new Date().toISOString()}\n`;
+    await this.deliver(subject, text);
+  }
+
+  // Shared best-effort delivery: SMTP (local/Mailpit) → Resend (prod) → log.
+  // Never throws into the caller's request/webhook path.
+  private async deliver(subject: string, text: string): Promise<void> {
     try {
       // Default to the platform ops inbox so prod alerts work without extra
       // env wiring. Override with SCAN_ALERT_TO, or set it to "" to disable.
       const to = process.env.SCAN_ALERT_TO ?? "dailyclose@yahoo.com";
       if (!to) return; // explicitly disabled
-      const subject = `QR scanned — ${input.partnerName} (${input.refCode})`;
-      const text =
-        `A referral link was just opened.\n\n` +
-        `Partner: ${input.partnerName}\n` +
-        `Code: ${input.refCode}\n` +
-        `Total scans now: ${input.scanCount}\n` +
-        `Time: ${new Date().toISOString()}\n`;
       const from = process.env.SMTP_FROM || process.env.RESEND_FROM || "Daily Close <alerts@dailyclose.us>";
 
       if (process.env.SMTP_HOST) {
@@ -44,10 +71,10 @@ export class ScanAlertService {
       } else if (process.env.RESEND_API_KEY) {
         await this.sendResend({ to, from, subject, text });
       } else {
-        this.logger.log(`[scan-alert:DRY-RUN] to=${to} :: ${subject}`);
+        this.logger.log(`[alert:DRY-RUN] to=${to} :: ${subject}`);
       }
     } catch (err) {
-      this.logger.warn(`Scan alert failed (ignored): ${(err as Error)?.message || err}`);
+      this.logger.warn(`Alert failed (ignored): ${(err as Error)?.message || err}`);
     }
   }
 

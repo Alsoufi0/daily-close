@@ -2,18 +2,26 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, CreditCard, Loader2, Sparkles, TimerReset } from "lucide-react";
+import { CheckCircle2, Copy, CreditCard, Gift, Loader2, Sparkles, TimerReset } from "lucide-react";
 import { useSession } from "../../lib/use-session";
 import {
+  getMyReferral,
   getSubscription,
   openBillingPortal,
   pauseStore,
+  ReferralSummary,
   resumeStore,
   startSubscriptionCheckout,
   SubscriptionView
 } from "../../lib/api-client";
 import { RequireAuth } from "../../components/require-auth";
 import { isAccountOwner } from "../../lib/session-roles";
+import {
+  effectivePerStoreCents,
+  formatUsd,
+  monthlyPriceCents,
+  planForStoreCount
+} from "@smokeshop/shared/pricing";
 
 const demoSub: SubscriptionView = {
   status: "TRIALING",
@@ -54,6 +62,26 @@ function BillingPageInner() {
 
   const [portalLoading, setPortalLoading] = useState(false);
   const [busyStoreId, setBusyStoreId] = useState<string | null>(null);
+  const [referral, setReferral] = useState<ReferralSummary | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const referralLink =
+    referral && typeof window !== "undefined"
+      ? `${window.location.origin}/r/${referral.code}`
+      : referral
+        ? `https://dailyclose.us/r/${referral.code}`
+        : "";
+
+  async function copyReferral() {
+    if (!referralLink) return;
+    try {
+      await navigator.clipboard.writeText(referralLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      // Clipboard blocked (e.g. insecure context) — the input stays selectable.
+    }
+  }
 
   // Pause/resume a store from the billing page. After the toggle we re-fetch the
   // subscription so the counts (and the Stripe quantity) reflect the change.
@@ -119,6 +147,10 @@ function BillingPageInner() {
       .then((s) => !cancelled && setSub(s))
       .catch(() => !cancelled && setSub(demoSub))
       .finally(() => !cancelled && setLoading(false));
+    // Referral summary is non-blocking: the card only renders if it loads.
+    getMyReferral(session.token)
+      .then((r) => !cancelled && setReferral(r))
+      .catch(() => undefined);
     return () => {
       cancelled = true;
     };
@@ -155,7 +187,12 @@ function BillingPageInner() {
   // portal (minted on demand — no static URL needed). Trial/expired go to
   // checkout to (re)subscribe.
   const portalAction = sub.status === "ACTIVE" || pastDue;
-  const unitPrice = `$${(sub.unitAmountCents / 100).toFixed(2)}`;
+  // Tiered pricing: the bill is computed from the billed store count via the
+  // shared graduated tiers (single source of truth, mirrors the Stripe price).
+  const billedQty = sub.billedStoreQuantity;
+  const monthlyTotal = formatUsd(monthlyPriceCents(billedQty));
+  const perStore = formatUsd(effectivePerStoreCents(billedQty));
+  const planName = planForStoreCount(billedQty).name;
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6">
@@ -163,7 +200,7 @@ function BillingPageInner() {
         <p className="text-sm font-black uppercase tracking-wide text-leaf">Billing</p>
         <h1 className="mt-1 text-3xl font-black tracking-tight">Your subscription</h1>
         <p className="mt-1 text-base font-bold text-ink/65">
-          $49.99 per store, per month. Billed monthly. Cancel anytime.
+          Pricing scales per store — from $29/mo, and the rate drops as you grow. Billed monthly. Cancel anytime.
         </p>
       </header>
 
@@ -231,12 +268,13 @@ function BillingPageInner() {
       </div>
 
       <section className="mt-4 grid gap-3 sm:grid-cols-3">
-        <BillingStat label="Active stores" value={String(sub.activeStoreCount)} />
         <BillingStat label="Stores billed" value={String(sub.billedStoreQuantity)} />
-        <BillingStat label="Price per store" value={unitPrice} />
+        <BillingStat label="Monthly total" value={monthlyTotal} />
+        <BillingStat label={`${planName} plan`} value={`~${perStore}/store`} />
       </section>
       <p className="mt-3 rounded-xl border border-leaf/20 bg-leaf/5 p-3 text-sm font-bold text-ink/70">
-        Adding a store asks for confirmation and updates your monthly bill automatically.
+        You only pay for billed stores — about {perStore} each on your {planName} plan. Adding a store updates your bill
+        automatically; pause a store anytime to stop billing it.
       </p>
 
       {(sub.stores ?? []).length > 0 ? (
@@ -283,6 +321,54 @@ function BillingPageInner() {
               </li>
             ))}
           </ul>
+        </section>
+      ) : null}
+
+      {referral ? (
+        <section className="mt-6 rounded-2xl border border-gold/30 bg-gold/5 p-5 shadow-sm">
+          <div className="flex items-start gap-3">
+            <span className="flex h-10 w-10 flex-none items-center justify-center rounded-xl bg-gold/15 text-gold">
+              <Gift size={20} />
+            </span>
+            <div className="min-w-0">
+              <h3 className="text-lg font-black">Refer a shop owner, get free store-months</h3>
+              <p className="mt-1 text-sm font-bold text-ink/65">
+                Share your link. When a shop owner you refer makes their first payment, you earn a
+                free month for every store they pay for — applied as credit on your next bill.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+            <input
+              readOnly
+              value={referralLink}
+              onFocus={(e) => e.currentTarget.select()}
+              className="focus-ring h-12 min-w-0 flex-1 rounded-lg border border-ink/15 bg-white px-3 font-bold text-ink/80"
+              aria-label="Your referral link"
+            />
+            <button
+              onClick={copyReferral}
+              className="focus-ring inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-gold px-4 font-black text-white"
+            >
+              {copied ? <CheckCircle2 size={18} /> : <Copy size={18} />}
+              {copied ? "Copied" : "Copy link"}
+            </button>
+          </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <BillingStat label="Friends joined" value={String(referral.referralCount)} />
+            <BillingStat
+              label="Credit earned"
+              value={`$${(referral.earnedCents / 100).toFixed(2)}`}
+            />
+          </div>
+          {referral.pendingCents > 0 ? (
+            <p className="mt-3 text-xs font-bold text-ink/55">
+              ${(referral.pendingCents / 100).toFixed(2)} will apply to your bill once you start a
+              paid plan.
+            </p>
+          ) : null}
         </section>
       ) : null}
 

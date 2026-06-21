@@ -5,22 +5,32 @@ import { CommissionsController } from "./commissions.controller";
 import { CommissionsService } from "./commissions.service";
 import { PartnersController } from "./partners.controller";
 import { PartnersService } from "./partners.service";
+import { ReferralRewardsService } from "./referral-rewards.service";
 import { ReferralSettingsController } from "./referral-settings.controller";
+import { ReferralsMeController } from "./referrals-me.controller";
 import { ReferralsPublicController } from "./referrals-public.controller";
 import { ScanAlertService } from "./scan-alert.service";
 
-// Referral attribution + recurring commission tracking. CommissionsService is
-// exported so the Stripe webhook (SubscriptionsModule) can mint/reverse rows
-// from real payment events.
+// Referral attribution + recurring commission tracking (partner/distributor
+// program) PLUS the owner→owner "refer a friend" credit program. Both
+// CommissionsService and ReferralRewardsService are exported so the Stripe
+// webhook (SubscriptionsModule) can mint/reverse rows from real payment events.
 @Module({
   imports: [AuthModule],
   controllers: [
     PartnersController,
     CommissionsController,
     ReferralSettingsController,
-    ReferralsPublicController
+    ReferralsPublicController,
+    ReferralsMeController
   ],
-  providers: [PartnersService, CommissionsService, AppSettingsService, ScanAlertService],
-  exports: [CommissionsService]
+  providers: [
+    PartnersService,
+    CommissionsService,
+    ReferralRewardsService,
+    AppSettingsService,
+    ScanAlertService
+  ],
+  exports: [CommissionsService, ReferralRewardsService]
 })
 export class ReferralsModule {}

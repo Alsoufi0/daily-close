@@ -72,6 +72,18 @@ enum CommissionKind {
   @@map("commission_kind")
 }
 
+// Lifecycle of an owner→owner referral credit (see migration 013):
+//   PENDING  → earned, not yet posted to the referrer's Stripe balance
+//   APPLIED  → posted to the referrer's Stripe customer balance
+//   REVERSED → clawed back (the referee's first payment refunded/disputed)
+enum ReferralRewardStatus {
+  PENDING
+  APPLIED
+  REVERSED
+
+  @@map("referral_reward_status")
+}
+
 model User {
   id              String         @id @default(cuid())
   authUserId      String?        @unique @map("auth_user_id")
@@ -108,12 +120,24 @@ model Owner {
   // signed up through. Stamped ONCE at signup, never reassigned (the API only
   // writes it when it is currently null). See migration 011.
   referredByPartnerId  String?   @map("referred_by_partner_id")
+  // Owner→owner "refer a friend" (migration 013). `referralCode` is this owner's
+  // own shareable code (lazy-generated). `referredByOwnerId` is the owner who
+  // referred THIS account — first-touch, stamped once at signup, never reassigned.
+  referralCode         String?   @unique @map("referral_code")
+  referredByOwnerId    String?   @map("referred_by_owner_id")
   user                 User      @relation(fields: [userId], references: [id])
   referredBy           Partner?  @relation(fields: [referredByPartnerId], references: [id])
+  referredByOwner      Owner?    @relation("OwnerReferral", fields: [referredByOwnerId], references: [id])
+  referredOwners       Owner[]   @relation("OwnerReferral")
   stores               Store[]
   commissions          Commission[]
+  // Referral credits this owner EARNED (as the referrer) and the ones their
+  // referral GAVE RISE TO (as the referee whose payment triggered them).
+  referralRewardsEarned ReferralReward[] @relation("RewardReferrer")
+  referralRewardsCaused ReferralReward[] @relation("RewardReferred")
 
   @@index([referredByPartnerId])
+  @@index([referredByOwnerId])
   @@map("owners")
 }
 
@@ -362,6 +386,38 @@ model Commission {
   @@index([ownerId])
   @@index([period])
   @@map("commissions")
+}
+
+// Owner→owner "refer a friend" credit ledger (migration 013). One row per
+// successful referral: the referrer earns N store-months of account credit when
+// the referee makes their first real payment (N = stores on that invoice).
+model ReferralReward {
+  id                 String               @id @default(cuid())
+  // The owner who EARNS the credit (referrer "A").
+  referrerOwnerId    String               @map("referrer_owner_id")
+  // The new owner whose first payment triggered it (referee "B"); SET NULL if B
+  // is later removed, so the ledger row survives.
+  referredOwnerId    String?              @map("referred_owner_id")
+  // B's first paid invoice. Unique so retries are idempotent and the reward
+  // fires on exactly one invoice per referral.
+  stripeInvoiceId    String?              @unique @map("stripe_invoice_id")
+  storeCount         Int                  @map("store_count")
+  unitAmountCents    Int                  @map("unit_amount_cents")
+  amountCents        Int                  @map("amount_cents")
+  currency           String               @default("usd")
+  status             ReferralRewardStatus @default(PENDING)
+  // The Stripe customer-balance transaction id once APPLIED (for exact reversal).
+  stripeBalanceTxnId String?              @map("stripe_balance_txn_id")
+  note               String?
+  createdAt          DateTime             @default(now()) @map("created_at")
+  updatedAt          DateTime             @default(now()) @updatedAt @map("updated_at")
+  referrerOwner      Owner                @relation("RewardReferrer", fields: [referrerOwnerId], references: [id], onDelete: Cascade)
+  referredOwner      Owner?               @relation("RewardReferred", fields: [referredOwnerId], references: [id])
+
+  @@index([referrerOwnerId])
+  @@index([referredOwnerId])
+  @@index([status])
+  @@map("referral_rewards")
 }
 
 // Single-row platform settings (id is always "global"). Holds the default

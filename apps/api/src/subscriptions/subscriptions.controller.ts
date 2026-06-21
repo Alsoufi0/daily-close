@@ -17,6 +17,7 @@ import { CurrentUser } from "../auth/current-user.decorator";
 import { RequestUser } from "../auth/request-user";
 import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
 import { CommissionsService } from "../referrals/commissions.service";
+import { ReferralRewardsService } from "../referrals/referral-rewards.service";
 import { StripeSignatureError, verifyStripeSignature } from "./stripe-signature";
 import { SubscriptionsService } from "./subscriptions.service";
 
@@ -27,7 +28,8 @@ export class SubscriptionsController {
 
   constructor(
     private readonly subscriptions: SubscriptionsService,
-    private readonly commissions: CommissionsService
+    private readonly commissions: CommissionsService,
+    private readonly referralRewards: ReferralRewardsService
   ) {}
 
   @Get("me")
@@ -180,6 +182,19 @@ export class SubscriptionsController {
     } catch {
       // Owner not yet linked - swallow.
     }
+
+    // Checkout just linked this owner to a Stripe customer — a good moment to
+    // post any referral credit they earned while still a trial user (no-op if
+    // none pending). Best-effort: never fail the webhook ack.
+    if (checkoutCompleted && ownerId) {
+      try {
+        await this.referralRewards.flushPendingForReferrer(ownerId);
+      } catch (err) {
+        this.logger.warn(
+          `Pending referral flush failed for owner ${ownerId}: ${(err as Error)?.message || err}`
+        );
+      }
+    }
     return { received: true };
   }
 
@@ -209,6 +224,46 @@ export class SubscriptionsController {
         `Commission record failed for invoice ${stripeInvoiceId}: ${(err as Error)?.message || err}`
       );
     }
+
+    // Owner→owner "refer a friend": mint the referrer's credit from this payer's
+    // FIRST paid invoice. Independent of commissions and equally best-effort —
+    // ReferralRewardsService skips unreferred owners and only rewards once.
+    try {
+      const { storeCount, unitAmountCents } = this.invoiceQuantityAndUnit(invoice, amountPaidCents);
+      const reward = await this.referralRewards.recordFirstPaymentReward({
+        referredStripeCustomerId: stripeCustomerId,
+        stripeInvoiceId,
+        amountPaidCents,
+        storeCount,
+        unitAmountCents,
+        currency: invoice?.currency
+      });
+      if (!reward.created) {
+        this.logger.log(`Invoice ${stripeInvoiceId}: no referral reward (${reward.reason}).`);
+      }
+    } catch (err) {
+      this.logger.warn(
+        `Referral reward failed for invoice ${stripeInvoiceId}: ${(err as Error)?.message || err}`
+      );
+    }
+  }
+
+  // Pull the billable store count + per-store list price out of a subscription
+  // invoice. Prefers the line for our configured price; falls back to the first
+  // line, then to deriving the unit from amount_paid / quantity.
+  private invoiceQuantityAndUnit(
+    invoice: any,
+    amountPaidCents: number
+  ): { storeCount: number; unitAmountCents: number } {
+    const lines: any[] = invoice?.lines?.data ?? [];
+    const priceId = process.env.STRIPE_PRICE_ID;
+    const line =
+      (priceId && lines.find((l) => l?.price?.id === priceId)) || lines[0] || undefined;
+    const storeCount = Math.max(1, Number(line?.quantity ?? 1));
+    const unitAmountCents = Number(
+      line?.price?.unit_amount ?? (storeCount > 0 ? Math.round(amountPaidCents / storeCount) : 0)
+    );
+    return { storeCount, unitAmountCents };
   }
 
   // Reverse the commission tied to a refunded/disputed charge. A refund event
@@ -232,6 +287,18 @@ export class SubscriptionsController {
     } catch (err) {
       this.logger.warn(
         `Reversal failed for invoice ${invoiceId}: ${(err as Error)?.message || err}`
+      );
+    }
+
+    // Also unwind any owner→owner referral credit minted from this invoice.
+    try {
+      const { reversed } = await this.referralRewards.reverseByInvoice(invoiceId);
+      this.logger.log(
+        `Referral reversal ${type} for invoice ${invoiceId}: ${reversed ? "reversed" : "no matching reward"}.`
+      );
+    } catch (err) {
+      this.logger.warn(
+        `Referral reversal failed for invoice ${invoiceId}: ${(err as Error)?.message || err}`
       );
     }
   }

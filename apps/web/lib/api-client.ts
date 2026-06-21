@@ -393,6 +393,20 @@ export async function getSubscription(token: string): Promise<SubscriptionView> 
   return apiFetch<SubscriptionView>("/subscriptions/me", token);
 }
 
+// Owner→owner "refer a friend": the signed-in owner's shareable code + the
+// account credit they've earned. The code is minted lazily on first read.
+export interface ReferralSummary {
+  code: string;
+  referralCount: number;
+  earnedCents: number;
+  appliedCents: number;
+  pendingCents: number;
+}
+
+export async function getMyReferral(token: string): Promise<ReferralSummary> {
+  return apiFetch<ReferralSummary>("/referrals/me", token);
+}
+
 // Pause a store (stop billing for it + block closing) or resume it. Not behind
 // the subscription paywall, so an owner can choose which stores to keep paying
 // for even after the trial lapses.

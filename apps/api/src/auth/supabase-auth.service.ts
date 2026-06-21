@@ -134,8 +134,9 @@ export class SupabaseAuthService {
 
     // First-touch referral attribution: resolved once, applied ONLY where a new
     // owner row is created below. An existing owner is never re-stamped, so the
-    // very first signup wins and later bootstrap calls can't reassign it.
-    const referredByPartnerId = await this.partnerIdForRef(refCode);
+    // very first signup wins and later bootstrap calls can't reassign it. A code
+    // is either a partner code OR another owner's "refer a friend" code.
+    const { referredByPartnerId, referredByOwnerId } = await this.resolveReferral(refCode);
 
     let user = await this.prisma.user.findFirst({
       where: { OR: [{ authUserId: authId }, { email }] },
@@ -155,7 +156,8 @@ export class SupabaseAuthService {
               subscriptionPlan: "Standard",
               subscriptionStatus: "TRIALING",
               trialEndsAt: new Date(Date.now() + 14 * 86_400_000),
-              referredByPartnerId
+              referredByPartnerId,
+              referredByOwnerId
             }
           }
         },
@@ -176,7 +178,8 @@ export class SupabaseAuthService {
           subscriptionPlan: "Standard",
           subscriptionStatus: "TRIALING",
           trialEndsAt: new Date(Date.now() + 14 * 86_400_000),
-          referredByPartnerId
+          referredByPartnerId,
+          referredByOwnerId
         }
       });
       user = (await this.prisma.user.findUnique({
@@ -414,6 +417,30 @@ export class SupabaseAuthService {
     return partner && partner.active ? partner.id : null;
   }
 
+  /**
+   * Resolve a signup ref code to exactly one attribution. A code is either a
+   * PARTNER code (distributor commission program) or another OWNER's "refer a
+   * friend" code — never both (owner codes are generated checked against the
+   * partner table). Partner takes precedence if somehow both matched. Returns
+   * nulls for an unknown/inactive code rather than failing signup. Inlined here
+   * (plain Prisma lookups) to avoid an Auth↔Referrals module cycle.
+   */
+  private async resolveReferral(
+    refCode?: string | null
+  ): Promise<{ referredByPartnerId: string | null; referredByOwnerId: string | null }> {
+    const code = refCode?.trim();
+    if (!code) return { referredByPartnerId: null, referredByOwnerId: null };
+
+    const partnerId = await this.partnerIdForRef(code);
+    if (partnerId) return { referredByPartnerId: partnerId, referredByOwnerId: null };
+
+    const owner = await this.prisma.owner.findUnique({
+      where: { referralCode: code },
+      select: { id: true }
+    });
+    return { referredByPartnerId: null, referredByOwnerId: owner?.id ?? null };
+  }
+
   // Creates the Supabase auth user + public.users/owners rows. The contact is
   // already verified by the caller, so email_confirm:true is legitimate here.
   private async createOwnerAccount(input: {
@@ -438,9 +465,10 @@ export class SupabaseAuthService {
       throw new BadRequestException(error?.message || "Could not create account.");
     }
 
-    // First-touch referral attribution: stamp the referring partner at account
-    // creation. This owner is brand new here, so it's first-touch by construction.
-    const referredByPartnerId = await this.partnerIdForRef(input.refCode);
+    // First-touch referral attribution: stamp the referring partner OR owner at
+    // account creation. This owner is brand new here, so it's first-touch by
+    // construction. A code resolves to at most one of the two.
+    const { referredByPartnerId, referredByOwnerId } = await this.resolveReferral(input.refCode);
 
     const user = await this.prisma.user.create({
       data: {
@@ -454,7 +482,8 @@ export class SupabaseAuthService {
             subscriptionPlan: "Standard",
             subscriptionStatus: "TRIALING",
             trialEndsAt: new Date(Date.now() + 14 * 86_400_000),
-            referredByPartnerId
+            referredByPartnerId,
+            referredByOwnerId
           }
         }
       },
