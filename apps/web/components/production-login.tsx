@@ -170,7 +170,10 @@ export function ProductionLogin() {
             ))}
           </ul>
           <div className="mt-10">
-            <StoreBadges appStoreHref="https://apps.apple.com/app/id6777175613" />
+            <StoreBadges
+              appStoreHref="https://apps.apple.com/app/id6777175613"
+              playHref="https://play.google.com/store/apps/details?id=us.dailyclose.app"
+            />
           </div>
         </div>
 

@@ -65,7 +65,10 @@ export function MarketingHome() {
           </div>
           <p className="lr lr-4 mt-4 text-sm font-bold text-ink/55">{t("marketing.heroNote")}</p>
           <div className="lr lr-4 mt-7 flex justify-center sm:mt-8 sm:justify-start">
-            <StoreBadges appStoreHref="https://apps.apple.com/app/id6777175613" />
+            <StoreBadges
+              appStoreHref="https://apps.apple.com/app/id6777175613"
+              playHref="https://play.google.com/store/apps/details?id=us.dailyclose.app"
+            />
           </div>
         </div>
 
