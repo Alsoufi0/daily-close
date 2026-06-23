@@ -10,7 +10,7 @@ import { useLanguage } from "./language-provider";
 const LINKS = [
   { href: "/how-it-works", labelKey: "marketing.navHowItWorks" },
   { href: "/tutorials", labelKey: "marketing.navTutorials" },
-  // Pricing link hidden until tiered pricing goes live in Stripe (re-add to restore).
+  { href: "/pricing", labelKey: "marketing.navPricing" },
   { href: "/contact", labelKey: "nav.contact" },
   { href: "/privacy", labelKey: "legal.privacy" },
   { href: "/terms", labelKey: "legal.terms" }

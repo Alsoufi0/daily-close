@@ -34,9 +34,7 @@ const NAV = [
 const MARKETING_NAV = [
   { href: "/how-it-works", labelKey: "marketing.navHowItWorks" },
   { href: "/tutorials", labelKey: "marketing.navTutorials" },
-  // Pricing tab hidden until the new tiered pricing goes live in Stripe (the
-  // /pricing page advertises tiers the checkout doesn't charge yet). Re-add to
-  // restore. See docs/PRICING_TIERED_GOLIVE.md.
+  { href: "/pricing", labelKey: "marketing.navPricing" },
   { href: "/contact", labelKey: "nav.contact" }
 ] as Array<{ href: string; labelKey: string }>;
 

@@ -16,6 +16,12 @@ import {
 } from "../../lib/api-client";
 import { RequireAuth } from "../../components/require-auth";
 import { isAccountOwner } from "../../lib/session-roles";
+import {
+  effectivePerStoreCents,
+  formatUsd,
+  monthlyPriceCents,
+  planForStoreCount
+} from "@smokeshop/shared/pricing";
 
 const demoSub: SubscriptionView = {
   status: "TRIALING",
@@ -181,7 +187,12 @@ function BillingPageInner() {
   // portal (minted on demand — no static URL needed). Trial/expired go to
   // checkout to (re)subscribe.
   const portalAction = sub.status === "ACTIVE" || pastDue;
-  const unitPrice = `$${(sub.unitAmountCents / 100).toFixed(2)}`;
+  // Tiered pricing: the bill is computed from the billed store count via the
+  // shared graduated tiers (single source of truth, mirrors the Stripe price).
+  const billedQty = sub.billedStoreQuantity;
+  const monthlyTotal = formatUsd(monthlyPriceCents(billedQty));
+  const perStore = formatUsd(effectivePerStoreCents(billedQty));
+  const planName = planForStoreCount(billedQty).name;
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6">
@@ -189,7 +200,7 @@ function BillingPageInner() {
         <p className="text-sm font-black uppercase tracking-wide text-leaf">Billing</p>
         <h1 className="mt-1 text-3xl font-black tracking-tight">Your subscription</h1>
         <p className="mt-1 text-base font-bold text-ink/65">
-          $49.99 per store, per month. Billed monthly. Cancel anytime.
+          Pricing scales per store — from $29/mo, and the rate drops as you grow. Billed monthly. Cancel anytime.
         </p>
       </header>
 
@@ -257,12 +268,13 @@ function BillingPageInner() {
       </div>
 
       <section className="mt-4 grid gap-3 sm:grid-cols-3">
-        <BillingStat label="Active stores" value={String(sub.activeStoreCount)} />
         <BillingStat label="Stores billed" value={String(sub.billedStoreQuantity)} />
-        <BillingStat label="Price per store" value={unitPrice} />
+        <BillingStat label="Monthly total" value={monthlyTotal} />
+        <BillingStat label={`${planName} plan`} value={`~${perStore}/store`} />
       </section>
       <p className="mt-3 rounded-xl border border-leaf/20 bg-leaf/5 p-3 text-sm font-bold text-ink/70">
-        Adding a store asks for confirmation and updates your monthly bill automatically.
+        You only pay for billed stores — about {perStore} each on your {planName} plan. Adding a store updates your bill
+        automatically; pause a store anytime to stop billing it.
       </p>
 
       {(sub.stores ?? []).length > 0 ? (
