@@ -23,6 +23,7 @@ import { WhatsAppService } from "./whatsapp.service";
 import { WeeklySummaryService } from "./weekly-summary.service";
 import { EmailService } from "./email.service";
 import { PushService } from "./push.service";
+import { withDbRetry } from "../prisma/db-retry";
 
 @ApiTags("Notifications")
 @Controller("notifications")
@@ -186,7 +187,9 @@ export class NotificationsController {
   @Post("check-missed-close")
   async checkMissedClose(@Headers("x-cron-secret") provided: string | undefined) {
     NotificationsController.assertCronSecret(provided);
-    const result = await this.missedClose.checkStores();
+    const result = await withDbRetry(() => this.missedClose.checkStores(), {
+      label: "check-missed-close"
+    });
     NotificationsController.pingHealthcheck(process.env.HEALTHCHECKS_MISSED_CLOSE_PING_URL);
     return result;
   }
@@ -194,7 +197,9 @@ export class NotificationsController {
   @Post("weekly-summary")
   async weeklySummary(@Headers("x-cron-secret") provided: string | undefined) {
     NotificationsController.assertCronSecret(provided);
-    const result = await this.weekly.sendForAllOwners();
+    const result = await withDbRetry(() => this.weekly.sendForAllOwners(), {
+      label: "weekly-summary"
+    });
     NotificationsController.pingHealthcheck(process.env.HEALTHCHECKS_WEEKLY_SUMMARY_PING_URL);
     return result;
   }
@@ -202,7 +207,9 @@ export class NotificationsController {
   @Post("monthly-summary")
   async monthlySummary(@Headers("x-cron-secret") provided: string | undefined) {
     NotificationsController.assertCronSecret(provided);
-    const result = await this.weekly.sendMonthlyForAllOwners();
+    const result = await withDbRetry(() => this.weekly.sendMonthlyForAllOwners(), {
+      label: "monthly-summary"
+    });
     NotificationsController.pingHealthcheck(process.env.HEALTHCHECKS_MONTHLY_SUMMARY_PING_URL);
     return result;
   }
