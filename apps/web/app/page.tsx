@@ -1,4 +1,7 @@
+import type { Metadata } from "next";
 import { MarketingHome } from "../components/marketing/marketing-home";
+
+export const metadata: Metadata = { alternates: { canonical: "/" } };
 
 // `/` is the public marketing landing. Sign-in lives at /login (linked from the
 // top bar). MarketingHome is a client component (uses the i18n t() hook + the
