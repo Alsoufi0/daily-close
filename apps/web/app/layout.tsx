@@ -21,6 +21,7 @@ import { Footer } from "../components/footer";
 import { SentryInit } from "../components/sentry-init";
 import { AuthBootstrap } from "../components/auth-bootstrap";
 import { LanguageProvider } from "../components/language-provider";
+import { StructuredData } from "../components/structured-data";
 
 const SITE_URL = "https://dailyclose.us";
 const DESCRIPTION =
@@ -46,21 +47,25 @@ export const metadata: Metadata = {
     apple: "/apple-touch-icon.png"
   },
   openGraph: {
-    title: "Daily Close",
+    title: "Daily Close: close your store in 2 minutes",
     description: DESCRIPTION,
     url: SITE_URL,
     siteName: "Daily Close",
-    images: [{ url: "/apple-touch-icon.png", width: 1024, height: 1024 }],
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "Daily Close — close your store in 2 minutes" }],
     type: "website",
     locale: "en_US"
   },
   twitter: {
-    card: "summary",
-    title: "Daily Close",
+    card: "summary_large_image",
+    title: "Daily Close: close your store in 2 minutes",
     description: DESCRIPTION,
-    images: ["/apple-touch-icon.png"]
+    images: ["/og.png"]
   },
-  robots: { index: true, follow: true }
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 }
+  }
 };
 
 export const viewport: Viewport = {
@@ -74,6 +79,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${display.variable} ${sans.variable}`}>
       <body className="flex min-h-screen flex-col overflow-x-hidden">
+        <StructuredData />
         <LanguageProvider>
           <SentryInit />
           <AuthBootstrap />

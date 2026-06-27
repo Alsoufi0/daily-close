@@ -7,7 +7,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/owner", "/admin", "/close", "/billing", "/account", "/setup", "/login"]
+      disallow: ["/owner", "/admin", "/close", "/billing", "/account", "/setup", "/login", "/demo"]
     },
     sitemap: "https://dailyclose.us/sitemap.xml"
   };

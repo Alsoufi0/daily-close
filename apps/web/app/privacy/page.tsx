@@ -1,4 +1,9 @@
-export const metadata = { title: "Privacy Policy · Daily Close" };
+export const metadata = {
+  title: "Privacy Policy",
+  description:
+    "How Daily Close collects, uses, and protects your data. We collect only what's needed to run the daily close, and we never sell your data.",
+  alternates: { canonical: "/privacy" }
+};
 
 export default function PrivacyPage() {
   return (

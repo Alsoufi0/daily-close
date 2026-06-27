@@ -1,4 +1,8 @@
-export const metadata = { title: "Terms of Service · Daily Close" };
+export const metadata = {
+  title: "Terms of Service",
+  description: "The terms that govern your use of Daily Close, including subscriptions, acceptable use, and your account.",
+  alternates: { canonical: "/terms" }
+};
 
 export default function TermsPage() {
   return (

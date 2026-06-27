@@ -1,4 +1,8 @@
-export const metadata = { title: "SMS Opt-In Proof · Daily Close" };
+export const metadata = {
+  title: "SMS Opt-In",
+  description: "How Daily Close handles SMS consent and opt-in for store close alerts and account notifications.",
+  alternates: { canonical: "/sms-opt-in" }
+};
 
 export default function SmsOptInProofPage() {
   return (
