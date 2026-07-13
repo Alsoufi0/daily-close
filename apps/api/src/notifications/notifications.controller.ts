@@ -77,6 +77,45 @@ export class NotificationsController {
     };
   }
 
+  @Post("partner-application")
+  async partnerApplication(
+    @Body()
+    input: {
+      name?: string;
+      email?: string;
+      phone?: string;
+      company?: string;
+      audience?: string;
+      message?: string;
+    }
+  ) {
+    const name = input.name?.trim() || "";
+    const email = input.email?.trim().toLowerCase() || "";
+    const phone = input.phone?.trim() || "";
+    const company = input.company?.trim() || "";
+    const audience = input.audience?.trim() || "";
+    const message = input.message?.trim() || "";
+    if (!name) throw new BadRequestException("Name is required.");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      throw new BadRequestException("Valid email is required.");
+    }
+
+    const result = await this.email.sendPartnerApplication({
+      name,
+      email,
+      phone,
+      company,
+      audience,
+      message
+    });
+    return {
+      sent: result.sent,
+      message: result.sent
+        ? "Application sent."
+        : "Email is not configured. Please email dailyclose@yahoo.com directly."
+    };
+  }
+
   @Get()
   @ApiBearerAuth()
   @UseGuards(SupabaseAuthGuard, SubscriptionGuard)

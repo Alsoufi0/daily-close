@@ -35,6 +35,7 @@ const MARKETING_NAV = [
   { href: "/how-it-works", labelKey: "marketing.navHowItWorks" },
   { href: "/tutorials", labelKey: "marketing.navTutorials" },
   { href: "/pricing", labelKey: "marketing.navPricing" },
+  { href: "/partners", labelKey: "partners.navLabel" },
   { href: "/contact", labelKey: "nav.contact" }
 ] as Array<{ href: string; labelKey: string }>;
 
