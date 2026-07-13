@@ -11,6 +11,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/how-it-works", priority: 0.8 },
     { path: "/tutorials", priority: 0.8 },
     { path: "/pricing", priority: 0.8 },
+    { path: "/partners", priority: 0.7 },
     { path: "/signup", priority: 0.7 },
     { path: "/contact", priority: 0.6 },
     { path: "/privacy", priority: 0.3 },

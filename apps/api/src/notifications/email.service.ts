@@ -90,6 +90,28 @@ export class EmailService {
     `);
     return this.send("dailyclose@yahoo.com", subject, html);
   }
+
+  async sendPartnerApplication(opts: {
+    name: string;
+    email: string;
+    phone?: string;
+    company?: string;
+    audience?: string;
+    message?: string;
+  }): Promise<{ sent: boolean; error?: string }> {
+    const subject = `New partner application: ${opts.name}`;
+    const html = baseEmailShell(`
+      <h1 style="margin:0 0 16px;font-size:20px;color:#11181c;">New Partner Program application</h1>
+      <p style="margin:0 0 10px;font-size:15px;color:#3f4b51;"><strong>Name:</strong> ${esc(opts.name)}</p>
+      <p style="margin:0 0 10px;font-size:15px;color:#3f4b51;"><strong>Email:</strong> ${esc(opts.email)}</p>
+      <p style="margin:0 0 10px;font-size:15px;color:#3f4b51;"><strong>Phone:</strong> ${esc(opts.phone || "Not provided")}</p>
+      <p style="margin:0 0 10px;font-size:15px;color:#3f4b51;"><strong>Business / role:</strong> ${esc(opts.company || "Not provided")}</p>
+      <p style="margin:0 0 18px;font-size:15px;color:#3f4b51;"><strong>Stores they can reach:</strong> ${esc(opts.audience || "Not provided")}</p>
+      <div style="white-space:pre-wrap;font-size:15px;line-height:1.7;color:#11181c;background:#f7faf8;border:1px solid #dde5e1;border-radius:10px;padding:16px;">${esc(opts.message || "(no message)")}</div>
+      <p style="margin:18px 0 0;font-size:13px;line-height:1.6;color:#8a949a;">Reply to this applicant, then create their partner + referral code in the Console.</p>
+    `);
+    return this.send("dailyclose@yahoo.com", subject, html);
+  }
 }
 
 function esc(value: string): string {

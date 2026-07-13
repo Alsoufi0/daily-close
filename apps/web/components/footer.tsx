@@ -11,6 +11,7 @@ const LINKS = [
   { href: "/how-it-works", labelKey: "marketing.navHowItWorks" },
   { href: "/tutorials", labelKey: "marketing.navTutorials" },
   { href: "/pricing", labelKey: "marketing.navPricing" },
+  { href: "/partners", labelKey: "partners.navLabel" },
   { href: "/contact", labelKey: "nav.contact" },
   { href: "/privacy", labelKey: "legal.privacy" },
   { href: "/terms", labelKey: "legal.terms" }
