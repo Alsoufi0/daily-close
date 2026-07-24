@@ -62,7 +62,15 @@ services:
         sync: false
       - key: TWILIO_FROM_NUMBER
         sync: false # +1... — fallback only if no Messaging Service
-      # OCR — Google Vision preferred when both keys are present
+      # OCR — Claude vision reads real employee receipt photos (rotated,
+      # crumpled, angled, drifted columns) far better than text OCR + regex, and
+      # sums Clover's split debit/credit card lines correctly. Selected
+      # automatically when ANTHROPIC_API_KEY is set; OCR_MODE=anthropic forces it.
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: OCR_MODE
+        value: anthropic
+      # Legacy fallbacks (used only if OCR_MODE points at them / key present)
       - key: GOOGLE_VISION_API_KEY
         sync: false
       - key: OCR_SPACE_API_KEY

@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import type { ParsedPOSReport } from "@shared/types";
+import { AnthropicVisionParser } from "./anthropic-vision.parser";
 import { CloverParser } from "./clover.parser";
 import { GenericParser } from "./generic.parser";
 import { NRSParser } from "./nrs.parser";
@@ -9,6 +10,10 @@ import { TerminalReportParser } from "./terminal-report.parser";
 @Injectable()
 export class PosParserService {
   private readonly parsers: POSParser[] = [
+    // The vision extractor emits a tagged JSON envelope; claim it first. Only
+    // matches that envelope, so the regex parsers below still handle raw OCR
+    // text from OCR.space / Google Vision.
+    new AnthropicVisionParser(),
     new CloverParser(),
     new NRSParser(),
     new TerminalReportParser(),
