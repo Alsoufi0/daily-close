@@ -57,3 +57,6 @@ graphify-out/
 supabase/.temp/
 
 .claude-access.md
+
+# local OCR test fixtures (store financial data — do not commit)
+scripts/ocr-samples/
